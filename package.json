@@ -1,0 +1,9 @@
+{
+  "name": "budget-mensuel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Budget Mensuel - version locale de développement",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
