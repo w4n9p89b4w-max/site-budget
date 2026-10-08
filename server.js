@@ -1,128 +1,344 @@
-// Serveur local de développement : sert index.html et imite l'API du site en ligne.
-// Les données sont stockées dans data/<prenom>.json (aucun lien avec les vraies données).
-const http = require('http');
-const fs = require('fs');
+// ============================================================
+// Budget Mensuel - API Server
+// Port 3003 - Node.js + SQLite
+// ============================================================
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const PORT = process.env.PORT || 3000;
-const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, 'data');
+const app = express();
+const PORT = process.env.PORT || 3003;
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'budget.db');
 
-function emptyStore() {
-  return { transactions: [], budget: {}, categories: [], recurring: [], applied: {} };
+// Utilisateurs autorises (login simple par prenom)
+const USERS = ['etienne', 'noa'];
+
+app.use(cors());
+app.use(bodyParser.json({ limit: '5mb' }));
+
+// ── Base de donnees ──
+const db = new Database(DB_PATH);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY,
+    date TEXT NOT NULL,
+    label TEXT NOT NULL,
+    cat TEXT,
+    amount REAL NOT NULL,
+    type TEXT NOT NULL,
+    bank TEXT,
+    need TEXT,
+    auto INTEGER DEFAULT 0,
+    transfer_pair INTEGER,
+    created_by TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS budget (
+    key TEXT PRIMARY KEY,
+    value REAL NOT NULL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS categories (
+    key TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    grp TEXT NOT NULL,
+    icon TEXT,
+    builtin INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS recurring (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT NOT NULL,
+    cat TEXT,
+    bank TEXT,
+    amount REAL NOT NULL,
+    day INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS applied_months (
+    month_key TEXT PRIMARY KEY,
+    applied_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS epargne (
+    key TEXT PRIMARY KEY,
+    verse REAL DEFAULT 0,
+    objectif REAL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS accounts (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT,
+    solde REAL DEFAULT 0,
+    solde_date TEXT,
+    solde_set_at INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    created_by TEXT
+  );
+`);
+
+// Colonnes ajoutees apres coup : on les cree si la base ne les a pas encore
+function addColumnIfMissing(table, column, type) {
+  const cols = db.prepare('PRAGMA table_info(' + table + ')').all().map(c => c.name);
+  if (!cols.includes(column)) db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + column + ' ' + type);
+}
+addColumnIfMissing('transactions', 'affect_year', 'INTEGER');
+addColumnIfMissing('transactions', 'affect_month_num', 'INTEGER');
+addColumnIfMissing('recurring', 'next_month', 'INTEGER DEFAULT 0');
+
+// ── Middleware auth ──
+function requireAuth(req, res, next) {
+  const user = (req.headers['x-user'] || '').toLowerCase().trim();
+  if (!USERS.includes(user)) {
+    return res.status(401).json({ error: 'Utilisateur non reconnu. Login requis.' });
+  }
+  req.user = user;
+  next();
 }
 
-function load(user) {
-  const file = path.join(DATA_DIR, safeName(user) + '.json');
-  try { return Object.assign(emptyStore(), JSON.parse(fs.readFileSync(file, 'utf8'))); }
-  catch (e) { return emptyStore(); }
+// ── Health check ──
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'budget-mensuel-api', port: PORT });
+});
+
+// ── Login ──
+app.post('/api/login', (req, res) => {
+  const prenom = (req.body.prenom || '').toLowerCase().trim();
+  if (USERS.includes(prenom)) {
+    res.json({ ok: true, user: prenom });
+  } else {
+    res.status(401).json({ ok: false, error: 'Prenom non reconnu' });
+  }
+});
+
+// ── TRANSACTIONS ──
+app.get('/api/transactions', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT * FROM transactions ORDER BY date DESC, id DESC').all();
+  res.json(rows);
+});
+
+app.post('/api/transactions', requireAuth, (req, res) => {
+  const t = req.body;
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num)
+    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num)
+  `);
+  const info = stmt.run({
+    id: t.id || Date.now(),
+    date: t.date,
+    label: t.label,
+    cat: t.cat || '',
+    amount: parseFloat(t.amount) || 0,
+    type: t.type || 'dep',
+    bank: t.bank || '',
+    need: t.need || '',
+    auto: t.auto ? 1 : 0,
+    transfer_pair: t.transfer_pair || null,
+    created_by: req.user,
+    affect_year: t.affect_year || null,
+    affect_month_num: t.affect_month_num !== undefined ? t.affect_month_num : null
+  });
+  res.json({ ok: true, id: t.id || info.lastInsertRowid });
+});
+
+// Import en masse (releve bancaire, depenses recurrentes)
+app.post('/api/transactions/bulk', requireAuth, (req, res) => {
+  const txns = req.body.transactions || [];
+  const insert = db.prepare(`
+    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num)
+    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num)
+  `);
+  const insertMany = db.transaction((items) => {
+    for (const t of items) {
+      insert.run({
+        id: t.id || Date.now() + Math.random(),
+        date: t.date,
+        label: t.label,
+        cat: t.cat || '',
+        amount: parseFloat(t.amount) || 0,
+        type: t.type || 'dep',
+        bank: t.bank || '',
+        need: t.need || '',
+        auto: t.auto ? 1 : 0,
+        transfer_pair: t.transfer_pair || null,
+        created_by: req.user,
+        affect_year: t.affect_year || null,
+        affect_month_num: t.affect_month_num !== undefined ? t.affect_month_num : null
+      });
+    }
+  });
+  insertMany(txns);
+  res.json({ ok: true, count: txns.length });
+});
+
+app.delete('/api/transactions/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM transactions WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ── BUDGET (montants mensuels de reference) ──
+app.get('/api/budget', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM budget').all();
+  const result = {};
+  rows.forEach(r => result[r.key] = r.value);
+  res.json(result);
+});
+
+app.post('/api/budget', requireAuth, (req, res) => {
+  const data = req.body;
+  const upsert = db.prepare(`
+    INSERT INTO budget (key, value, updated_at) VALUES (?, ?, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `);
+  const upsertMany = db.transaction((obj) => {
+    for (const [key, value] of Object.entries(obj)) {
+      upsert.run(key, parseFloat(value) || 0);
+    }
+  });
+  upsertMany(data);
+  res.json({ ok: true });
+});
+
+// ── CATEGORIES ──
+app.get('/api/categories', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT * FROM categories ORDER BY sort_order, key').all();
+  res.json(rows.map(r => ({
+    key: r.key, label: r.label, group: r.grp, icon: r.icon, builtin: !!r.builtin
+  })));
+});
+
+app.post('/api/categories', requireAuth, (req, res) => {
+  const cats = req.body.categories || [];
+  const upsert = db.prepare(`
+    INSERT INTO categories (key, label, grp, icon, builtin, sort_order)
+    VALUES (@key, @label, @grp, @icon, @builtin, @sort_order)
+    ON CONFLICT(key) DO UPDATE SET label=excluded.label, grp=excluded.grp, icon=excluded.icon, sort_order=excluded.sort_order
+  `);
+  const upsertMany = db.transaction((items) => {
+    items.forEach((c, i) => upsert.run({
+      key: c.key, label: c.label, grp: c.group, icon: c.icon || '',
+      builtin: c.builtin ? 1 : 0, sort_order: i
+    }));
+  });
+  upsertMany(cats);
+  res.json({ ok: true });
+});
+
+app.delete('/api/categories/:key', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM categories WHERE key = ? AND builtin = 0').run(req.params.key);
+  res.json({ ok: true });
+});
+
+// ── DEPENSES RECURRENTES ──
+app.get('/api/recurring', requireAuth, (req, res) => {
+  res.json(db.prepare('SELECT * FROM recurring ORDER BY id').all());
+});
+
+app.post('/api/recurring', requireAuth, (req, res) => {
+  const r = req.body;
+  const info = db.prepare(
+    'INSERT INTO recurring (label, cat, bank, amount, day, next_month) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0);
+  res.json({ ok: true, id: info.lastInsertRowid });
+});
+
+app.delete('/api/recurring/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM recurring WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ── MOIS APPLIQUES (depenses fixes auto) ──
+app.get('/api/applied-months', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT month_key FROM applied_months').all();
+  const result = {};
+  rows.forEach(r => result[r.month_key] = true);
+  res.json(result);
+});
+
+app.post('/api/applied-months/:key', requireAuth, (req, res) => {
+  db.prepare('INSERT OR IGNORE INTO applied_months (month_key) VALUES (?)').run(req.params.key);
+  res.json({ ok: true });
+});
+
+// ── EPARGNE ──
+app.get('/api/epargne', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT key, verse, objectif FROM epargne').all();
+  const result = {};
+  rows.forEach(r => result[r.key] = { verse: r.verse, objectif: r.objectif });
+  res.json(result);
+});
+
+app.post('/api/epargne/:key', requireAuth, (req, res) => {
+  const { verse, objectif } = req.body;
+  db.prepare(`
+    INSERT INTO epargne (key, verse, objectif, updated_at) VALUES (?, ?, ?, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET verse=excluded.verse, objectif=excluded.objectif, updated_at=excluded.updated_at
+  `).run(req.params.key, parseFloat(verse)||0, parseFloat(objectif)||0);
+  res.json({ ok: true });
+});
+
+// ── COMPTES BANCAIRES ──
+function accountFromRow(r) {
+  return { id: r.id, name: r.name, color: r.color, solde: r.solde, soldeDate: r.solde_date, soldeSetAt: r.solde_set_at };
 }
 
-function save(user, store) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(path.join(DATA_DIR, safeName(user) + '.json'), JSON.stringify(store, null, 2));
-}
+app.get('/api/accounts', requireAuth, (req, res) => {
+  res.json(db.prepare('SELECT * FROM accounts ORDER BY sort_order, id').all().map(accountFromRow));
+});
 
-function safeName(user) { return String(user || 'anonyme').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'anonyme'; }
+// Cree ou met a jour un compte
+app.post('/api/accounts', requireAuth, (req, res) => {
+  const a = req.body;
+  if (!a.name) return res.status(400).json({ error: 'Nom du compte manquant' });
+  const id = a.id || Date.now();
+  db.prepare(`
+    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by)
+    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by)
+    ON CONFLICT(id) DO UPDATE SET name=excluded.name, color=excluded.color, solde=excluded.solde,
+      solde_date=excluded.solde_date, solde_set_at=excluded.solde_set_at, sort_order=excluded.sort_order
+  `).run({
+    id: id,
+    name: a.name,
+    color: a.color || '',
+    solde: parseFloat(a.solde) || 0,
+    solde_date: a.soldeDate || null,
+    solde_set_at: a.soldeSetAt || null,
+    sort_order: parseInt(a.sortOrder) || 0,
+    created_by: req.user
+  });
+  res.json({ ok: true, id: id });
+});
 
-function send(res, status, body) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(body));
-}
+app.delete('/api/accounts/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM accounts WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
 
-function readBody(req) {
-  return new Promise((resolve) => {
-    let raw = '';
-    req.on('data', (c) => { raw += c; });
-    req.on('end', () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch (e) { resolve({}); } });
+// ── Servir les fichiers statiques du site ──
+const PUBLIC = path.join(__dirname, 'public');
+if (fs.existsSync(PUBLIC)) {
+  app.use(express.static(PUBLIC));
+  app.get('/{*path}', (req, res) => {
+    res.sendFile(path.join(PUBLIC, 'index.html'));
+  });
+} else {
+  // En local (pas de dossier public) : on sert seulement index.html a cote du serveur
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
   });
 }
 
-function sortTxns(arr) { arr.sort((a, b) => String(b.date).localeCompare(String(a.date))); }
-
-async function handleApi(req, res, url) {
-  const parts = url.pathname.split('/').filter(Boolean); // ['api', resource, id?]
-  const resource = parts[1];
-  const id = parts[2];
-  const method = req.method;
-  const body = method === 'POST' ? await readBody(req) : {};
-
-  if (resource === 'login' && method === 'POST') {
-    return body.prenom ? send(res, 200, { ok: true }) : send(res, 400, { error: 'prenom manquant' });
-  }
-  if (resource === 'scan-ticket') {
-    return send(res, 501, { error: 'Scan de ticket non disponible en local' });
-  }
-
-  const user = req.headers['x-user'];
-  const store = load(user);
-
-  switch (resource) {
-    case 'transactions':
-      if (method === 'GET') return send(res, 200, store.transactions);
-      if (method === 'POST' && id === 'bulk') {
-        store.transactions.push(...(body.transactions || []));
-        sortTxns(store.transactions); save(user, store);
-        return send(res, 200, { ok: true });
-      }
-      if (method === 'POST') {
-        store.transactions.push(body); sortTxns(store.transactions); save(user, store);
-        return send(res, 200, { ok: true, id: body.id });
-      }
-      if (method === 'DELETE') {
-        store.transactions = store.transactions.filter((t) => String(t.id) !== id); save(user, store);
-        return send(res, 200, { ok: true });
-      }
-      break;
-    case 'budget':
-      if (method === 'GET') return send(res, 200, store.budget);
-      if (method === 'POST') { store.budget = body; save(user, store); return send(res, 200, { ok: true }); }
-      break;
-    case 'categories':
-      if (method === 'GET') return send(res, 200, store.categories);
-      if (method === 'POST') { store.categories = body.categories || []; save(user, store); return send(res, 200, { ok: true }); }
-      break;
-    case 'recurring':
-      if (method === 'GET') return send(res, 200, store.recurring);
-      if (method === 'POST') {
-        const item = Object.assign({ id: Date.now() }, body);
-        store.recurring.push(item); save(user, store);
-        return send(res, 200, { ok: true, id: item.id });
-      }
-      if (method === 'DELETE') {
-        store.recurring = store.recurring.filter((r) => String(r.id) !== id); save(user, store);
-        return send(res, 200, { ok: true });
-      }
-      break;
-    case 'applied-months':
-      if (method === 'GET') return send(res, 200, store.applied);
-      if (method === 'POST' && id) { store.applied[id] = true; save(user, store); return send(res, 200, { ok: true }); }
-      break;
-  }
-  send(res, 404, { error: 'Route inconnue' });
-}
-
-http.createServer((req, res) => {
-  const url = new URL(req.url, 'http://localhost');
-  // Autorise la page ouverte directement depuis le disque (file://)
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-user');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
-  if (url.pathname.startsWith('/api/')) {
-    handleApi(req, res, url).catch((e) => send(res, 500, { error: e.message }));
-    return;
-  }
-  // Fichiers statiques (index.html par défaut)
-  const rel = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname.slice(1));
-  const file = path.join(ROOT, rel);
-  if (!file.startsWith(ROOT) || file.startsWith(DATA_DIR)) { res.writeHead(403); return res.end(); }
-  fs.readFile(file, (err, content) => {
-    if (err) { res.writeHead(404); return res.end('Introuvable'); }
-    const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
-    res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' });
-    res.end(content);
-  });
-}).listen(PORT, () => {
-  console.log('Budget Mensuel en local : http://localhost:' + PORT);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('Budget Mensuel API demarree sur le port ' + PORT);
+  console.log('DB: ' + DB_PATH);
 });

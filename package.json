@@ -5,5 +5,11 @@
   "description": "Budget Mensuel - version locale de développement",
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "body-parser": "^2.3.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
   }
 }
