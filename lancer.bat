@@ -33,8 +33,8 @@ rem Premier lancement sur cet ordinateur (ou autre version de Node) : on (re)ins
 node -e "require('better-sqlite3')" >nul 2>nul
 if errorlevel 1 (
   echo Installation des modules pour cet ordinateur, patiente une minute...
-  call npm install
-  call npm rebuild better-sqlite3
+  rem --ignore-scripts : better-sqlite3 contient deja les versions compilees, pas besoin de Visual Studio
+  call npm install --ignore-scripts
 )
 
 start "" http://localhost:3003
