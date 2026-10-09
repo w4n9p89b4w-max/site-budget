@@ -4,6 +4,10 @@ rem il enregistre tes modifications et les envoie sur GitHub.
 cd /d "%~dp0"
 title Site budget - envoi sur GitHub
 
+rem Signature des modifications (reglee une seule fois par ordinateur)
+git config user.email >nul 2>nul || git config user.email "etiennefayet28@gmail.com"
+git config user.name >nul 2>nul || git config user.name "Etienne"
+
 git add -A
 git diff --cached --quiet
 if errorlevel 1 (
