@@ -95,6 +95,9 @@ function addColumnIfMissing(table, column, type) {
 addColumnIfMissing('transactions', 'affect_year', 'INTEGER');
 addColumnIfMissing('transactions', 'affect_month_num', 'INTEGER');
 addColumnIfMissing('recurring', 'next_month', 'INTEGER DEFAULT 0');
+addColumnIfMissing('accounts', 'bank_key', 'TEXT');
+addColumnIfMissing('accounts', 'acc_type', 'TEXT');
+addColumnIfMissing('accounts', 'description', 'TEXT');
 
 // ── Middleware auth ──
 function requireAuth(req, res, next) {
@@ -289,7 +292,10 @@ app.post('/api/epargne/:key', requireAuth, (req, res) => {
 
 // ── COMPTES BANCAIRES ──
 function accountFromRow(r) {
-  return { id: r.id, name: r.name, color: r.color, solde: r.solde, soldeDate: r.solde_date, soldeSetAt: r.solde_set_at };
+  return {
+    id: r.id, name: r.name, color: r.color, solde: r.solde, soldeDate: r.solde_date, soldeSetAt: r.solde_set_at,
+    bank: r.bank_key || '', type: r.acc_type || '', description: r.description || ''
+  };
 }
 
 app.get('/api/accounts', requireAuth, (req, res) => {
@@ -302,10 +308,11 @@ app.post('/api/accounts', requireAuth, (req, res) => {
   if (!a.name) return res.status(400).json({ error: 'Nom du compte manquant' });
   const id = a.id || Date.now();
   db.prepare(`
-    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by)
-    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by)
+    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description)
+    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description)
     ON CONFLICT(id) DO UPDATE SET name=excluded.name, color=excluded.color, solde=excluded.solde,
-      solde_date=excluded.solde_date, solde_set_at=excluded.solde_set_at, sort_order=excluded.sort_order
+      solde_date=excluded.solde_date, solde_set_at=excluded.solde_set_at, sort_order=excluded.sort_order,
+      bank_key=excluded.bank_key, acc_type=excluded.acc_type, description=excluded.description
   `).run({
     id: id,
     name: a.name,
@@ -314,7 +321,10 @@ app.post('/api/accounts', requireAuth, (req, res) => {
     solde_date: a.soldeDate || null,
     solde_set_at: a.soldeSetAt || null,
     sort_order: parseInt(a.sortOrder) || 0,
-    created_by: req.user
+    created_by: req.user,
+    bank_key: a.bank || '',
+    acc_type: a.type || '',
+    description: a.description || ''
   });
   res.json({ ok: true, id: id });
 });

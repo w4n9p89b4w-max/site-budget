@@ -556,6 +556,74 @@ body.on-home header{display:none;}
 .detail-list div:last-child{border-bottom:none;}
 .detail-list span:first-child{color:var(--muted);font-weight:600;}
 .detail-list span:last-child{font-weight:700;text-align:right;}
+/* Cartes de comptes : contenu */
+.acc-head{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;min-width:0;max-width:100%;}
+.acc-foot{position:relative;z-index:1;display:flex;flex-direction:column;}
+.acc-pill{background:#fff;border-radius:7px;padding:3px 8px;font-size:13px;font-weight:900;letter-spacing:-.2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acc-desc{font-size:11.5px;font-weight:600;opacity:.85;margin-top:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acc-solde-lbl{font-size:13px;letter-spacing:2.5px;font-weight:800;opacity:.75;margin-bottom:2px;}
+.acc-card.light{color:#2a2118;}
+.card-preview{max-width:340px;margin:8px auto 22px;}
+.card-preview .acc-card{width:100%;aspect-ratio:1.6;border-radius:22px;padding:22px 24px;cursor:default;box-shadow:0 12px 28px rgba(60,40,20,.25);}
+.card-preview .acc-pill{font-size:24px;border-radius:10px;padding:4px 12px;}
+.card-preview .acc-name{font-size:26px;}
+.card-preview .acc-desc{font-size:17px;margin-top:10px;}
+.card-preview .acc-bal{font-size:34px;}
+
+/* Parcours d ajout de compte : plein ecran sur telephone, fenetre sur ordinateur */
+.wiz-backdrop{display:none;position:fixed;inset:0;z-index:850;background:rgba(40,28,15,.4);align-items:center;justify-content:center;}
+.wiz-backdrop.open{display:flex;}
+.wiz{background:var(--bg);width:100%;height:100%;display:flex;flex-direction:column;animation:sheetUp .22s ease-out;}
+@media(min-width:700px){.wiz{width:520px;height:min(860px,92vh);border-radius:26px;overflow:hidden;box-shadow:0 20px 60px rgba(40,28,15,.3);}}
+.wiz-top{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 12px 6px;}
+.wiz-icon{width:42px;height:42px;border:none;background:none;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.wiz-icon .ico{width:26px;height:26px;stroke-width:2.4;}
+.wiz-prog{flex:1;height:6px;border-radius:99px;background:#e9e0cf;overflow:hidden;}
+.wiz-prog div{height:100%;width:20%;background:#8b6b35;border-radius:99px;transition:width .25s;}
+.wiz-body{flex:1;overflow-y:auto;padding:12px 20px 24px;}
+.wiz-title{font-size:32px;font-weight:900;letter-spacing:-.8px;line-height:1.12;margin:8px 0 14px;}
+.wiz-title small{font-size:18px;font-weight:600;color:#b9ad9c;letter-spacing:0;}
+.wiz-sub{font-size:15.5px;color:var(--muted);line-height:1.45;margin-bottom:18px;}
+.wiz-search{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #e2d9cb;border-radius:18px;padding:14px 16px;margin-bottom:18px;color:#8a7f72;}
+.wiz-search .ico{width:22px;height:22px;flex-shrink:0;}
+.wiz-search input{flex:1;min-width:0;border:none;outline:none;font-family:inherit;font-size:17px;background:none;color:var(--text);}
+.bank-row{display:flex;align-items:center;gap:16px;width:100%;background:#fff;border:2px solid transparent;border-radius:18px;padding:18px;margin-bottom:12px;cursor:pointer;font-family:inherit;text-align:left;box-shadow:0 2px 8px rgba(80,55,20,.06);}
+.bank-row.on{border-color:var(--accent);background:#fffaf0;}
+.bank-logo{width:96px;flex-shrink:0;font-size:13px;font-weight:900;letter-spacing:-.3px;line-height:1.1;text-align:center;}
+.bank-logo.emoji{font-size:32px;color:var(--accent);}
+.bank-name{font-size:18px;font-weight:800;color:var(--text);}
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px;}
+.type-tile{background:#fff;border:1.5px solid #efe6d8;border-radius:24px;padding:22px 10px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;cursor:pointer;font-family:inherit;color:var(--text);transition:background .15s;}
+.type-tile .ti{width:62px;height:62px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;}
+.type-tile b{font-size:16.5px;font-weight:900;}
+.type-tile span{font-size:13px;color:#a3978a;line-height:1.35;}
+.type-tile.on{background:#5b8fa0;border-color:#5b8fa0;color:#fff;box-shadow:0 8px 20px rgba(60,100,115,.25);}
+.type-tile.on .ti{background:rgba(255,255,255,.22)!important;}
+.type-tile.on span{color:rgba(255,255,255,.88);}
+.desc-sec{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#a99e90;margin:22px 0 12px;}
+.desc-sec span{font-size:22px;}
+.desc-row{display:block;width:100%;background:#fff;border:2px solid transparent;border-radius:16px;padding:17px 18px;margin-bottom:10px;font-family:inherit;font-size:17px;font-weight:800;color:var(--text);text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(80,55,20,.05);}
+.desc-row.on{border-color:var(--accent);background:#fffaf0;}
+.amt-pills{display:flex;justify-content:center;gap:12px;margin-top:6px;}
+.amt-pill{padding:10px 18px;border-radius:99px;border:1.5px solid #e2d9cb;background:#fff;font-family:inherit;font-size:16px;font-weight:700;color:#6f6455;}
+button.amt-pill{cursor:pointer;}
+button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
+.amt-big{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:16vh;font-size:66px;font-weight:900;color:var(--text);cursor:text;}
+.amt-big input{border:none;outline:none;background:none;font-family:inherit;font-size:66px;font-weight:900;color:inherit;text-align:right;padding:0;}
+.amt-big.empty,.amt-big.empty input{color:#cdbf9f;}
+.amt-big input::placeholder{color:#cdbf9f;}
+.wiz-alt{display:block;width:100%;max-width:340px;margin:0 auto;padding:16px;border-radius:99px;border:none;background:#a87547;color:#fff;font-family:inherit;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(120,80,40,.22);}
+.wiz-alt.soft{background:#efe7d6;color:#8b6b35;box-shadow:none;}
+.picker{display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:24px;}
+.wheel{position:relative;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle closest-side,#fff,rgba(255,255,255,0)),conic-gradient(red,yellow,lime,cyan,blue,magenta,red);touch-action:none;cursor:crosshair;box-shadow:0 4px 14px rgba(0,0,0,.12);}
+.wheel-dot{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2),0 2px 6px rgba(0,0,0,.3);pointer-events:none;}
+.light-row{display:flex;align-items:center;gap:12px;width:240px;font-size:20px;}
+.light-row input{flex:1;accent-color:#a87547;}
+.wiz-foot{padding:12px 20px calc(18px + env(safe-area-inset-bottom));}
+.wiz-btn{width:100%;padding:18px;border-radius:99px;border:none;background:#8b6b35;color:#fff;font-family:inherit;font-size:19px;font-weight:800;cursor:pointer;}
+.wiz-btn:disabled{background:#ece3d1;color:#b9a888;cursor:default;}
+.wiz-btn.soft{background:#ece3d1;color:#6f6455;}
+.wiz-btn.go{background:#2f5e3c;}
 </style>
 </head>
 <body>
@@ -988,6 +1056,17 @@ body.on-home header{display:none;}
 </div>
 <div class="sheet-backdrop" id="sheet" onclick="if(event.target===this)closeSheet()">
   <div class="sheet"><div class="sheet-grab"></div><div id="sheetBody"></div></div>
+</div>
+<div class="wiz-backdrop" id="wiz">
+  <div class="wiz">
+    <div class="wiz-top">
+      <button class="wiz-icon" onclick="wizBack()" title="Retour"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="wiz-prog"><div id="wizProg"></div></div>
+      <button class="wiz-icon" onclick="closeWiz()" title="Fermer"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="wiz-body" id="wizBody"></div>
+    <div class="wiz-foot"><button class="wiz-btn" id="wizBtn" onclick="wizNext()"></button></div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -2803,15 +2882,15 @@ function renderHome(){
   for(var i=0;i<accs.length;i++){
     var a=accs[i], bal=accountBalance(a); total+=bal;
     var card=document.createElement('button');
-    card.className='acc-card acc-'+(ACC_COLORS.indexOf(a.color)>=0?a.color:'noir');
-    card.innerHTML='<span class="acc-name">'+esc(a.name)+'</span><span class="acc-bal">'+moneyHtml(bal)+' €</span>';
+    applyCardLook(card,a);
+    card.innerHTML=accCardInner(a,bal,false);
     (function(id){ card.onclick=function(){ openAccountSheet(id); }; })(a.id);
     grid.appendChild(card);
   }
   var add=document.createElement('button');
   add.className='acc-add'+(accs.length%2===0?' solo':'');
   add.innerHTML='<span class="plus"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Ajouter un compte';
-  add.onclick=function(){ openAccountSheet(null); };
+  add.onclick=function(){ openAccountWizard(); };
   grid.appendChild(add);
   var pv=document.getElementById('patriVal');
   pv.innerHTML=moneyHtml(Math.round(total*100)/100,true);
@@ -2897,7 +2976,7 @@ function fillBankSelects(){
   for(var i=0;i<specs.length;i++){
     var sel=document.getElementById(specs[i][0]); if(!sel) continue;
     var prev=sel.value, html=specs[i][1]?'<option value="">'+specs[i][1]+'</option>':'';
-    for(var j=0;j<accs.length;j++) html+='<option value="'+esc(accs[j].id)+'">'+esc(accs[j].name)+'</option>';
+    for(var j=0;j<accs.length;j++) html+='<option value="'+esc(accs[j].id)+'">'+esc(accLabel(accs[j]))+'</option>';
     sel.innerHTML=html;
     if(prev) sel.value=prev;
   }
@@ -2912,7 +2991,7 @@ function closeSheet(){ document.getElementById('sheet').classList.remove('open')
 function sheetHead(title){ return '<div class="sheet-head"><h3>'+title+'</h3><button class="sheet-close" onclick="closeSheet()">✕</button></div>'; }
 function accountOptions(selected, withNone){
   var accs=getAccounts(), html=withNone?'<option value="">Aucun compte</option>':'';
-  for(var i=0;i<accs.length;i++) html+='<option value="'+esc(accs[i].id)+'"'+(String(accs[i].id)===String(selected)?' selected':'')+'>'+esc(accs[i].name)+'</option>';
+  for(var i=0;i<accs.length;i++) html+='<option value="'+esc(accs[i].id)+'"'+(String(accs[i].id)===String(selected)?' selected':'')+'>'+esc(accLabel(accs[i]))+'</option>';
   return html;
 }
 
@@ -2973,7 +3052,7 @@ function openTransferSheet(){
   var accs=getAccounts();
   if(accs.length<2){
     openSheet(sheetHead('Transfert')+'<p class="sheet-note">Un transfert déplace de l’argent d’un de tes comptes vers un autre. Il faut d’abord créer au moins deux comptes.</p>'+
-      '<button class="sheet-btn" onclick="openAccountSheet(null)">Ajouter un compte</button>');
+      '<button class="sheet-btn" onclick="openAccountWizard()">Ajouter un compte</button>');
     return;
   }
   openSheet(sheetHead('Transfert')+
@@ -3003,21 +3082,279 @@ function saveSheetTransfer(){
   });
 }
 
-// ---------- Compte : creation / modification ----------
-var sheetColor='noir';
+// ---------- Banques, types de compte, cartes ----------
+// card : couleurs du degrade de la carte par defaut ; fg : couleur du nom de la banque
+var BANKS=[
+  {key:'especes',name:'Espèces',emoji:'💸',card:['#4f9d69','#2e6b45']},
+  {key:'ca',name:'Crédit Agricole',fg:'#00775f',card:['#1d9a83','#0a5a4b']},
+  {key:'bourso',name:'BoursoBank',fg:'#d4007a',card:['#2a2d6e','#c8007a']},
+  {key:'revolut',name:'Revolut',fg:'#111111',card:['#0d1424','#2b3650']},
+  {key:'sg',name:'Société Générale',fg:'#e9041e',card:['#2a2a2a','#c8031a']},
+  {key:'cm',name:'Crédit Mutuel',fg:'#0a4d93',card:['#0a4d93','#062e5a']},
+  {key:'cmb',name:'Crédit Mutuel de Bretagne',fg:'#e2001a',card:['#e2232f','#9b0f17']},
+  {key:'cepac',name:'CEPAC',fg:'#d0001b',card:['#d21f2b','#8e0d16']},
+  {key:'ce',name:'Caisse d’Épargne',fg:'#d0001b',card:['#e1272f','#9c0f19']},
+  {key:'bnp',name:'BNP Paribas',fg:'#00915a',card:['#14a46b','#00653f']},
+  {key:'lbp',name:'La Banque Postale',fg:'#123f8c',card:['#1f4fa3','#0f2f6b']},
+  {key:'lcl',name:'LCL',fg:'#1a2c5b',card:['#33508f','#1a2c5b']},
+  {key:'cic',name:'CIC',fg:'#00305f',card:['#1b4f8a','#00305f']},
+  {key:'bp',name:'Banque Populaire',fg:'#0b3c8c',card:['#1e56b3','#0b3170']},
+  {key:'hello',name:'Hello bank!',fg:'#00a19a',card:['#1c1c1c','#00877f']},
+  {key:'fortuneo',name:'Fortuneo',fg:'#4d9b2c',card:['#2d2d2d','#4d9b2c']},
+  {key:'monabanq',name:'Monabanq',fg:'#7a2a8f',card:['#8e3aa6','#561c68']},
+  {key:'hsbc',name:'HSBC',fg:'#db0011',card:['#e01a2b','#8a0010']},
+  {key:'n26',name:'N26',fg:'#111111',card:['#4fb7a3','#2a7f70']},
+  {key:'sumeria',name:'Sumeria (Lydia)',fg:'#0d2c54',card:['#1d4a7d','#0b1f3a']},
+  {key:'nickel',name:'Nickel',fg:'#111111',card:['#1b1b1b','#e85d10']},
+  {key:'qonto',name:'Qonto',fg:'#1d1d1b',card:['#2b2b2b','#5b5b66']},
+  {key:'shine',name:'Shine',fg:'#e85a4f',card:['#ff8a70','#e0504a']},
+  {key:'amex',name:'American Express',fg:'#016fd0',card:['#2d8de0','#015ba8']},
+  {key:'trade',name:'Trade Republic',fg:'#111111',card:['#1a1a1a','#3d3d3d']},
+  {key:'swile',name:'Swile',fg:'#5b3cf5',card:['#7b5cff','#4b2bd6']},
+  {key:'edenred',name:'Edenred',fg:'#e2231a',card:['#e2231a','#a5150f']},
+  {key:'paypal',name:'PayPal',fg:'#003087',card:['#0070e0','#003087']},
+  {key:'binance',name:'Binance',fg:'#b88700',card:['#2b2f36','#c99400']},
+  {key:'coinbase',name:'Coinbase',fg:'#0052ff',card:['#2f6bff','#0040c9']}
+];
+var ACC_TYPES=[
+  {key:'quotidien',label:'Argent du quotidien',sub:'Compte courant, espèces, ticket restaurant…',icon:'🏦',bg:'#eaf1f3',
+    descs:['Compte Courant','Compte Joint','Espèces','Ticket Restaurant']},
+  {key:'credit',label:'Cartes de crédit',sub:'American Express, Visa Premier…',icon:'💳',bg:'#fbeeee',
+    descs:['Carte de crédit','American Express','Visa Premier','Mastercard Gold']},
+  {key:'epargne',label:'Épargne',sub:'Livret A, Livret Jeune, coffre-fort…',icon:'🐷',bg:'#edf6ef',
+    descs:['Livret A','LDDS','Livret Jeune','LEP','PEL','CEL','Compte à terme','Coffre-fort']},
+  {key:'invest',label:'Investissements',sub:'PEA, CTO, PER, Bricks, Crypto…',icon:'📈',bg:'#eef0f6',
+    descs:['PEA','CTO','PER','Assurance vie','Crypto','Bricks']}
+];
+function findBank(key){ for(var i=0;i<BANKS.length;i++){ if(BANKS[i].key===key) return BANKS[i]; } return null; }
+function accLabel(a){ return a.name+(a.description?' · '+a.description:''); }
+function normTxt(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+
+// Couleurs : melange avec du blanc (amt>0) ou du noir (amt<0)
+function shadeHex(hex,amt){
+  var n=parseInt(hex.slice(1),16), r=n>>16, g=(n>>8)&255, b=n&255, t=amt<0?0:255, p=Math.abs(amt);
+  r=Math.round(r+(t-r)*p); g=Math.round(g+(t-g)*p); b=Math.round(b+(t-b)*p);
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+function hexLum(hex){ var n=parseInt(hex.slice(1),16); return (0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255; }
+function hslHex(h,s,l){
+  s/=100; l/=100;
+  var a=s*Math.min(l,1-l);
+  function f(n){ var k=(n+h/30)%12; return l-a*Math.max(-1,Math.min(k-3,Math.min(9-k,1))); }
+  return '#'+[f(0),f(8),f(4)].map(function(x){ return ('0'+Math.round(x*255).toString(16)).slice(-2); }).join('');
+}
+// Style de la carte : couleur perso (#hex), couleur predefinie, ou couleur par defaut de la banque
+function cardLook(acc){
+  var c=acc.color||'';
+  if(c.charAt(0)==='#') return {bg:'linear-gradient(135deg,'+shadeHex(c,.22)+','+c+' 55%,'+shadeHex(c,-.35)+')',light:hexLum(c)>.68};
+  if(ACC_COLORS.indexOf(c)>=0) return {cls:'acc-'+c};
+  var b=findBank(acc.bank);
+  if(b) return {bg:'linear-gradient(135deg,'+b.card[0]+','+b.card[1]+')'};
+  return {cls:'acc-noir'};
+}
+function applyCardLook(el,acc){
+  var look=cardLook(acc);
+  el.className='acc-card'+(look.cls?' '+look.cls:'')+(look.light?' light':'');
+  el.style.background=look.bg||'';
+}
+function accCardInner(acc,bal,big){
+  var b=findBank(acc.bank), head;
+  if(b&&b.emoji) head='<span class="acc-name">'+b.emoji+' '+esc(acc.name)+'</span>';
+  else if(acc.bank) head='<span class="acc-pill" style="color:'+(b&&b.fg?b.fg:'#2a2118')+'">'+esc(acc.name)+'</span>';
+  else head='<span class="acc-name">'+esc(acc.name)+'</span>';
+  if(acc.description) head+='<span class="acc-desc">'+esc(acc.description)+'</span>';
+  return '<span class="acc-head">'+head+'</span><span class="acc-foot">'+(big?'<span class="acc-solde-lbl">SOLDE</span>':'')+
+    '<span class="acc-bal">'+moneyHtml(bal)+' €</span></span>';
+}
+function bankLogoHtml(b){
+  if(b.emoji) return '<span class="bank-logo emoji">'+b.emoji+'</span>';
+  return '<span class="bank-logo" style="color:'+b.fg+'">'+esc(b.name)+'</span>';
+}
+
+// ---------- Creation d un compte : parcours en 5 etapes ----------
+var W=null;
+function openAccountWizard(){
+  closeSheet();
+  W={step:1,q:'',bank:'',bankName:'',type:'',desc:'',amount:'',neg:false,color:'',custom:false,h:20,s:85,l:45,
+    fallback:ACC_COLORS[getAccounts().length%ACC_COLORS.length]};
+  document.getElementById('wiz').classList.add('open');
+  renderWiz();
+}
+function closeWiz(){ document.getElementById('wiz').classList.remove('open'); W=null; }
+function wizBack(){
+  if(W.step===5&&W.custom){ W.custom=false; W.color=''; renderWiz(); return; }
+  if(W.step<=1){ closeWiz(); return; }
+  W.step--; renderWiz();
+}
+function wizNext(){ if(W.step<5){ W.step++; renderWiz(); } else createWizAccount(); }
+function wizBtn(label,enabled,cls){
+  var b=document.getElementById('wizBtn');
+  b.textContent=label; b.disabled=!enabled; b.className='wiz-btn'+(cls?' '+cls:'');
+}
+function renderWiz(){
+  document.getElementById('wizProg').style.width=(W.step*20)+'%';
+  var body=document.getElementById('wizBody');
+  body.scrollTop=0;
+  if(W.step===1){
+    body.innerHTML='<div class="wiz-title">Nom du compte</div>'+
+      '<p class="wiz-sub">Aucune connexion bancaire. Tu choisis juste une banque et une carte, les montants c’est toi qui les saisis.</p>'+
+      '<label class="wiz-search"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg><input type="text" id="wizQ" placeholder="Cherche ou crée ta carte…" autocomplete="off"></label>'+
+      '<div id="wizBanks"></div>';
+    var q=document.getElementById('wizQ'); q.value=W.q;
+    q.oninput=function(){ W.q=q.value; renderWizBanks(); };
+    renderWizBanks();
+  } else if(W.step===2){
+    var html='<div class="wiz-title">Quel type de compte ?</div><div class="type-grid">';
+    for(var i=0;i<ACC_TYPES.length;i++){
+      var t=ACC_TYPES[i];
+      html+='<button class="type-tile'+(W.type===t.key?' on':'')+'" onclick="wizPickType(\''+t.key+'\')"><span class="ti" style="background:'+t.bg+'">'+t.icon+'</span><b>'+t.label+'</b><span>'+t.sub+'</span></button>';
+    }
+    body.innerHTML=html+'</div>';
+    wizBtn('Continuer',!!W.type);
+  } else if(W.step===3){
+    var types=ACC_TYPES.slice().sort(function(a,b){ return (b.key===W.type)-(a.key===W.type); });
+    var h3='<div class="wiz-title">Description <small>- optionnel</small></div>'+
+      '<label class="wiz-search"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg><input type="text" id="wizDesc" maxlength="30" placeholder="Ex : Compte courant, Livret A, espèces…" autocomplete="off"></label>';
+    for(var k=0;k<types.length;k++){
+      h3+='<div class="desc-sec"><span>'+types[k].icon+'</span>'+types[k].label+'</div>';
+      for(var d=0;d<types[k].descs.length;d++) h3+='<button class="desc-row" data-d="'+esc(types[k].descs[d])+'" onclick="wizPickDesc(this)">'+esc(types[k].descs[d])+'</button>';
+    }
+    body.innerHTML=h3;
+    var di=document.getElementById('wizDesc'); di.value=W.desc;
+    di.oninput=function(){ W.desc=di.value.trim(); updateWizDesc(); };
+    updateWizDesc();
+  } else if(W.step===4){
+    body.innerHTML='<div class="wiz-title">Combien y a-t-il sur le compte ?</div>'+
+      '<div class="amt-pills"><span class="amt-pill">€ EUR</span><button class="amt-pill'+(W.neg?' on':'')+'" onclick="wizToggleNeg(this)">− Solde négatif</button></div>'+
+      '<label class="amt-big" id="wizAmtBox"><span class="neg" id="wizNegSign">−</span><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>€</span></label>';
+    var ai=document.getElementById('wizAmt'); ai.value=W.amount;
+    ai.oninput=function(){
+      var v=ai.value.replace(/[^0-9.,]/g,'').replace('.',',');
+      var parts=v.split(','); if(parts.length>2) v=parts[0]+','+parts.slice(1).join('');
+      parts=v.split(','); if(parts[1]&&parts[1].length>2) v=parts[0]+','+parts[1].slice(0,2);
+      ai.value=v; W.amount=v; updateWizAmt();
+    };
+    updateWizAmt();
+    setTimeout(function(){ ai.focus(); },150);
+  } else {
+    var h5='<div class="wiz-title">Couleur de la carte</div><div class="card-preview"><div id="wizCard"></div></div>';
+    if(!W.custom) h5+='<button class="wiz-alt" onclick="wizCustomize()">Personnaliser ma carte</button>';
+    else h5+='<button class="wiz-alt soft" onclick="wizBack()">Garder la couleur par défaut de la banque</button>'+
+      '<div class="picker"><div class="wheel" id="wizWheel"><span class="wheel-dot" id="wizDot"></span></div>'+
+      '<div class="light-row"><span>☀️</span><input type="range" id="wizLight" min="18" max="75" value="'+W.l+'"></div></div>';
+    body.innerHTML=h5;
+    updateWizCard();
+    if(W.custom) initWheel();
+    wizBtn('Créer le compte',true,'go');
+  }
+}
+function renderWizBanks(){
+  var q=normTxt(W.q.trim()), list='', exact=false;
+  if(q){
+    for(var i=0;i<BANKS.length;i++){ if(normTxt(BANKS[i].name)===q) exact=true; }
+    if(!exact) list+='<button class="bank-row'+(W.bank==='custom'?' on':'')+'" onclick="wizPickBank(\'custom\')"><span class="bank-logo emoji">＋</span><span class="bank-name">Créer « '+esc(W.q.trim())+' »</span></button>';
+  }
+  for(var j=0;j<BANKS.length;j++){
+    var b=BANKS[j];
+    if(q&&normTxt(b.name).indexOf(q)<0) continue;
+    list+='<button class="bank-row'+(W.bank===b.key?' on':'')+'" onclick="wizPickBank(\''+b.key+'\')">'+bankLogoHtml(b)+'<span class="bank-name">'+esc(b.name)+'</span></button>';
+  }
+  document.getElementById('wizBanks').innerHTML=list;
+  wizBtn(W.bank?'Continuer':'Sélectionne une banque',!!W.bank);
+}
+function wizPickBank(key){
+  if(key==='custom'){ W.bank='custom'; W.bankName=W.q.trim(); }
+  else {
+    W.bank=key; W.bankName=findBank(key).name;
+    if(key==='especes'){ W.type='quotidien'; W.desc='Espèces'; }
+  }
+  renderWizBanks();
+}
+function wizPickType(key){
+  W.type=key; W.neg=(key==='credit');
+  renderWiz();
+}
+function wizPickDesc(btn){
+  var d=btn.getAttribute('data-d');
+  W.desc=(W.desc===d)?'':d;
+  document.getElementById('wizDesc').value=W.desc;
+  updateWizDesc();
+}
+function updateWizDesc(){
+  var rows=document.querySelectorAll('.desc-row');
+  for(var i=0;i<rows.length;i++) rows[i].classList.toggle('on',rows[i].getAttribute('data-d')===W.desc);
+  if(W.desc) wizBtn('Continuer',true); else wizBtn('Passer',true,'soft');
+}
+function wizToggleNeg(btn){ W.neg=!W.neg; btn.classList.toggle('on',W.neg); updateWizAmt(); }
+function updateWizAmt(){
+  var ai=document.getElementById('wizAmt');
+  ai.style.width=Math.max(1,(ai.value||'0').length)+'ch';
+  document.getElementById('wizAmtBox').classList.toggle('empty',!W.amount);
+  document.getElementById('wizNegSign').style.display=W.neg?'':'none';
+  wizBtn('Continuer',W.amount!=='');
+}
+function wizTempAccount(){
+  var hasBankLook=W.bank&&W.bank!=='custom';
+  return {name:W.bankName,bank:W.bank,description:W.desc,color:W.color||(hasBankLook?'':W.fallback)};
+}
+function wizAmount(){ var v=parseFloat(String(W.amount).replace(',','.'))||0; return W.neg?-Math.abs(v):v; }
+function updateWizCard(){
+  var el=document.getElementById('wizCard'); if(!el) return;
+  var acc=wizTempAccount();
+  applyCardLook(el,acc);
+  el.innerHTML=accCardInner(acc,wizAmount(),true);
+}
+function wizCustomize(){ W.custom=true; W.color=hslHex(W.h,W.s,W.l); renderWiz(); }
+function initWheel(){
+  var wheel=document.getElementById('wizWheel'), dot=document.getElementById('wizDot'), light=document.getElementById('wizLight');
+  function place(){
+    var r=wheel.offsetWidth/2, ang=W.h*Math.PI/180, dist=r*W.s/100;
+    dot.style.left=(r+Math.sin(ang)*dist)+'px'; dot.style.top=(r-Math.cos(ang)*dist)+'px';
+    dot.style.background=W.color;
+  }
+  function pick(e){
+    var rect=wheel.getBoundingClientRect(), r=rect.width/2;
+    var dx=e.clientX-rect.left-r, dy=e.clientY-rect.top-r;
+    W.h=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;
+    W.s=Math.min(100,Math.sqrt(dx*dx+dy*dy)/r*100);
+    W.color=hslHex(W.h,W.s,W.l); place(); updateWizCard();
+  }
+  var dragging=false;
+  wheel.addEventListener('pointerdown',function(e){ dragging=true; wheel.setPointerCapture(e.pointerId); pick(e); });
+  wheel.addEventListener('pointermove',function(e){ if(dragging) pick(e); });
+  wheel.addEventListener('pointerup',function(){ dragging=false; });
+  light.oninput=function(){ W.l=parseInt(light.value,10); W.color=hslHex(W.h,W.s,W.l); place(); updateWizCard(); };
+  place();
+}
+function createWizAccount(){
+  var tmp=wizTempAccount();
+  var acc={id:Date.now(),name:W.bankName,bank:W.bank==='custom'?'custom':W.bank,type:W.type,description:W.desc,color:tmp.color,
+    solde:wizAmount(),soldeDate:todayStr(),soldeSetAt:Date.now(),sortOrder:getAccounts().length};
+  apiPost('/api/accounts',acc,function(err){
+    if(err){ showToast('Erreur : '+err.message); return; }
+    var list=getAccounts().slice(); list.push(acc); _cache.accounts=list;
+    closeWiz(); fillBankSelects(); renderHome(); showToast('Compte créé');
+  });
+}
+
+// ---------- Compte : modification ----------
+var sheetColor='';
 function openAccountSheet(id){
-  var a=id!=null?findAccount(id):null;
-  sheetColor=a&&a.color?a.color:ACC_COLORS[getAccounts().length%ACC_COLORS.length];
-  var sw='';
+  if(id==null){ openAccountWizard(); return; }
+  var a=findAccount(id); if(!a) return;
+  sheetColor=a.color||'';
+  var b=findBank(a.bank), sw='';
+  if(b) sw+='<button type="button" class="swatch'+(sheetColor===''?' on':'')+'" data-c="" style="background:linear-gradient(135deg,'+b.card[0]+','+b.card[1]+')" onclick="pickColor(this)" title="Couleur de la banque"></button>';
   for(var i=0;i<ACC_COLORS.length;i++) sw+='<button type="button" class="swatch acc-'+ACC_COLORS[i]+(ACC_COLORS[i]===sheetColor?' on':'')+'" data-c="'+ACC_COLORS[i]+'" onclick="pickColor(this)" title="'+ACC_COLORS[i]+'"></button>';
-  openSheet(sheetHead(a?'Modifier le compte':'Nouveau compte')+
-    '<div class="sf"><label>Nom du compte</label><input type="text" id="shAccName" maxlength="30" placeholder="Ex : Revolut, Livret A…" value="'+esc(a?a.name:'')+'"></div>'+
-    '<div class="sf"><label>Solde actuel (€)</label><input type="number" id="shAccSolde" inputmode="decimal" step="0.01" placeholder="0,00" value="'+(a?accountBalance(a):'')+'"></div>'+
-    '<p class="sheet-note">Mets le solde affiché par ta banque aujourd’hui. Ensuite, chaque dépense, revenu ou transfert ajouté sur ce compte le mettra à jour.</p>'+
+  if(sheetColor.charAt(0)==='#') sw+='<button type="button" class="swatch on" data-c="'+esc(sheetColor)+'" style="background:'+esc(sheetColor)+'" onclick="pickColor(this)" title="Couleur personnalisée"></button>';
+  openSheet(sheetHead('Modifier le compte')+
+    '<div class="sf"><label>Nom du compte</label><input type="text" id="shAccName" maxlength="30" value="'+esc(a.name)+'"></div>'+
+    '<div class="sf"><label>Description</label><input type="text" id="shAccDesc" maxlength="30" placeholder="Ex : Compte courant, Livret A…" value="'+esc(a.description||'')+'"></div>'+
+    '<div class="sf"><label>Solde actuel (€)</label><input type="number" id="shAccSolde" inputmode="decimal" step="0.01" placeholder="0,00" value="'+accountBalance(a)+'"></div>'+
+    '<p class="sheet-note">Si le solde ne correspond plus à celui de ta banque, corrige-le ici : le site repart de ce montant.</p>'+
     '<div class="sf"><label>Couleur</label><div class="swatches">'+sw+'</div></div>'+
-    '<button class="sheet-btn" onclick="saveAccount('+(a?("'"+Number(a.id)+"'"):'null')+')">'+(a?'Enregistrer':'Créer le compte')+'</button>'+
-    (a?'<button class="sheet-btn ghost" onclick="deleteAccount('+("'"+Number(a.id)+"'")+')">Supprimer ce compte</button>':''));
-  if(!a) setTimeout(function(){ document.getElementById('shAccName').focus(); },150);
+    '<button class="sheet-btn" onclick="saveAccount(\''+Number(a.id)+'\')">Enregistrer</button>'+
+    '<button class="sheet-btn ghost" onclick="deleteAccount(\''+Number(a.id)+'\')">Supprimer ce compte</button>');
 }
 function pickColor(btn){
   sheetColor=btn.getAttribute('data-c');
@@ -3025,22 +3362,20 @@ function pickColor(btn){
   for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on',bs[i]===btn);
 }
 function saveAccount(id){
+  var old=findAccount(id); if(!old) return;
   var name=document.getElementById('shAccName').value.trim();
-  var soldeRaw=document.getElementById('shAccSolde').value;
-  var solde=parseFloat(soldeRaw)||0;
+  var solde=parseFloat(document.getElementById('shAccSolde').value)||0;
   if(!name){ showToast('Donne un nom au compte'); return; }
-  var old=id?findAccount(id):null;
-  var acc={id:old?old.id:Date.now(),name:name,color:sheetColor,solde:old?old.solde:solde,soldeDate:old?old.soldeDate:todayStr(),soldeSetAt:old?old.soldeSetAt:Date.now(),
-    sortOrder:old?getAccounts().indexOf(old):getAccounts().length};
+  var acc={id:old.id,name:name,bank:old.bank||'',type:old.type||'',description:document.getElementById('shAccDesc').value.trim(),
+    color:sheetColor,solde:old.solde,soldeDate:old.soldeDate,soldeSetAt:old.soldeSetAt,sortOrder:getAccounts().indexOf(old)};
   // Solde corrige a la main : on repart de ce nouveau solde a partir de maintenant
-  if(old&&Math.abs(accountBalance(old)-solde)>=0.005){ acc.solde=solde; acc.soldeDate=todayStr(); acc.soldeSetAt=Date.now(); }
+  if(Math.abs(accountBalance(old)-solde)>=0.005){ acc.solde=solde; acc.soldeDate=todayStr(); acc.soldeSetAt=Date.now(); }
   apiPost('/api/accounts',acc,function(err){
     if(err){ showToast('Erreur : '+err.message); return; }
-    var list=getAccounts().slice(), replaced=false;
-    for(var i=0;i<list.length;i++){ if(String(list[i].id)===String(acc.id)){ list[i]=acc; replaced=true; } }
-    if(!replaced) list.push(acc);
+    var list=getAccounts().slice();
+    for(var i=0;i<list.length;i++){ if(String(list[i].id)===String(acc.id)) list[i]=acc; }
     _cache.accounts=list;
-    closeSheet(); fillBankSelects(); renderHome(); showToast(old?'Compte mis à jour':'Compte créé');
+    closeSheet(); fillBankSelects(); renderHome(); showToast('Compte mis à jour');
   });
 }
 function deleteAccount(id){
