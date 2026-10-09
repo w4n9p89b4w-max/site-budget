@@ -1,0 +1,3 @@
+# Fins de ligne : Mac/Linux pour les scripts Mac, Windows pour les .bat
+*.command text eol=lf
+*.bat text eol=crlf

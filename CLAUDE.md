@@ -1,8 +1,8 @@
 # Budget Mensuel — notes du projet
 
 Site perso d'Etienne et Noa : https://budgetmensuel.fayetcardoso.fr
-Le projet est sur GitHub (dépôt privé https://github.com/w4n9p89b4w-max/site-budget) et utilisé depuis plusieurs ordinateurs.
-L'utilisateur ne veut PAS de OneDrive : chaque PC a une copie locale (ex. C:\Projets\site-budget).
+Le projet est sur GitHub (dépôt privé https://github.com/w4n9p89b4w-max/site-budget) et utilisé depuis plusieurs ordinateurs : un PC Windows et un MacBook Air.
+L'utilisateur ne veut PAS de OneDrive : chaque ordinateur a une copie locale (Windows : C:\Projets\site-budget, Mac : ~/Projets/site-budget).
 Répondre en français, simplement (l'utilisateur n'est pas développeur).
 
 ## Fichiers
@@ -12,6 +12,8 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 - `budget.db` : base de test locale (pas les vraies données), propre à chaque ordinateur, non envoyée sur GitHub.
 - `lancer.bat` : récupère la dernière version (git pull), installe les modules au besoin, lance le site → http://localhost:3003.
 - `envoyer.bat` : enregistre et envoie les modifications sur GitHub.
+- `lancer.command` / `envoyer.command` : les mêmes pour le Mac (garder fins de ligne LF et le droit d'exécution, voir `.gitattributes`).
+- Installer les modules avec `npm install --ignore-scripts` (better-sqlite3 contient déjà les versions compilées Windows et Mac).
 - `IMG_*.PNG` : captures/maquettes envoyées par l'utilisateur comme modèles de design.
 
 ## Points importants
