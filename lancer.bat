@@ -15,6 +15,20 @@ if errorlevel 1 (
   exit /b
 )
 
+rem Recupere la derniere version depuis GitHub (si rien n'est en cours de modification ici)
+where git >nul 2>nul
+if not errorlevel 1 (
+  echo Recuperation de la derniere version depuis GitHub...
+  git pull --ff-only
+  if errorlevel 1 (
+    echo.
+    echo  ATTENTION : impossible de recuperer la derniere version automatiquement.
+    echo  Tu as peut-etre des modifications pas encore envoyees : lance envoyer.bat ou demande a Claude.
+    echo.
+    pause
+  )
+)
+
 rem Premier lancement sur cet ordinateur (ou autre version de Node) : on (re)installe les modules
 node -e "require('better-sqlite3')" >nul 2>nul
 if errorlevel 1 (
