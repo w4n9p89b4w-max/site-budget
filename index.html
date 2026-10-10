@@ -1573,7 +1573,7 @@ var DEMO = /github\.io$/i.test(location.hostname) || /[?&]demo=1/.test(location.
 function demoLoad(){
   var d=null; try{ d=JSON.parse(localStorage.getItem('budget_demo')||'null'); }catch(e){}
   d=d||{}; ['transactions','categories','recurring','accounts'].forEach(function(k){ if(!Array.isArray(d[k])) d[k]=[]; });
-  ['budget','applied','epargne'].forEach(function(k){ if(!d[k]||typeof d[k]!=='object') d[k]={}; });
+  ['budget','applied','epargne','settings'].forEach(function(k){ if(!d[k]||typeof d[k]!=='object') d[k]={}; });
   return d;
 }
 function demoSave(d){ try{ localStorage.setItem('budget_demo',JSON.stringify(d)); }catch(e){} }
@@ -1582,7 +1582,8 @@ function demoTxn(t){
     type:t.type||'dep', bank:t.bank||'', need:t.need||'', auto:t.auto?1:0, transfer_pair:t.transfer_pair||null,
     created_by:currentUser, affect_year:t.affect_year||null,
     affect_month_num:t.affect_month_num!==undefined?t.affect_month_num:null,
-    remb:t.remb?1:0, later_pay:t.later_pay?1:0, no_balance:t.no_balance?1:0, trip:t.trip||null };
+    remb:t.remb?1:0, later_pay:t.later_pay?1:0, no_balance:t.no_balance?1:0, trip:t.trip||null,
+    rec_key:t.rec_key||null, note:t.note||null };
 }
 function demoApi(method,path,data){
   var d=demoLoad(), m, id;
@@ -1595,6 +1596,7 @@ function demoApi(method,path,data){
     if(path==='/api/recurring') return d.recurring;
     if(path==='/api/applied-months') return d.applied;
     if(path==='/api/epargne') return d.epargne;
+    if(path==='/api/settings') return d.settings;
     if(path==='/api/accounts') return d.accounts.slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0)||a.id-b.id; });
     return null;
   }
@@ -1610,11 +1612,18 @@ function demoApi(method,path,data){
       demoSave(d); return {ok:true};
     }
     if(path==='/api/recurring'){
+      if(data.id){ // mise a jour d une operation reguliere existante
+        var ex=d.recurring.find(function(x){ return String(x.id)===String(data.id); });
+        if(ex){ ex.label=data.label; ex.cat=data.cat||''; ex.bank=data.bank||''; ex.amount=parseFloat(data.amount)||0; ex.day=parseInt(data.day)||1; ex.to_bank=data.to_bank||null; ex.kind=data.kind||null; }
+        demoSave(d); return {ok:true,id:data.id};
+      }
       id=d.recurring.reduce(function(mx,x){return Math.max(mx,x.id);},0)+1;
       d.recurring.push({id:id,label:data.label,cat:data.cat||'',bank:data.bank||'',amount:parseFloat(data.amount)||0,day:parseInt(data.day)||1,
-        next_month:parseInt(data.next_month)||0,to_bank:data.to_bank||null,start_key:data.start_key||null});
+        next_month:parseInt(data.next_month)||0,to_bank:data.to_bank||null,start_key:data.start_key||null,
+        kind:data.kind||null,freq:data.freq||null,every:parseInt(data.every)||null,anchor:data.anchor||null,end_date:data.end_date||null});
       demoSave(d); return {ok:true,id:id};
     }
+    if((m=path.match(/^\/api\/settings\/(.+)$/))){ d.settings[decodeURIComponent(m[1])]=data.value; demoSave(d); return {ok:true}; }
     if((m=path.match(/^\/api\/applied-months\/(.+)$/))){ d.applied[decodeURIComponent(m[1])]=true; demoSave(d); return {ok:true}; }
     if((m=path.match(/^\/api\/epargne\/(.+)$/))){ d.epargne[decodeURIComponent(m[1])]={verse:parseFloat(data.verse)||0,objectif:parseFloat(data.objectif)||0}; demoSave(d); return {ok:true}; }
     if(path==='/api/accounts'){
