@@ -19,6 +19,7 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 ## Points importants
 - Les données sont communes à Etienne et Noa (le serveur ne filtre pas par utilisateur).
 - En ligne, le serveur sert la page depuis un dossier `public/`. Mise en ligne = copier `index.html` dans `public/` ET remplacer `server.js` (sinon les comptes ne s'enregistrent pas).
+- Mode démo : sur github.io (GitHub Pages) ou avec `?demo=1`, la page n'appelle pas le serveur et garde les données dans le navigateur (clé `budget_demo`). Sans effet sur le vrai site.
 - Ne jamais lire `J:\budget mensuel\cles api.txt` (clés API).
 
 ## Refonte en cours (depuis le 08/10/2026)
