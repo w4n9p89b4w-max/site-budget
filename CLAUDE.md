@@ -32,3 +32,4 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 - Début de session : `git pull`. Chaque étape validée = un commit, puis `git push` pour que l'autre PC l'ait.
 - Ne jamais supprimer de fichiers de l'utilisateur sans les avoir mis de côté (réécriture d'historique git comprise).
 - Tester en largeur téléphone (375 px) dans le navigateur intégré.
+- Voir la version en cours sur l'iPhone : lancer `lancer.bat`/`lancer.command`, puis ouvrir dans Safari l'adresse « Sur ton iPhone » affichée par le serveur (même Wi-Fi). Windows : autoriser Node.js sur « Réseaux privés » si le pare-feu le demande.
