@@ -462,7 +462,7 @@ body.on-home header{display:none;}
 .patri-pill{width:42px;height:42px;border-radius:50%;background:#ebe3d6;color:#8a7a62;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;}
 .patri-pill .ico{width:20px;height:20px;stroke-width:1.6;}
 
-.acc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.acc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;}
 .acc-card{position:relative;overflow:hidden;aspect-ratio:1.8;border-radius:16px;padding:14px 16px;color:#fff;cursor:pointer;
   display:flex;flex-direction:column;justify-content:space-between;text-align:left;border:none;font-family:inherit;
   box-shadow:0 6px 16px rgba(60,40,20,.18);}
@@ -477,7 +477,7 @@ body.on-home header{display:none;}
 .acc-violet{background:linear-gradient(135deg,#9a7be6,#7353cc 60%,#55389f);}
 .acc-rose{background:linear-gradient(135deg,#f08aa8,#d95f84 60%,#b64266);}
 .acc-or{background:linear-gradient(135deg,#d6b25e,#b48d36 60%,#8f6c22);}
-.acc-add{aspect-ratio:1.8;border-radius:16px;border:1.5px solid #e2d9cb;background:#efe9df;cursor:pointer;font-family:inherit;
+.acc-add{aspect-ratio:1.6;border-radius:16px;border:1.5px solid #e2d9cb;background:#efe9df;cursor:pointer;font-family:inherit;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#6f6455;font-size:15px;font-weight:600;}
 .acc-add.solo{grid-column:1 / -1;width:calc(50% - 6px);justify-self:center;}
 .acc-add .plus{width:44px;height:44px;border-radius:50%;background:#fff;color:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.05);}
@@ -563,6 +563,27 @@ body.on-home header{display:none;}
 .acc-desc{font-size:11.5px;font-weight:600;opacity:.85;margin-top:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .acc-solde-lbl{font-size:13px;letter-spacing:2.5px;font-weight:800;opacity:.75;margin-bottom:2px;}
 .acc-card.light{color:#2a2118;}
+/* Cartes facon carte bancaire (tailles en % de la largeur de la carte) */
+.acc-card{container-type:inline-size;aspect-ratio:1.6!important;}
+.acc-card .cv-deco{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.acc-card .cv-wm{position:absolute;right:5cqw;top:13cqw;width:36cqw;height:36cqw;object-fit:contain;opacity:.2;border-radius:5cqw;transform:rotate(-14deg) skewX(-6deg);filter:saturate(.5);pointer-events:none;}
+.acc-card .cv-head{position:absolute;left:7cqw;top:7cqw;right:30cqw;display:flex;align-items:center;gap:3cqw;min-width:0;}
+.acc-card .cv-logo{flex-shrink:0;width:13cqw;height:13cqw;background:#fff;border-radius:1.6cqw;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.acc-card .cv-logo img{width:84%;height:84%;object-fit:contain;}
+.acc-card .cv-logo.emoji{font-size:8cqw;background:rgba(255,255,255,.92);}
+.acc-card .cv-logo.letter{font-size:7cqw;font-weight:900;color:#2a2118;}
+.acc-card .cv-name{font-size:5.6cqw;font-weight:900;line-height:1.05;text-transform:uppercase;letter-spacing:.1cqw;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;}
+.acc-card .cv-desc{position:absolute;left:7cqw;top:23cqw;max-width:60cqw;font-size:3.6cqw;font-weight:700;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acc-card .cv-chip{position:absolute;left:7cqw;top:30cqw;width:11.5cqw;height:8.6cqw;border-radius:1.6cqw;
+  background:linear-gradient(90deg,transparent 31%,rgba(120,85,20,.45) 31%,rgba(120,85,20,.45) 34%,transparent 34%,transparent 66%,rgba(120,85,20,.45) 66%,rgba(120,85,20,.45) 69%,transparent 69%),
+    linear-gradient(0deg,transparent 46%,rgba(120,85,20,.45) 46%,rgba(120,85,20,.45) 54%,transparent 54%),
+    linear-gradient(135deg,#f6dc8c,#c9a246 45%,#f1d27a 60%,#b8892f);box-shadow:inset 0 0 0 .3cqw rgba(120,85,20,.5);}
+.acc-card .cv-lbl{position:absolute;left:7cqw;bottom:17cqw;font-size:3.6cqw;font-weight:800;letter-spacing:.9cqw;opacity:.75;}
+.acc-card .cv-bal{position:absolute;left:7cqw;bottom:6cqw;font-size:9.5cqw;font-weight:900;letter-spacing:-.2cqw;white-space:nowrap;}
+.acc-card .cv-bal small{font-size:.62em;}
+.acc-card .cv-visa{position:absolute;right:7cqw;bottom:6.5cqw;font-size:8.5cqw;font-weight:900;font-style:italic;letter-spacing:-.3cqw;
+  background:linear-gradient(180deg,#ffffff,#c9ccd2 55%,#9aa0a8);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.acc-card.light .cv-visa{background:linear-gradient(180deg,#5b6170,#2a2f38);-webkit-background-clip:text;background-clip:text;}
 .card-preview{max-width:340px;margin:8px auto 22px;}
 .card-preview .acc-card{width:100%;aspect-ratio:1.6;border-radius:22px;padding:22px 24px;cursor:default;box-shadow:0 12px 28px rgba(60,40,20,.25);}
 .card-preview .acc-pill{font-size:24px;border-radius:10px;padding:4px 12px;}
@@ -625,6 +646,83 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .wiz-btn.soft{background:#ece3d1;color:#6f6455;}
 .wiz-btn.go{background:#2f5e3c;}
 .wiz{position:relative;}
+.am.oc{padding:20px 18px;}
+.oc-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.oc-top b{flex:1;min-width:0;font-size:19px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oc-tic{color:#a8842c;display:flex;}.oc-tic .ico{width:26px;height:26px;}
+.oc-flag{width:42px;height:42px;border-radius:13px;border:3px solid #f1e3e1;background:#fff;color:#8b2020;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.oc-flag .ico{width:21px;height:21px;}
+.oc-lbl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#6f6455;margin:14px 0 7px;}
+.oc-in{width:100%;padding:13px 15px;border:none;border-radius:16px;background:#f6f1e8;font-family:inherit;font-size:17px;font-weight:600;color:var(--text);outline:none;}
+.oc-row{display:flex;gap:10px;}
+.oc-row>div{flex:1;min-width:0;}
+.oc-amt{display:flex;gap:6px;}
+.oc-amt input{font-weight:800;text-align:center;min-width:0;}
+.oc-amt span{flex:0 0 46px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#ece5d6;font-size:20px;font-weight:900;}
+.oc-cat{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;}
+.oc-cat span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.oc-cic{width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.oc-cic .ico{width:16px;height:16px;}
+.oc-cats{margin-top:10px;max-height:260px;overflow-y:auto;background:#f6f1e8;}
+.exp-car.oc-deck{margin:0 -18px;padding:6px 0 22px;}
+.exp-car.oc-deck .acc-card{width:min(50%,170px);border-radius:14px;padding:10px 12px;}
+.oc-deck .acc-pill{font-size:13px;}.oc-deck .acc-name{font-size:14px;}.oc-deck .acc-desc{font-size:11px;}.oc-deck .acc-bal{font-size:17px;}
+.acc-card.oc-acc{flex:0 0 46%;aspect-ratio:1.55;border-radius:16px;padding:11px 13px;opacity:.75;}
+.acc-card.oc-acc.sel{opacity:1;box-shadow:0 0 0 3px #fff,0 0 0 5px #8b6b35;}
+.oc-none{color:#a3978a;font-size:14px;}
+.oc-date{flex:0 0 54%!important;}
+.oc-dt{display:flex;align-items:center;gap:8px;color:#a8842c;}
+.oc-dt{padding:13px 10px;gap:6px;}
+.oc-dt .ico{width:18px;height:18px;flex-shrink:0;}
+.oc-dt input{flex:1;min-width:0;border:none;background:none;font-family:inherit;font-size:15px;font-weight:600;color:var(--text);outline:none;}
+.oc-go{flex:2.4!important;font-size:16px!important;padding:15px 8px!important;}
+.am.oc .am-cancel{font-size:16px;}
+.rl-tic.green{color:#2f7a4f;}
+.rl-add.green{background:#2f5e3c;}
+.fs-box{display:flex;align-items:center;gap:10px;background:#fff;border-radius:20px;padding:12px 14px;box-shadow:0 2px 8px rgba(80,55,20,.05);}
+.fs-lbl{flex:1;font-size:17px;font-weight:700;white-space:nowrap;}
+.fs-box input{width:58px;padding:10px 6px;border:1.5px solid #e2d3b4;border-radius:12px;background:#fbf8f2;font-family:inherit;font-size:18px;font-weight:800;text-align:center;outline:none;}
+.fs-box select{width:118px;padding:10px;border:1.5px solid #e2d3b4;border-radius:12px;background:#fbf8f2;font-family:inherit;font-size:16px;font-weight:700;outline:none;}
+.fs-pick{display:flex;gap:10px;margin-top:14px;background:#fff;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(80,55,20,.05);}
+.fs-months{display:flex;flex-direction:column;gap:5px;flex:0 0 38%;}
+.fs-month{padding:7px 10px;border:none;border-radius:10px;background:#f3efe7;font-family:inherit;font-size:14px;font-weight:800;color:#b3a898;text-align:left;}
+.fs-month.on{background:#e3efe6;color:var(--text);}
+.fs-month.pick{cursor:pointer;}
+.fs-month.pick.on{background:#2f5e3c;color:#fff;}
+.fs-days{flex:1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;align-content:space-around;}
+.fs-day{aspect-ratio:1;border:none;border-radius:10px;background:none;font-family:inherit;font-size:16px;font-weight:700;color:var(--text);cursor:pointer;}
+.fs-day.on{background:#2f5e3c;color:#fff;}
+.fs-week{display:flex;gap:6px;margin-top:14px;}
+.fs-wd{flex:1;padding:12px 0;border:none;border-radius:12px;background:#fff;font-family:inherit;font-size:14px;font-weight:800;color:#6f6455;cursor:pointer;box-shadow:0 2px 6px rgba(80,55,20,.05);}
+.fs-wd.on{background:#2f5e3c;color:#fff;}
+.am.rl{padding:18px 16px;}
+.rl-top{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;margin:4px 0 16px;}
+.rl-top b{font-size:19px;font-weight:900;}
+.rl-tic{color:#d64545;display:flex;}.rl-tic .ico{width:26px;height:26px;}
+.rl-top .sheet-close{position:absolute;right:0;top:-4px;}
+.rl-list{max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.rl-grp{border-radius:22px;padding:6px 8px 8px;}
+.rl-ghd{display:flex;align-items:center;gap:10px;padding:8px 6px 10px;}
+.rl-ghd b{flex:1;font-size:16.5px;font-weight:800;}
+.rl-ghd .red{font-size:16.5px;font-weight:900;}
+.rl-gic{width:32px;height:32px;border-radius:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.rl-gic .ico{width:18px;height:18px;}
+.rl-item{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;margin-top:6px;border:none;border-radius:16px;background:#fff;font-family:inherit;text-align:left;color:var(--text);cursor:pointer;}
+.rl-mid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
+.rl-mid b{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.rl-dot{width:9px;height:9px;border-radius:50%;background:#f2c94c;display:inline-block;}
+.rl-pill{padding:2px 10px;border-radius:9px;border:1.5px solid #c9a46a;background:#f3e9d6;font-size:12.5px;font-weight:800;color:#5c4630;}
+.rl-amt{font-size:16.5px;font-weight:900;white-space:nowrap;align-self:flex-start;margin-top:2px;}
+.rl-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 10px;border-radius:22px;background:#f6f2ea;color:#8a7f72;text-align:center;font-size:15px;line-height:1.45;}
+.rl-empty .ico{width:34px;height:34px;color:#c9a46a;}
+.rl-add{display:block;width:100%;margin-top:18px;padding:16px;border:none;border-radius:99px;background:#8b6b35;color:#fff;font-family:inherit;font-size:17px;font-weight:800;cursor:pointer;}
+.fq-start{display:flex;align-items:center;gap:8px;width:100%;margin:-4px 0 14px;padding:12px 14px;border:1.5px solid #e2d9cb;border-radius:16px;background:#fff;font-family:inherit;font-size:15px;color:#6f6455;cursor:pointer;text-align:left;}
+.fq-start b{color:var(--text);flex:1;}
+.fq-start .ico{width:19px;height:19px;color:#3f6fb5;}
+.fq-start .ico:last-child{color:#b9ad9c;}
+.fq-pop{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:99px;background:#e3f3ea;color:#2f8a55;font-style:normal;font-size:12.5px;font-weight:800;vertical-align:middle;}
+.fq-every{align-self:center;font-size:16px;font-weight:700;color:#6f6455;white-space:nowrap;}
+#fqEvery{max-width:90px;text-align:center;}
 /* ===== Page Budget ===== */
 #page-budget.active{padding-bottom:110px;}
 .bg-head{background:linear-gradient(180deg,#3f7d58,#1f4a34);color:#fff;padding:calc(18px + env(safe-area-inset-top)) 16px 64px;margin-bottom:-48px;}
@@ -1560,7 +1658,7 @@ function setTxns(a) { _cache.txns=a; }
 
 function fmt(v) { if(!v||v===0) return '0,00 EUR'; return v.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' EUR'; }
 function showToast(msg, duration) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');}, duration||1800); }
-function getCatObj(key) { var ec=findExpCat(key); if(ec) return ec; var cats=getCats(); for(var i=0;i<cats.length;i++){if(cats[i].key===key)return cats[i];} return {icon:'?',label:'Autre',key:'autres_dep',group:'dep'}; }
+function getCatObj(key) { var ec=findExpCat(key)||(typeof findIncCat==='function'?findIncCat(key):null); if(ec) return ec; var cats=getCats(); for(var i=0;i<cats.length;i++){if(cats[i].key===key)return cats[i];} return {icon:'?',label:'Autre',key:'autres_dep',group:'dep'}; }
 function catColorClass(key) { var map={loyer:'loyer',courses:'courses',coiffeur:'coiffeur',telephone:'telephone',apple:'apple',sport:'sport',banque:'banque',sante:'sante',restaurant:'restaurant',internet:'internet',maison:'maison',repas:'repas',facture:'facture',bebe:'bebe',autres_dep:'autres_dep',enveloppe:'enveloppe',assurance_vie:'assurance_vie',lep:'lep',epargne_sal:'epargne_sal',compte_bebe:'compte_bebe',salaire_m:'salaire_m',salaire_f:'salaire_f',autre_rev:'autre_rev'}; return 'cat-'+(map[key]||'custom'); }
 function isExpense(type) { return type==='dep'||type==='dep_var'||type==='epargne'; }
 function isTransfert(type) { return type==='transfert'||type==='transfert_in'; }
@@ -3528,7 +3626,7 @@ function cardLook(acc){
   if(c.charAt(0)==='#') return {bg:'linear-gradient(135deg,'+shadeHex(c,.22)+','+c+' 55%,'+shadeHex(c,-.35)+')',light:hexLum(c)>.68};
   if(ACC_COLORS.indexOf(c)>=0) return {cls:'acc-'+c};
   var b=findBank(acc.bank);
-  if(b) return {bg:'linear-gradient(135deg,'+b.card[0]+','+b.card[1]+')'};
+  if(b) return {bg:'linear-gradient(140deg,'+b.card[0]+' 0%,'+b.card[1]+' 58%,'+shadeHex(b.card[1],-.42)+' 100%)'};
   return {cls:'acc-noir'};
 }
 function applyCardLook(el,acc){
@@ -3536,14 +3634,57 @@ function applyCardLook(el,acc){
   el.className='acc-card'+(look.cls?' '+look.cls:'')+(look.light?' light':'');
   el.style.background=look.bg||'';
 }
+// Motif propre a chaque banque : tire au hasard mais toujours le meme pour une banque donnee
+function seedRng(str){
+  var h=2166136261; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+  return function(){ h+=0x6D2B79F5; var t=h; t=Math.imul(t^t>>>15,t|1); t^=t+Math.imul(t^t>>>7,t|61); return ((t^t>>>14)>>>0)/4294967296; };
+}
+// Faisceau de 3 a 5 traits qui partent du bas de la carte et finissent en haut, de meme forme,
+// legerement decales (en eventail) : forme, inclinaison et espacement propres a chaque banque
+function cvDecoSvg(rnd){
+  var W='rgba(255,255,255,', K='rgba(0,0,0,', a=function(lo,hi){ return lo+rnd()*(hi-lo); }, r1=function(v){ return Math.round(v*10)/10; };
+  var n=3+Math.floor(rnd()*3), shape=Math.floor(rnd()*3), dir=rnd()<.5?-1:1, bend=a(18,42);
+  var k1=shape===2?0:dir*bend, k2=shape===0?-dir*bend:(shape===1?dir*bend:0);
+  var xb0=a(38,92), lean=a(-35,45), sb=a(9,17), st=sb*a(.55,1.6);
+  var curves=[];
+  for(var i=0;i<n;i++){
+    var xb=xb0+i*sb, xt=xb0+lean+i*st, f=1+i*.08;
+    curves.push('M'+r1(xb)+',100 C'+r1(xb+k1*f)+','+r1(a(58,70))+' '+r1(xt+k2*f)+','+r1(a(30,42))+' '+r1(xt)+',0');
+  }
+  var g='';
+  // bandes claires entre deux traits, et ombre apres le dernier trait
+  var band=Math.floor(rnd()*(n-1));
+  function rev(d){ // meme courbe parcourue de haut en bas, pour fermer une surface
+    var p=d.split(/[ MC]+/).filter(Boolean);
+    return ' L'+p[3]+' C'+p[2]+' '+p[1]+' '+p[0];
+  }
+  g+='<path d="'+curves[band]+rev(curves[band+1])+' Z" fill="'+W+'.07)"/>';
+  if(n>3) g+='<path d="'+curves[n-3]+rev(curves[n-2])+' Z" fill="'+W+'.04)"/>';
+  g+='<path d="'+curves[n-1]+' L170,0 L170,100 Z" fill="'+K+'.2)"/>';
+  for(var c=0;c<n;c++){
+    var op=c===band?.5:(.14+rnd()*.22), w=c===band?.7:(.5+rnd()*1.1);
+    g+='<path d="'+curves[c]+'" fill="none" stroke="'+W+r1(op*100)/100+')" stroke-width="'+r1(w)+'"/>';
+  }
+  return '<svg class="cv-deco" viewBox="0 0 160 100" preserveAspectRatio="none">'+g+'</svg>';
+}
+// Carte facon carte bancaire : logo + nom, puce, solde, VISA, reflets et logo en filigrane.
+// Toutes les tailles suivent la largeur de la carte (unites cqw) : meme rendu en petit et en grand.
 function accCardInner(acc,bal,big){
-  var b=findBank(acc.bank), head;
-  if(b&&b.emoji) head='<span class="acc-name">'+b.emoji+' '+esc(acc.name)+'</span>';
-  else if(acc.bank) head='<span class="acc-pill" style="color:'+(b&&b.fg?b.fg:'#2a2118')+'">'+esc(acc.name)+'</span>';
-  else head='<span class="acc-name">'+esc(acc.name)+'</span>';
-  if(acc.description) head+='<span class="acc-desc">'+esc(acc.description)+'</span>';
-  return '<span class="acc-head">'+head+'</span><span class="acc-foot">'+(big?'<span class="acc-solde-lbl">SOLDE</span>':'')+
-    '<span class="acc-bal">'+moneyHtml(bal)+' €</span></span>';
+  var b=findBank(acc.bank), logo=b&&LOGOS[b.key], tile;
+  if(logo) tile='<span class="cv-logo"><img src="'+logo+'" alt=""></span>';
+  else if(b&&b.emoji) tile='<span class="cv-logo emoji">'+b.emoji+'</span>';
+  else tile='<span class="cv-logo letter">'+esc((acc.name||'?').charAt(0).toUpperCase())+'</span>';
+  var visa=acc.bank&&acc.bank!=='especes'&&acc.type!=='epargne'&&acc.type!=='invest';
+  var rnd=seedRng(acc.bank&&acc.bank!=='custom'?acc.bank:('n:'+(acc.name||'')));
+  var deco=cvDecoSvg(rnd);
+  // Logo en filigrane : place, taille et inclinaison propres a la banque (toujours a droite, derriere le texte)
+  var size=Math.round(30+rnd()*24), right=Math.round(-8+rnd()*16), top=Math.round(4+rnd()*(56-size*0.9)), rot=Math.round(-26+rnd()*44);
+  var wm=logo?'<img class="cv-wm" src="'+logo+'" alt="" style="width:'+size+'cqw;height:'+size+'cqw;right:'+right+'cqw;top:'+Math.max(2,top)+'cqw;transform:rotate('+rot+'deg)">':'';
+  return deco+wm+
+    '<span class="cv-head">'+tile+'<span class="cv-name">'+esc(acc.name)+'</span></span>'+
+    (acc.description?'<span class="cv-desc">'+esc(acc.description)+'</span>':'')+
+    '<span class="cv-chip"></span><span class="cv-lbl">SOLDE</span><span class="cv-bal">'+moneyHtml(bal)+' €</span>'+
+    (visa?'<span class="cv-visa">VISA</span>':'');
 }
 function bankLogoHtml(b){
   if(b.emoji) return '<span class="bank-logo emoji">'+b.emoji+'</span>';
@@ -3575,7 +3716,7 @@ function wizNext(){ if(E){ expNext(); return; } if(W.step<5){ W.step++; renderWi
 function wizBtn(label,enabled,cls){
   var b=document.getElementById('wizBtn');
   if(!E){ document.getElementById('wizBtn2').className='wiz-btn2'; document.getElementById('wizSum').innerHTML=''; }
-  b.textContent=label; b.disabled=!enabled; b.className='wiz-btn'+(cls?' '+cls:'');
+  b.style.display=''; b.textContent=label; b.disabled=!enabled; b.className='wiz-btn'+(cls?' '+cls:'');
 }
 function renderWiz(){
   document.getElementById('wizProg').style.width=(W.step*20)+'%';
@@ -3681,7 +3822,7 @@ function updateWizAmt(){
 }
 function wizTempAccount(){
   var hasBankLook=W.bank&&W.bank!=='custom';
-  return {name:W.bankName,bank:W.bank,description:W.desc,color:W.color||(hasBankLook?'':W.fallback)};
+  return {name:W.bankName,bank:W.bank,type:W.type,description:W.desc,color:W.color||(hasBankLook?'':W.fallback)};
 }
 function wizAmount(){ var v=parseFloat(String(W.amount).replace(',','.'))||0; return W.neg?-Math.abs(v):v; }
 function updateWizCard(){
@@ -3845,6 +3986,7 @@ function openTxnDetail(id){
   if(t.bank) rows.push(['Compte',accountName(t.bank)]);
   if(t.need) rows.push(['Nature',t.need==='plaisir'?'Plaisir':'Obligatoire']);
   if(t.trip) rows.push(['Voyage',t.trip]);
+  if(t.note) rows.push(['Note',t.note]);
   if(Number(t.remb)) rows.push(['Remboursement','Quelqu’un me rembourse']);
   if(Number(t.later_pay)) rows.push(['Paiement','À payer plus tard']);
   if(Number(t.no_balance)) rows.push(['Solde','Non affecté']);
@@ -4030,7 +4172,7 @@ function newFlow(kind,date){
 function openExpenseWizard(date){ closeSheet(); reopenExpenseWizard(newFlow('dep',date)); }
 function openTransferWizard(date){ closeSheet(); reopenExpenseWizard(newFlow('tra',date)); }
 function reopenExpenseWizard(state){
-  W=null; E=state;
+  W=null; E=state; calTarget='date';
   document.getElementById('wiz').classList.add('open');
   renderExp();
 }
@@ -4041,7 +4183,7 @@ function expBack(){
 }
 function expNext(){
   if(E.btnAdd){ expAddAccount(); return; }
-  if(E.step<4){ E.step++; renderExp(); } else saveExpense();
+  if(E.step<flowSteps()){ E.step++; renderExp(); } else if(E.kind==='rev'&&E.regular) saveIncomeFlow(); else saveExpense();
 }
 function expAddAccount(){
   closeWizPop();
@@ -4050,14 +4192,14 @@ function expAddAccount(){
 }
 function renderExp(){
   closeWizPop();
-  document.getElementById('wizProg').style.width=(E.step*25)+'%';
+  document.getElementById('wizProg').style.width=(E.step*100/flowSteps())+'%';
   var body=document.getElementById('wizBody'), tra=E.kind==='tra';
   body.scrollTop=0;
   document.getElementById('wizBtn2').className='wiz-btn2';
   document.getElementById('wizSum').innerHTML='';
   E.btnAdd=false;
   if(E.step===1){
-    renderAccStep(tra?'Transfert depuis&nbsp;?':'Depuis quel compte&nbsp;?','acc',getAccounts());
+    renderAccStep(tra?'Transfert depuis&nbsp;?':(E.kind==='rev'?'Sur quel compte&nbsp;?':'Depuis quel compte&nbsp;?'),'acc',getAccounts());
   } else if(E.step===2){
     body.innerHTML='<div class="wiz-title center">Pour quel montant&nbsp;?</div>'+
       '<label class="amt-big exp-amt" id="wizAmtBox"><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>€</span></label>';
@@ -4071,6 +4213,8 @@ function renderExp(){
     ai.onkeydown=function(e){ if(e.key==='Enter'&&expAmount()>0) expNext(); };
     updateExpAmt();
     setTimeout(function(){ ai.focus(); },150);
+  } else if(E.step===3&&E.kind==='rev'){
+    renderIncDetails();
   } else if(E.step===3&&tra){
     var others=getAccounts().filter(function(a){ return String(a.id)!==String(E.acc); });
     renderAccStep('Vers quel compte&nbsp;?','to',others);
@@ -4088,6 +4232,10 @@ function renderExp(){
     li.oninput=function(){ E.label=li.value; };
     li.onkeydown=function(e){ if(e.key==='Enter') li.blur(); };
     updateExpBtn();
+  } else if(E.step===5){
+    renderFreqSetup();
+  } else if(E.regular){
+    renderFreq();
   } else {
     renderRecap();
   }
@@ -4223,7 +4371,8 @@ function renderRecapSum(){
 function expToggle(k){ E[k]=!E[k]; refreshRecap(); }
 function refreshRecap(){
   var body=document.getElementById('wizBody'), y=body.scrollTop;
-  renderRecap(); body.scrollTop=y;
+  if(E.step===5) renderFreqSetup(); else if(E.regular) renderFreq(); else renderRecap();
+  body.scrollTop=y;
 }
 
 // Petite fenetre par-dessus le parcours (calendrier, voyage)
@@ -4239,8 +4388,8 @@ function closeWizPop(){
 }
 
 // Calendrier en grand
-var calM=null;
-function expOpenCal(){ var p=E.date.split('-'); calM={y:+p[0],m:+p[1]-1}; renderCal(); }
+var calM=null, calTarget='date';
+function expOpenCal(){ var p=(E[calTarget]||E.date).split('-'); calM={y:+p[0],m:+p[1]-1}; renderCal(); }
 function calMove(n){ calM.m+=n; if(calM.m<0){ calM.m=11; calM.y--; } if(calM.m>11){ calM.m=0; calM.y++; } renderCal(); }
 function shiftDay(n){ var d=new Date(); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function renderCal(){
@@ -4252,12 +4401,12 @@ function renderCal(){
   for(var s=0;s<start;s++) html+='<span></span>';
   for(var d=1;d<=days;d++){
     var ds=calM.y+'-'+pad(calM.m+1)+'-'+pad(d);
-    html+='<button class="cal-day'+(ds===E.date?' on':'')+(ds===today?' today':'')+'" onclick="calPick(\''+ds+'\')">'+d+'</button>';
+    html+='<button class="cal-day'+(ds===E[calTarget]?' on':'')+(ds===today?' today':'')+'" onclick="calPick(\''+ds+'\')">'+d+'</button>';
   }
-  html+='</div><div class="cal-quick"><button onclick="calPick(\''+shiftDay(-1)+'\')">Hier</button><button onclick="calPick(\''+today+'\')">Aujourd’hui</button><button onclick="calPick(\''+shiftDay(1)+'\')">Demain</button></div>';
+  html+='</div><div class="cal-quick">'+(calTarget==='end'?'<button onclick="calPick(\'\')">Jamais</button>':'')+'<button onclick="calPick(\''+shiftDay(-1)+'\')">Hier</button><button onclick="calPick(\''+today+'\')">Aujourd’hui</button><button onclick="calPick(\''+shiftDay(1)+'\')">Demain</button></div>';
   openWizPop(html);
 }
-function calPick(ds){ E.date=ds; closeWizPop(); refreshRecap(); }
+function calPick(ds){ E[calTarget]=ds; calTarget='date'; closeWizPop(); refreshRecap(); }
 
 // Voyage : un nom libre, reutilisable
 function expOpenTrip(){
@@ -4274,9 +4423,9 @@ function expSetTrip(name){ E.trip=name||''; closeWizPop(); refreshRecap(); }
 // Paquet de cartes : la carte choisie devant, les autres empilees derriere.
 // Carte choisie au centre, la suivante derriere a droite, la precedente derriere a gauche. Le paquet tourne dans le sens du glisser.
 var deck=null;
-function initDeck(car,idx){
+function initDeck(car,idx,onPick){
   var cards=car.children;
-  deck={car:car,cards:cards,n:cards.length,pos:idx,drag:null};
+  deck={car:car,cards:cards,n:cards.length,pos:idx,drag:null,onPick:onPick||null};
   deckLayout();
   setTimeout(function(){ car.classList.add('anim'); },30);
   if(deck.n<2) return;
@@ -4314,7 +4463,8 @@ function deckLayout(){
     el.style.opacity=Math.max(0,Math.min(1,(1.5-a)*2));
     el.style.zIndex=100-Math.round(a*10);
   }
-  expShowAcc(((Math.round(deck.pos)%n)+n)%n);
+  var cur=((Math.round(deck.pos)%n)+n)%n;
+  if(deck.onPick) deck.onPick(cur); else expShowAcc(cur);
 }
 function expShowAcc(idx){
   var dots=document.getElementById('expDots').children;
@@ -4411,7 +4561,7 @@ function markTxnPaid(id){
 // ============================================================
 var MONTHS_ABBR=['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
 var MONTHS_SHORT=['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
-var BG={tab:'budget',mode:'prevu',y:new Date().getFullYear(),m:new Date().getMonth(),sel:null,calView:'mois',showTra:false,prevAcc:'all',detail:null};
+var BG={tab:'budget',mode:'prevu',y:new Date().getFullYear(),m:new Date().getMonth(),sel:null,calView:'mois',onlyReg:false,prevAcc:'all',detail:null};
 
 // Groupes du budget : chaque groupe rassemble des categories et a un budget mensuel
 var DEFAULT_GROUPS=[
@@ -4451,7 +4601,7 @@ function groupRegulars(g){ return regulars('dep').filter(function(r){ return g.c
 function sumAmt(list){ var s=0; for(var i=0;i<list.length;i++) s+=parseFloat(list[i].amount)||0; return Math.round(s*100)/100; }
 function groupBudget(g){
   if(g.special) return 0;
-  var rec=sumAmt(groupRegulars(g));
+  var rec=sumMonthly(groupRegulars(g));
   return g.budget!=null&&g.budget!==''?Math.max(parseFloat(g.budget)||0,0):rec;
 }
 function mKey(y,m){ return y+'-'+pad(m); }               // mois 0-12 (meme format que start_key)
@@ -4468,12 +4618,16 @@ function fmtK(v){ var a=Math.abs(v); return a>=1000?(v<0?'-':'')+(a/1000).toLoca
 function occurrences(y,m){
   var out=[], txns=getTxns(), done={};
   for(var t=0;t<txns.length;t++){ if(txns[t].rec_key) done[txns[t].rec_key]=txns[t]; }
-  var rs=regulars();
+  var rs=regulars(), skipped=(_cache.settings&&_cache.settings.skipped)||[];
   for(var i=0;i<rs.length;i++){
     var r=rs[i];
     if(r.start_key&&mKey(y,m)<r.start_key) continue;
-    var d=Math.min(parseInt(r.day,10)||1,daysIn(y,m)), key=r.id+'@'+mKey(y,m);
-    out.push({r:r,key:key,date:mPrefix(y,m)+'-'+pad(d),day:d,kind:r.kind,amount:parseFloat(r.amount)||0,label:r.label,cat:r.cat,bank:r.bank,done:done[key]||null});
+    var days=recDays(r,y,m), monthly=(r.freq||'month')==='month';
+    for(var j=0;j<days.length;j++){
+      var d=days[j], ds=mPrefix(y,m)+'-'+pad(d), key=r.id+'@'+(monthly?mKey(y,m):ds);
+      if(skipped.indexOf(key)>=0) continue;
+      out.push({r:r,key:key,date:ds,day:d,kind:r.kind,amount:parseFloat(r.amount)||0,label:r.label,cat:r.cat,bank:r.bank,done:done[key]||null});
+    }
   }
   return out;
 }
@@ -4502,7 +4656,7 @@ function monthStats(y,m){
     if(oc.kind==='dep'){ var og=groupOfCat(oc.cat), ok=og?og.key:'_autres'; st.upDep+=oc.amount; st.upByGroup[ok]=(st.upByGroup[ok]||0)+oc.amount; }
     if(oc.kind==='rev') st.incUp+=oc.amount;
   }
-  st.incPlanned=sumAmt(regulars('rev'));
+  st.incPlanned=sumMonthly(regulars('rev'));
   if(!st.incPlanned) st.incPlanned=st.incReal+st.incUp;
   st.planned=0;
   for(var g2=0;g2<groups.length;g2++) st.planned+=groupBudget(groups[g2]);
@@ -4526,7 +4680,7 @@ function renderBudget(){
   var html='<div class="bg-head"><div class="bg-months"><button onclick="bgMove(-1)">'+prevL+'</button><b>'+curL+'</b><button onclick="bgMove(1)">'+nextL+'</button></div>'+
     '<div class="bg-tabs">'+th+'</div>';
   if(BG.tab==='budget') html+='<div class="bg-range">1 '+MONTHS_ABBR[m].toLowerCase().replace('.','')+' → '+daysIn(y,m)+' '+MONTHS_ABBR[m].toLowerCase().replace('.','')+'</div>';
-  if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="Afficher les transferts">'+svgIcon('swap')+'<button class="sw'+(BG.showTra?' on':'')+'" onclick="BG.showTra=!BG.showTra;renderBudget()"></button></span>'+
+  if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="'+(BG.onlyReg?'Afficher aussi les dépenses non régulières':'Masquer les dépenses non régulières')+'">'+svgIcon('repeat')+'<button class="sw'+(BG.onlyReg?' on':'')+'" onclick="BG.onlyReg=!BG.onlyReg;renderBudget()"></button></span>'+
     '<div class="bg-seg"><button class="'+(BG.calView==='mois'?'on':'')+'" onclick="BG.calView=\'mois\';renderBudget()">Mois</button><button class="'+(BG.calView==='annee'?'on':'')+'" onclick="BG.calView=\'annee\';renderBudget()">Année</button></div></div>';
   html+='</div><div class="bg-body">';
   if(BG.tab==='budget') html+=renderBgBudget();
@@ -4557,6 +4711,237 @@ function itemIcon(label,cat,kind,cls){
   if(kind==='rev') return '<span class="'+cls+'" style="background:#2f6b45;color:#fff">'+svgIcon('cash')+'</span>';
   if(kind==='tra') return '<span class="'+cls+'" style="background:#ebe3d3;color:#7a5c2e">'+svgIcon('swap')+'</span>';
   return catIconHtml(getCatObj(cat),cls);
+}
+
+// ---------- Frequence des operations regulieres ----------
+// freq : month / week / day / year ; every : tous les N ; anchor : premiere echeance ; end_date : derniere date possible
+var WEEKDAYS_FR=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+function parseDs(ds){ var p=ds.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function dsOf(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function recEvery(r){ return Math.max(1,parseInt(r.every,10)||1); }
+// Jours du mois (y, m de 0 a 11) ou tombe une operation reguliere
+function recDays(r,y,m){
+  var dim=daysIn(y,m), f=r.freq||'month', an=r.anchor?parseDs(r.anchor):null, ev=recEvery(r), out=[];
+  if(f==='month'){
+    var md=an?(y-an.getFullYear())*12+(m-an.getMonth()):0;
+    if(md>=0&&md%ev===0) out.push(Math.min(parseInt(r.day,10)||(an?an.getDate():1),dim));
+  } else if(f==='year'){
+    if(an&&an.getMonth()===m&&y>=an.getFullYear()&&(y-an.getFullYear())%ev===0) out.push(Math.min(an.getDate(),dim));
+  } else if(f==='week'){
+    var wd=an?an.getDay():1;
+    for(var d=1;d<=dim;d++){
+      var dt=new Date(y,m,d); if(dt.getDay()!==wd) continue;
+      var wdiff=an?Math.round((dt-an)/86400000)/7:0;
+      if(wdiff>=0&&wdiff%ev===0) out.push(d);
+    }
+  } else if(f==='day'){
+    for(var k=1;k<=dim;k++){ var diff=an?Math.round((new Date(y,m,k)-an)/86400000):k-1; if(diff>=0&&diff%ev===0) out.push(k); }
+  }
+  if(an) out=out.filter(function(d){ return new Date(y,m,d)>=an; });
+  if(r.end_date){ var en=parseDs(r.end_date); out=out.filter(function(d){ return new Date(y,m,d)<=en; }); }
+  return out;
+}
+// Montant moyen par mois (pour les budgets)
+function monthlyAmt(r){
+  var a=parseFloat(r.amount)||0, f=r.freq||'month', ev=recEvery(r);
+  if(f==='week') return a*52/12/ev;
+  if(f==='day') return a*365/12/ev;
+  if(f==='year') return a/12/ev;
+  return a/ev;
+}
+function sumMonthly(list){ var s=0; for(var i=0;i<list.length;i++) s+=monthlyAmt(list[i]); return Math.round(s*100)/100; }
+function freqLabel(r){
+  var f=r.freq||'month', an=r.anchor?parseDs(r.anchor):null, ev=recEvery(r), t;
+  if(f==='week') t=(ev>1?'Toutes les '+ev+' semaines, le ':'Chaque ')+WEEKDAYS_FR[an?an.getDay():1];
+  else if(f==='day') t=ev>1?'Tous les '+ev+' jours':'Tous les jours';
+  else if(f==='year') t=(ev>1?'Tous les '+ev+' ans':'Chaque année')+(an?' le '+an.getDate()+' '+MONTHS_FR[an.getMonth()]:'');
+  else t=ev>1?'Tous les '+ev+' mois, le '+(parseInt(r.day,10)||1):'Tous les '+(parseInt(r.day,10)||1)+' du mois';
+  if(r.end_date){ var en=parseDs(r.end_date); t+=' · jusqu’au '+en.getDate()+' '+MONTHS_ABBR[en.getMonth()].toLowerCase()+' '+en.getFullYear(); }
+  return t;
+}
+
+// ---------- Categories de revenus ----------
+var INC_CATS=[
+  ['salaire','Salaire','#2f7a4f','cash'],['prime','Prime','#2f7a4f','cash'],['side_business','Side business','#2f7a4f','cash'],
+  ['freelance','Freelance','#2f7a4f','cash'],['autre_rev','Autres revenus','#2f7a4f','cash'],['location_rev','Airbnb & location','#3f7fae','plane'],
+  ['aides','Aides (CAF…)','#e7f2ea','🏛️'],['cadeaux_recus','Cadeaux reçus','#e7f2ea','🎁'],['revenus_financiers','Revenus financiers','#e7f2ea','📈'],
+  ['loyers_percus','Loyers perçus','#e7f2ea','🏘️'],['chomage','Chômage','#e7f2ea','🏛️'],['retraite','Retraite','#e7f2ea','🧓'],
+  ['vente_objets','Vente d’objets','#e7f2ea','🏷️'],['remboursements','Remboursements','#e7f2ea','↩️']
+].map(function(c){ return {key:c[0],label:c[1],color:c[2],ic:c[3],group:'rev'}; });
+function findIncCat(key){ for(var i=0;i<INC_CATS.length;i++){ if(INC_CATS[i].key===key) return INC_CATS[i]; } return null; }
+function customIncCats(){ return getCats().filter(function(c){ return !c.builtin&&c.group==='rev'&&!findIncCat(c.key); }); }
+
+// ---------- Fenetres "Depenses regulieres" / "Revenus reguliers" ----------
+function openRegularList(kind){
+  kind=kind||'dep';
+  var rev=kind==='rev', regs=regulars(kind), today=todayStr(), now=new Date(), occ=occurrences(now.getFullYear(),now.getMonth()), late={};
+  for(var o=0;o<occ.length;o++){ if(occ[o].kind===kind&&!occ[o].done&&occ[o].date<=today) late[occ[o].r.id]=1; }
+  var byGroup={}, order=[];
+  for(var i=0;i<regs.length;i++){
+    var g=rev?null:groupOfCat(regs[i].cat), k=rev?'_rev':(g?g.key:'_autres');
+    if(!byGroup[k]){ byGroup[k]=[]; order.push(k); }
+    byGroup[k].push(regs[i]);
+  }
+  var html='';
+  for(var j=0;j<order.length;j++){
+    var gk=order[j], gr=rev?null:findGroup(gk), list=byGroup[gk], col=rev?'#2f7a4f':(gr?gr.color:'#a99e90');
+    var gic=rev?'<span class="rl-gic" style="background:#2f7a4f">'+svgIcon('cash')+'</span>':(gr?'<span class="rl-gic" style="background:'+col+'">'+svgIcon(gr.ic)+'</span>':'<span class="rl-gic" style="background:#efe9df">📦</span>');
+    html+='<div class="rl-grp" style="background:'+shadeHex(col,.88)+'"><div class="rl-ghd">'+gic+
+      '<b>'+esc(rev?'Revenus':(gr?gr.label:'Autres dépenses'))+'</b><span class="'+(rev?'green':'red')+'">'+fmtE(Math.round(sumMonthly(list)))+'</span></div>';
+    for(var n=0;n<list.length;n++){
+      var r=list[n];
+      html+='<button class="rl-item" onclick="closeAccModal();bgEditRegular('+r.id+')">'+itemIcon(r.label,r.cat,kind,'bg-ic')+
+        '<span class="rl-mid"><b>'+esc(r.label)+(late[r.id]?'<i class="rl-dot" title="À confirmer"></i>':'')+'</b><span class="rl-pill">'+esc(freqLabel(r))+'</span></span>'+
+        '<span class="'+(rev?'green':'red')+' rl-amt">'+(rev?'+':'')+fmtE(parseFloat(r.amount)||0)+'</span></button>';
+    }
+    html+='</div>';
+  }
+  if(!regs.length) html='<div class="rl-empty">'+svgIcon(rev?'cash':'repeat')+'<p>'+(rev?'Aucun revenu régulier pour l’instant.<br>Ajoute ton salaire, tes aides, tes loyers perçus…':'Aucune dépense régulière pour l’instant.<br>Ajoute ton loyer, tes abonnements, ton forfait…')+'</p></div>';
+  var m=document.getElementById('accModal');
+  m.innerHTML='<div class="am rl"><div class="rl-top"><span class="rl-tic'+(rev?' green':'')+'">'+svgIcon(rev?'cash':'repeat')+'</span><b>'+(rev?'Revenus réguliers':'Dépenses régulières')+'</b>'+
+    '<button class="sheet-close" onclick="closeAccModal()">✕</button></div><div class="rl-list">'+html+'</div>'+
+    '<button class="rl-add'+(rev?' green':'')+'" onclick="closeAccModal();openRegularWizard({kind:\''+kind+'\'})">'+(rev?'Ajouter un revenu régulier':'Ajouter une dépense régulière')+'</button></div>';
+  m.classList.add('open');
+}
+
+// ---------- Parcours d ajout d une operation reguliere ----------
+// Depense : compte, montant, nom + categorie, frequence (enregistre au choix).
+// Revenu : compte, montant, nom + categorie, frequence, reglage de la frequence et periode.
+function openRegularWizard(opt){
+  opt=opt||{};
+  var st=newFlow(opt.kind==='rev'?'rev':'dep');
+  st.regular=true; st.label=opt.label||''; st.cat=opt.cat||''; st.every=1; st.end='';
+  closeSheet(); reopenExpenseWizard(st);
+}
+function flowSteps(){ return E.kind==='rev'&&E.regular?5:4; }
+function renderIncDetails(){
+  var body=document.getElementById('wizBody');
+  body.innerHTML='<div class="wiz-title">Revenu régulier</div>'+
+    '<div class="exp-name"><label for="expLabel">Nom</label><input type="text" id="expLabel" maxlength="40" placeholder="ex. Salaire" autocomplete="off"></div>'+
+    '<div class="exp-name"><label for="incQ">Catégorie</label><input type="text" id="incQ" maxlength="30" placeholder="ex. Salaire, Prime…" autocomplete="off"></div>'+
+    '<div class="cat-panel" id="incTiles"></div>';
+  var li=document.getElementById('expLabel'), q=document.getElementById('incQ');
+  li.value=E.label; li.oninput=function(){ E.label=li.value; };
+  q.value=E.incQ||''; q.oninput=function(){ E.incQ=q.value; renderIncTiles(); };
+  renderIncTiles();
+}
+function renderIncTiles(){
+  var q=normTxt(E.incQ||''), all=customIncCats().concat(INC_CATS), tiles='<button class="cat-tile add" onclick="incNewCat()"><span class="cat-ic">'+svgIcon('plus')+'</span>Ajouter</button>';
+  for(var i=0;i<all.length;i++){
+    if(q&&normTxt(all[i].label).indexOf(q)<0) continue;
+    tiles+='<button class="cat-tile'+(E.cat===all[i].key?' on':'')+'" data-k="'+esc(all[i].key)+'" onclick="expPickCat(this)">'+catIconHtml(all[i],'cat-ic')+esc(all[i].label)+'</button>';
+  }
+  document.getElementById('incTiles').innerHTML=tiles;
+  updateExpBtn();
+}
+function incNewCat(){
+  var name=(prompt('Nom de la nouvelle catégorie de revenu')||'').trim();
+  if(!name) return;
+  var cats=getCats(), key='cat_'+Date.now();
+  cats.push({key:key,label:name,group:'rev',icon:'💶',builtin:false});
+  setCats(cats); E.cat=key; renderIncTiles();
+}
+function renderFreq(){
+  var body=document.getElementById('wizBody'), an=parseDs(E.date), d=an.getDate(), rev=E.kind==='rev';
+  function row(f,title,sub,extra){
+    return '<button class="rc-row" onclick="expPickFreq(\''+f+'\')"><span class="rc-ric" style="background:#e6eefc;color:#3f6fb5">'+svgIcon('calendar')+'</span>'+
+      '<span class="rc-txt"><b>'+title+(extra||'')+'</b><span>'+sub+'</span></span><span class="rc-chev">'+svgIcon('chev')+'</span></button>';
+  }
+  body.innerHTML='<div class="wiz-title">Fréquence</div>'+
+    (rev?'':'<button class="fq-start" onclick="expOpenCal()">'+svgIcon('calendar')+'Première échéance : <b>'+niceDate(E.date)+'</b>'+svgIcon('chev')+'</button>')+
+    '<div class="rc-box">'+
+    row('month','Mensuelle',rev?'Tous les mois':'Tous les mois, le '+d,'<i class="fq-pop">Populaire</i>')+
+    row('week','Hebdomadaire',rev?'Toutes les semaines':'Toutes les semaines, le '+WEEKDAYS_FR[an.getDay()])+
+    row('day','Quotidienne','Tous les jours ou tous les X jours')+
+    row('year','Annuelle','Tous les ans, en '+MONTHS_FR[an.getMonth()])+'</div>';
+  wizBtn('',false); document.getElementById('wizBtn').style.display='none';
+}
+function expPickFreq(f){
+  if(E.kind==='rev'){
+    var an=parseDs(E.date);
+    E.freq=f; E.every=1; E.fDay=an.getDate(); E.fWday=an.getDay(); E.fMonth=an.getMonth();
+    E.step=5; renderExp(); return;
+  }
+  if(f!=='day'){ saveRegularFlow(f,1); return; }
+  openWizPop('<div class="pop-title">Quotidienne</div><p class="sheet-note">Tous les combien de jours ?</p>'+
+    '<div class="pop-new"><span class="fq-every">Tous les</span><input type="number" id="fqEvery" min="1" max="365" value="1" inputmode="numeric"><span class="fq-every">jour(s)</span></div>'+
+    '<button class="sheet-btn" style="margin-top:14px" onclick="saveRegularFlow(\'day\',parseInt(document.getElementById(\'fqEvery\').value,10)||1)">Valider</button>');
+}
+
+// Reglage de la frequence (revenus) : "Tous les N [unite]", jour / jour de semaine / mois, et periode
+var FREQ_NAMES={day:'Quotidienne',week:'Hebdomadaire',month:'Mensuelle',year:'Annuelle'};
+function renderFreqSetup(){
+  var body=document.getElementById('wizBody'), f=E.freq, html='';
+  var units=[['day','Jours'],['week','Semaines'],['month','Mois'],['year','Ans']], uo='';
+  for(var u=0;u<units.length;u++) uo+='<option value="'+units[u][0]+'"'+(units[u][0]===f?' selected':'')+'>'+units[u][1]+'</option>';
+  html+='<div class="wiz-title">'+FREQ_NAMES[f]+'</div>'+
+    '<div class="fs-box"><span class="rc-ric" style="background:#e6eefc;color:#3f6fb5">'+svgIcon('calendar')+'</span><span class="fs-lbl">Tous les</span>'+
+    '<input type="number" id="fsEvery" min="1" max="99" value="'+E.every+'" inputmode="numeric"><select id="fsUnit">'+uo+'</select></div>';
+  if(f==='month'||f==='year'){
+    var months='', days='';
+    var startM=parseDs(E.date).getMonth();
+    for(var m=0;m<12;m++){
+      var on=f==='year'?m===E.fMonth:((m-startM+12)%12)%E.every===0;
+      months+='<button class="fs-month'+(on?' on':'')+(f==='year'?' pick':'')+'"'+(f==='year'?' onclick="E.fMonth='+m+';renderFreqSetup()"':'')+'>'+MONTHS_FR[m].charAt(0).toUpperCase()+MONTHS_FR[m].slice(1)+'</button>';
+    }
+    for(var d=1;d<=31;d++) days+='<button class="fs-day'+(d===E.fDay?' on':'')+'" onclick="E.fDay='+d+';renderFreqSetup()">'+d+'</button>';
+    html+='<div class="fs-pick"><div class="fs-months">'+months+'</div><div class="fs-days">'+days+'</div></div>';
+    if(E.fDay>28) html+='<p class="sheet-note">Les mois plus courts, il tombera le dernier jour du mois.</p>';
+  } else if(f==='week'){
+    var wd='', order=[1,2,3,4,5,6,0];
+    for(var w=0;w<7;w++){ var k=order[w]; wd+='<button class="fs-wd'+(k===E.fWday?' on':'')+'" onclick="E.fWday='+k+';renderFreqSetup()">'+WEEKDAYS_FR[k].charAt(0).toUpperCase()+WEEKDAYS_FR[k].slice(1,3)+'</button>'; }
+    html+='<div class="fs-week">'+wd+'</div>';
+  }
+  var st=parseDs(E.date);
+  html+='<div class="rc-sec">Période</div><div class="rc-box">'+
+    rcLink('calTarget=\'date\';expOpenCal()','calendar','#eceef2','#5a6170','Commence le',st.getDate()+' '+MONTHS_ABBR[st.getMonth()].toLowerCase()+' '+st.getFullYear())+
+    rcLink('calTarget=\'end\';expOpenCal()','ban','#fbe3e3','#d64545','Se termine',E.end?(function(e){ return e.getDate()+' '+MONTHS_ABBR[e.getMonth()].toLowerCase()+' '+e.getFullYear(); })(parseDs(E.end)):'Jamais')+'</div>';
+  body.innerHTML=html;
+  var ev=document.getElementById('fsEvery'), un=document.getElementById('fsUnit');
+  ev.onchange=function(){ E.every=Math.max(1,parseInt(ev.value,10)||1); renderFreqSetup(); };
+  un.onchange=function(){ E.freq=un.value; renderFreqSetup(); };
+  wizBtn('Ajouter le revenu régulier',true,'go');
+}
+// Premiere echeance a partir de la date de debut, selon les choix
+function firstOccurrence(){
+  var s=parseDs(E.date), f=E.freq, c;
+  if(f==='month'){
+    c=new Date(s.getFullYear(),s.getMonth(),Math.min(E.fDay,daysIn(s.getFullYear(),s.getMonth())));
+    if(c<s){ var n=new Date(s.getFullYear(),s.getMonth()+1,1); c=new Date(n.getFullYear(),n.getMonth(),Math.min(E.fDay,daysIn(n.getFullYear(),n.getMonth()))); }
+  } else if(f==='year'){
+    c=new Date(s.getFullYear(),E.fMonth,Math.min(E.fDay,daysIn(s.getFullYear(),E.fMonth)));
+    if(c<s) c=new Date(s.getFullYear()+1,E.fMonth,Math.min(E.fDay,daysIn(s.getFullYear()+1,E.fMonth)));
+  } else if(f==='week'){
+    c=new Date(s); while(c.getDay()!==E.fWday) c.setDate(c.getDate()+1);
+  } else c=s;
+  return c;
+}
+function saveIncomeFlow(){
+  var s=E, amount=Math.round(expAmount()*100)/100, cat=getCatObj(s.cat);
+  if(!(amount>0)){ s.step=2; renderExp(); return; }
+  if(s.end&&s.end<s.date){ showToast('La date de fin est avant le début'); return; }
+  var first=firstOccurrence();
+  var r={kind:'rev',label:s.label.trim()||cat.label,cat:s.cat,bank:s.acc||'',amount:amount,day:s.freq==='month'?s.fDay:first.getDate(),next_month:0,
+    freq:s.freq,every:s.every,anchor:dsOf(first),end_date:s.end||null,start_key:mKey(first.getFullYear(),first.getMonth())};
+  var btn=document.getElementById('wizBtn'); btn.disabled=true;
+  apiPost('/api/recurring',r,function(err,res){
+    if(err){ btn.disabled=false; showToast('Erreur : '+err.message); return; }
+    r.id=res.id; var arr=getRecurring().slice(); arr.push(r); setRecurring(arr);
+    closeWiz(); showToast('Revenu régulier ajouté');
+    if(currentPage==='budget'){ bgRefresh(); openRegularList('rev'); } else renderHome();
+  });
+}
+function saveRegularFlow(freq,every){
+  var s=E, amount=Math.round(expAmount()*100)/100, cat=getCatObj(s.cat), an=parseDs(s.date);
+  if(!(amount>0)){ s.step=2; renderExp(); return; }
+  var r={kind:'dep',label:s.label.trim()||cat.label,cat:s.cat,bank:s.acc||'',amount:amount,day:an.getDate(),next_month:0,
+    freq:freq,every:freq==='day'?Math.max(1,every):null,anchor:s.date,start_key:mKey(an.getFullYear(),an.getMonth())};
+  apiPost('/api/recurring',r,function(err,res){
+    if(err){ showToast('Erreur : '+err.message); return; }
+    r.id=res.id; var arr=getRecurring().slice(); arr.push(r); setRecurring(arr);
+    closeWiz(); showToast('Dépense régulière ajoutée');
+    if(currentPage==='budget'){ bgRefresh(); openRegularList('dep'); } else renderHome();
+  });
 }
 
 // ---------- Onglet Budget ----------
@@ -4617,7 +5002,7 @@ function renderBgBudget(){
   }
   var extra=st.incReal+st.incUp-sumAmt(occ.filter(function(x){ return x.kind==='rev'&&x.done; }).map(function(x){ return x.done; }));
   if(reel&&extra>0.005) html+=bgRow('<span class="bg-ic" style="background:#e3f3ea;color:#2f8a55">'+svgIcon('plus')+'</span>','Autres revenus','Reçus ce mois','<b class="green">'+fmtE(extra)+'</b>','');
-  html+='<button class="bg-add green" onclick="bgRegularSheet(\'rev\')">+ Ajouter un revenu régulier</button></div>';
+  html+='<button class="bg-add green" onclick="openRegularWizard({kind:\'rev\'})">+ Ajouter un revenu régulier</button></div>';
   // Groupes
   var totG=reel?st.spent:st.planned;
   html+='<div class="bg-sec"><b>Dépenses par groupe</b><b>'+fmtE(totG)+'</b></div><div class="bg-list">';
@@ -4673,11 +5058,11 @@ function renderGroupDetail(){
   if(!regs.length) html+='<div class="bg-empty">Rien de prévu pour l’instant.</div>';
   for(var i=0;i<regs.length;i++){
     var r=regs[i];
-    html+='<div class="bg-row">'+itemIcon(r.label,r.cat,'dep','bg-ic')+'<span class="bg-mid" onclick="bgEditRegular('+r.id+')"><b>'+esc(r.label)+'</b><span>le '+r.day+'</span>'+
-      '<span class="bg-prog"><i style="width:'+(b?Math.min(100,r.amount/b*100):0)+'%;background:'+g.color+'"></i></span></span>'+
+    html+='<div class="bg-row">'+itemIcon(r.label,r.cat,'dep','bg-ic')+'<span class="bg-mid" onclick="bgEditRegular('+r.id+')"><b>'+esc(r.label)+'</b><span>'+esc(freqLabel(r))+'</span>'+
+      '<span class="bg-prog"><i style="width:'+(b?Math.min(100,monthlyAmt(r)/b*100):0)+'%;background:'+g.color+'"></i></span></span>'+
       '<span class="bg-amt"><b>'+fmtE(r.amount,true)+'</b></span><button class="gd-x" onclick="bgDeleteRegular('+r.id+')" title="Supprimer">✕</button></div>';
   }
-  html+='<button class="bg-add" onclick="bgRegularSheet(\'dep\',{group:\''+g.key+'\'})">+ Ajouter une dépense régulière</button></div>';
+  html+='<button class="bg-add" onclick="openRegularWizard()">+ Ajouter une dépense régulière</button></div>';
   // Depenses deja faites ce mois dans ce groupe
   var tx=monthTxns(BG.y,BG.m).filter(function(t){ return txnKind(t)==='dep'&&g.cats.indexOf(t.cat)>=0; });
   if(tx.length){
@@ -4719,7 +5104,7 @@ function bgDeleteGroup(){
   _cache.settings.groups=getGroups().filter(function(x){ return x!==g; });
   saveGroups(); bgCloseGroup(); showToast('Groupe supprimé');
 }
-function bgSuggest(btn){ bgRegularSheet('dep',{group:BG.detail,label:btn.getAttribute('data-n'),cat:btn.getAttribute('data-c')}); }
+function bgSuggest(btn){ openRegularWizard({label:btn.getAttribute('data-n'),cat:btn.getAttribute('data-c')}); }
 
 // ---------- Operations regulieres : ajout / modification ----------
 function bgRegularSheet(kind,opt,existing){
@@ -4751,7 +5136,7 @@ function bgSaveRegular(kind,id){
   if(!label){ showToast('Indique un nom'); return; }
   if(!(amount>0)){ showToast('Indique un montant'); return; }
   if(!(day>=1&&day<=31)){ showToast('Jour entre 1 et 31'); return; }
-  var r={label:label,amount:Math.round(amount*100)/100,day:day,cat:catEl?catEl.value:'autre_rev',bank:document.getElementById('rgBank').value,kind:kind,next_month:0};
+  var r={label:label,amount:Math.round(amount*100)/100,day:day,cat:catEl?catEl.value:((getRecurring().filter(function(x){ return x.id===id; })[0]||{}).cat||'autre_rev'),bank:document.getElementById('rgBank').value,kind:kind,next_month:0};
   if(id) r.id=id; else r.start_key=mKey(BG.y,BG.m);
   apiPost('/api/recurring',r,function(err,res){
     if(err){ showToast('Erreur : '+err.message); return; }
@@ -4819,40 +5204,93 @@ function bgMoveCat(sel){
 
 // ---------- Confirmer une echeance ----------
 function bgOcc(key){
-  var p=key.split('@'), ym=p[1].split('-'), occ=occurrences(+ym[0],+ym[1]);
+  var p=key.split('@'), ym=p[1].split('-'), occ=p[1].length===10?occurrences(+ym[0],+ym[1]-1):occurrences(+ym[0],+ym[1]);
   for(var i=0;i<occ.length;i++){ if(occ[i].key===key) return occ[i]; }
   return null;
 }
+// Fenetre de confirmation d une echeance : on ajuste nom, montant, categorie, compte, date et note
+var OC=null;
 function bgOpenOcc(key){
   var o=bgOcc(key); if(!o) return;
-  var past=o.date<=todayStr();
-  openSheet(sheetHead(esc(o.label))+
-    '<div class="detail-top">'+itemIcon(o.label,o.cat,o.kind,'tx-icon')+'<div class="detail-amt tx-amt '+(o.kind==='rev'?'rev':'dep')+'" style="background:none;padding:0;">'+(o.kind==='rev'?'+ ':'– ')+fmtEur(o.amount)+'</div></div>'+
-    '<p class="sheet-note">'+(o.kind==='rev'?'Revenu':'Dépense')+' régulière prévue le '+niceDate(o.date).toLowerCase()+(o.bank?' sur '+esc(accountName(o.bank)):'')+'. '+
-    (past?'Confirme-la quand elle est passée sur ton compte : elle sera enregistrée et comptera dans le solde.':'Tu peux la confirmer dès maintenant si elle est déjà passée.')+'</p>'+
-    '<div class="sf"><label>Montant réel (€)</label><input type="number" id="ocAmount" inputmode="decimal" step="0.01" value="'+o.amount+'"></div>'+
-    '<button class="sheet-btn" onclick="bgConfirmOcc(\''+key+'\')">Confirmer</button>'+
-    '<button class="sheet-btn ghost" onclick="closeSheet();bgEditRegular('+o.r.id+')">Modifier l’opération régulière</button>');
+  OC={key:key,kind:o.kind,label:o.label,amount:String(o.amount).replace('.',','),cat:o.cat||(o.kind==='rev'?'autre_rev':''),bank:o.bank||'',
+    date:o.date>todayStr()?todayStr():o.date,note:'',picking:false,rid:o.r.id,to:o.r.to_bank};
+  renderOccModal();
+  document.getElementById('accModal').classList.add('open');
 }
-function bgConfirmOcc(key){
-  var o=bgOcc(key); if(!o) return;
-  var amount=parseFloat(document.getElementById('ocAmount').value)||o.amount, date=o.date>todayStr()?todayStr():o.date, now=Date.now();
-  var list;
+function renderOccModal(){
+  var rev=OC.kind==='rev', tra=OC.kind==='tra', cat=getCatObj(OC.cat), accs=getAccounts(), cards='';
+  for(var i=0;i<accs.length;i++){
+    if(tra&&String(accs[i].id)===String(OC.to)) continue;
+    cards+='<div data-id="'+esc(accs[i].id)+'"></div>';
+  }
+  var title=tra?'Transfert régulier':(rev?'Revenu régulier':'Dépense régulière');
+  var btn=(OC.date===todayStr()?(tra?'Transfert fait aujourd’hui':(rev?'Revenu reçu aujourd’hui':'Dépense payée aujourd’hui')):(tra?'Confirmer le transfert':(rev?'Confirmer le revenu':'Confirmer la dépense')));
+  var html='<div class="am oc"><div class="oc-top"><span class="oc-tic">'+svgIcon('repeat')+'</span><b>'+title+'</b>'+
+    '<button class="oc-flag" onclick="bgSkipOcc()" title="Ignorer cette échéance (pas cette fois)"><svg class="ico" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>'+
+    '<button class="am-del" onclick="bgDeleteRegularFromOcc()" title="Supprimer l’opération régulière"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button></div>'+
+    '<label class="oc-lbl">Nom</label><input class="oc-in" id="ocName" maxlength="40" value="'+esc(OC.label)+'">'+
+    '<div class="oc-row"><div><label class="oc-lbl">Montant</label><div class="oc-amt"><input class="oc-in" id="ocAmount" inputmode="decimal" value="'+esc(OC.amount)+'"><span>€</span></div></div>'+
+    (tra?'':'<div><label class="oc-lbl">Catégorie</label><button class="oc-in oc-cat" onclick="OC.picking=!OC.picking;renderOccModal()">'+catIconHtml(cat,'oc-cic')+'<span>'+esc(cat.label)+'</span></button></div>')+'</div>';
+  if(OC.picking){
+    var list=rev?customIncCats().concat(INC_CATS):customExpCats().concat(EXP_CATS), tiles='';
+    for(var c=0;c<list.length;c++) tiles+='<button class="cat-tile'+(list[c].key===OC.cat?' on':'')+'" onclick="OC.cat=\''+list[c].key+'\';OC.picking=false;renderOccModal()">'+catIconHtml(list[c],'cat-ic')+esc(list[c].label)+'</button>';
+    html+='<div class="cat-panel oc-cats">'+tiles+'</div>';
+  }
+  html+='<label class="oc-lbl">'+(rev?'Compte crédité':'Compte débité')+(OC.bank?'':' <i class="rl-dot"></i>')+'</label>'+(cards?'<div class="exp-car oc-deck" id="ocCar">'+cards+'</div><div class="exp-dots" id="ocDots"></div>':'<span class="oc-none">Aucun compte</span>')+
+    '<div class="oc-row"><div class="oc-date"><label class="oc-lbl">Date</label><label class="oc-in oc-dt">'+svgIcon('calendar')+'<input type="date" id="ocDate" value="'+OC.date+'"></label></div>'+
+    '<div><label class="oc-lbl">Note</label><input class="oc-in" id="ocNote" maxlength="80" placeholder="Note facultative…" value="'+esc(OC.note)+'"></div></div>'+
+    '<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save oc-go" onclick="bgConfirmOcc()">'+btn+'</button></div></div>';
+  var m=document.getElementById('accModal'), y=m.firstChild?m.firstChild.scrollTop:0;
+  m.innerHTML=html; m.firstChild.scrollTop=y;
+  var car=document.getElementById('ocCar');
+  if(car){
+    var cs=car.children, idx=0, dots='';
+    for(var k=0;k<cs.length;k++){
+      var a=findAccount(cs[k].getAttribute('data-id'));
+      applyCardLook(cs[k],a); cs[k].innerHTML=accCardInner(a,accountBalance(a),false); dots+='<span></span>';
+      if(String(a.id)===String(OC.bank)) idx=k;
+    }
+    document.getElementById('ocDots').innerHTML=dots;
+    initDeck(car,idx,function(i){
+      OC.bank=cs[i].getAttribute('data-id');
+      var ds=document.getElementById('ocDots').children;
+      for(var d=0;d<ds.length;d++) ds[d].classList.toggle('on',d===i);
+    });
+  }
+  document.getElementById('ocName').oninput=function(){ OC.label=this.value; };
+  document.getElementById('ocAmount').oninput=function(){ OC.amount=this.value; };
+  document.getElementById('ocNote').oninput=function(){ OC.note=this.value; };
+  document.getElementById('ocDate').onchange=function(){ OC.date=this.value||todayStr(); renderOccModal(); };
+}
+function bgConfirmOcc(){
+  var o=bgOcc(OC.key); if(!o) return;
+  var amount=Math.round((parseFloat(String(OC.amount).replace(',','.'))||0)*100)/100;
+  if(!(amount>0)){ showToast('Indique un montant'); return; }
+  var label=OC.label.trim()||o.label, date=OC.date||todayStr(), now=Date.now(), key=OC.key, note=OC.note.trim(), list;
   if(o.kind==='tra'){
-    list=[{id:now,date:date,label:o.label,cat:'autres_dep',amount:amount,type:'transfert',bank:o.bank,need:'',transfer_pair:now+1,rec_key:key},
-          {id:now+1,date:date,label:o.label,cat:'autre_rev',amount:amount,type:'transfert_in',bank:o.r.to_bank,need:'',transfer_pair:now,rec_key:key+'#in'}];
+    list=[{id:now,date:date,label:label,cat:'autres_dep',amount:amount,type:'transfert',bank:OC.bank,need:'',transfer_pair:now+1,rec_key:key,note:note},
+          {id:now+1,date:date,label:label,cat:'autre_rev',amount:amount,type:'transfert_in',bank:o.r.to_bank,need:'',transfer_pair:now,rec_key:key+'#in',note:note}];
   } else if(o.kind==='rev'){
-    list=[{id:now,date:date,label:o.label,cat:'autre_rev',amount:amount,type:'rev',bank:o.bank,need:'',rec_key:key}];
+    list=[{id:now,date:date,label:label,cat:OC.cat||'autre_rev',amount:amount,type:'rev',bank:OC.bank,need:'',rec_key:key,note:note}];
   } else {
-    var c=getCatObj(o.cat), grp=c.group&&c.group!=='rev'?c.group:'dep';
-    list=[{id:now,date:date,label:o.label,cat:o.cat,amount:amount,type:grp,bank:o.bank,need:c.need||'obligatoire',rec_key:key}];
+    var c=getCatObj(OC.cat), grp=c.group&&c.group!=='rev'?c.group:'dep';
+    list=[{id:now,date:date,label:label,cat:OC.cat,amount:amount,type:grp,bank:OC.bank,need:c.need||'obligatoire',rec_key:key,note:note}];
   }
   apiPost('/api/transactions/bulk',{transactions:list},function(err){
     if(err){ showToast('Erreur : '+err.message); return; }
     var txns=getTxns(); for(var i=0;i<list.length;i++) txns.unshift(list[i]); setTxns(txns);
-    closeSheet(); bgRefresh(); showToast('Confirmé');
+    closeAccModal(); bgRefresh(); showToast('Confirmé');
   });
 }
+// Drapeau : ignorer cette echeance (elle ne sera ni comptee ni proposee)
+function bgSkipOcc(){
+  if(!confirm('Ignorer cette échéance ? Elle ne sera pas comptée ce coup-ci, les suivantes restent prévues.')) return;
+  var s=_cache.settings||(_cache.settings={}), sk=s.skipped||(s.skipped=[]);
+  if(sk.indexOf(OC.key)<0) sk.push(OC.key);
+  apiPost('/api/settings/skipped',{value:sk},null);
+  closeAccModal(); bgRefresh(); showToast('Échéance ignorée');
+}
+function bgDeleteRegularFromOcc(){ var id=OC.rid; closeAccModal(); bgDeleteRegular(id); }
 
 // ---------- Onglet Calendrier : mois ----------
 // Ce qui se passe chaque jour du mois : transactions + echeances pas encore confirmees
@@ -4861,12 +5299,12 @@ function dayItems(y,m){
   function add(d,it){ (out[d]=out[d]||[]).push(it); }
   for(var i=0;i<tx.length;i++){
     var t=tx[i], k=txnKind(t);
-    if(k==='tra'&&!BG.showTra) continue;
+    if(k==='tra'&&!t.rec_key) continue;          // virements ponctuels : pas dans le calendrier
+    if(BG.onlyReg&&!t.rec_key) continue;         // interrupteur : seulement les operations regulieres
     add(parseInt(t.date.slice(8),10),{label:t.label,cat:t.cat,kind:k,amount:(k==='rev'||t.type==='transfert_in'?1:-1)*(parseFloat(t.amount)||0),txn:t,pending:isPending(t)});
   }
   for(var o=0;o<occ.length;o++){
     var oc=occ[o]; if(oc.done) continue;
-    if(oc.kind==='tra'&&!BG.showTra) continue;
     add(oc.day,{label:oc.label,cat:oc.cat,kind:oc.kind,amount:(oc.kind==='rev'?1:-1)*oc.amount,occ:oc,pending:true});
   }
   return out;
@@ -4904,9 +5342,9 @@ function renderBgCal(){
     else { html+='<div class="bg-list flat">'; for(var l=0;l<list.length;l++) html+=bcItemRow(list[l]); html+='</div>'; }
   }
   // Raccourcis : depenses regulieres, revenus reguliers, transfert
-  var regDep=sumAmt(regulars('dep')), incs=regulars('rev'), inc=incs[0];
-  html+='<div class="bc-pills"><button class="bc-pill red" onclick="bgRegularSheet(\'dep\')"><span class="pl">'+svgIcon('plus')+'</span><span><small>Dépenses régulières</small><b>'+fmtE(regDep,true)+'</b></span></button>'+
-    '<button class="bc-pill green" onclick="bgRegularSheet(\'rev\')"><span class="pl">'+svgIcon('plus')+'</span><span><small>'+(inc?esc(inc.label):'Revenu régulier')+'</small><b>+'+fmtE(inc?sumAmt(incs):0)+'</b></span></button>'+
+  var regDep=sumMonthly(regulars('dep')), incs=regulars('rev'), inc=incs[0];
+  html+='<div class="bc-pills"><button class="bc-pill red" onclick="openRegularList()"><span class="pl">'+svgIcon('plus')+'</span><span><small>Dépenses régulières</small><b>'+fmtE(regDep,true)+'</b></span></button>'+
+    '<button class="bc-pill green" onclick="openRegularList(\'rev\')"><span class="pl">'+svgIcon('plus')+'</span><span><small>'+(inc?esc(inc.label):'Revenu régulier')+'</small><b>+'+fmtE(inc?sumMonthly(incs):0)+'</b></span></button>'+
     '<button class="bc-pill tra" onclick="openTransferWizard()">'+svgIcon('swap')+'</button></div>';
   // Prevu ce mois-ci
   var prev=[];
@@ -4949,7 +5387,7 @@ function renderBgYear(){
   var y=BG.y, now=new Date(), cy=now.getFullYear(), cm=now.getMonth(), rows='', tSp=0, tIn=0, max=1, data=[];
   for(var m=0;m<12;m++){
     var future=y>cy||(y===cy&&m>cm), st=monthStats(y,m), sp, inc;
-    if(future){ sp=sumAmt(regulars('dep')); inc=sumAmt(regulars('rev')); }
+    if(future){ sp=sumMonthly(regulars('dep')); inc=sumMonthly(regulars('rev')); }
     else { sp=st.spent+(y===cy&&m===cm?st.upDep:0); inc=st.incReal+(y===cy&&m===cm?st.incUp:0); tSp+=st.spent; tIn+=st.incReal; }
     data.push({m:m,sp:sp,inc:inc,future:future,cur:y===cy&&m===cm});
     max=Math.max(max,sp+inc);

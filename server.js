@@ -110,7 +110,13 @@ addColumnIfMissing('recurring', 'start_key', 'TEXT');
 addColumnIfMissing('accounts', 'hidden', 'INTEGER DEFAULT 0');
 // Page Budget : type d operation reguliere (dep, rev, tra) et lien transaction <-> echeance confirmee
 addColumnIfMissing('recurring', 'kind', 'TEXT');
+// Frequence : month (defaut), week, day (tous les "every" jours), year ; anchor = date de la premiere echeance
+addColumnIfMissing('recurring', 'freq', 'TEXT');
+addColumnIfMissing('recurring', 'every', 'INTEGER');
+addColumnIfMissing('recurring', 'anchor', 'TEXT');
+addColumnIfMissing('recurring', 'end_date', 'TEXT');
 addColumnIfMissing('transactions', 'rec_key', 'TEXT');
+addColumnIfMissing('transactions', 'note', 'TEXT');
 // Reglages libres en JSON (groupes du budget...)
 db.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)');
 
@@ -148,8 +154,8 @@ app.get('/api/transactions', requireAuth, (req, res) => {
 app.post('/api/transactions', requireAuth, (req, res) => {
   const t = req.body;
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip, rec_key)
-    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip, @rec_key)
+    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip, rec_key, note)
+    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip, @rec_key, @note)
   `);
   const info = stmt.run({
     id: t.id || Date.now(),
@@ -169,7 +175,8 @@ app.post('/api/transactions', requireAuth, (req, res) => {
     later_pay: t.later_pay ? 1 : 0,
     no_balance: t.no_balance ? 1 : 0,
     trip: t.trip || null,
-    rec_key: t.rec_key || null
+    rec_key: t.rec_key || null,
+    note: t.note || null
   });
   res.json({ ok: true, id: t.id || info.lastInsertRowid });
 });
@@ -178,8 +185,8 @@ app.post('/api/transactions', requireAuth, (req, res) => {
 app.post('/api/transactions/bulk', requireAuth, (req, res) => {
   const txns = req.body.transactions || [];
   const insert = db.prepare(`
-    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip, rec_key)
-    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip, @rec_key)
+    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip, rec_key, note)
+    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip, @rec_key, @note)
   `);
   const insertMany = db.transaction((items) => {
     for (const t of items) {
@@ -201,7 +208,8 @@ app.post('/api/transactions/bulk', requireAuth, (req, res) => {
         later_pay: t.later_pay ? 1 : 0,
         no_balance: t.no_balance ? 1 : 0,
         trip: t.trip || null,
-        rec_key: t.rec_key || null
+        rec_key: t.rec_key || null,
+        note: t.note || null
       });
     }
   });
@@ -293,8 +301,9 @@ app.post('/api/recurring', requireAuth, (req, res) => {
     return res.json({ ok: true, id: r.id });
   }
   const info = db.prepare(
-    'INSERT INTO recurring (label, cat, bank, amount, day, next_month, to_bank, start_key, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0, r.to_bank || null, r.start_key || null, r.kind || null);
+    'INSERT INTO recurring (label, cat, bank, amount, day, next_month, to_bank, start_key, kind, freq, every, anchor, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0, r.to_bank || null, r.start_key || null, r.kind || null,
+    r.freq || null, parseInt(r.every) || null, r.anchor || null, r.end_date || null);
   res.json({ ok: true, id: info.lastInsertRowid });
 });
 
