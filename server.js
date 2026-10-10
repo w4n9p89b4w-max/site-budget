@@ -370,4 +370,20 @@ if (fs.existsSync(PUBLIC)) {
 app.listen(PORT, '0.0.0.0', () => {
   console.log('Budget Mensuel API demarree sur le port ' + PORT);
   console.log('DB: ' + DB_PATH);
+
+  // Adresse a taper sur l'iPhone (meme Wi-Fi que cet ordinateur)
+  const nets = require('os').networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(nets)) {
+    for (const n of nets[name] || []) {
+      if (n.family === 'IPv4' && !n.internal) ips.push(n.address);
+    }
+  }
+  console.log('');
+  console.log('  Sur cet ordinateur : http://localhost:' + PORT);
+  if (ips.length) {
+    console.log('  Sur ton iPhone (meme Wi-Fi), ouvre dans Safari :');
+    ips.forEach(ip => console.log('     http://' + ip + ':' + PORT));
+  }
+  console.log('');
 });
