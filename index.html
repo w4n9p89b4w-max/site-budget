@@ -1567,12 +1567,92 @@ function getProxyUrlRaw(){
 // Ouvert en double-cliquant sur le fichier : on passe par le serveur local
 var API_BASE = location.protocol === 'file:' ? 'http://localhost:3003' : '';
 var currentUser = '';
+
+// ── Mode démo (lien GitHub Pages) : pas de serveur, les données restent sur cet appareil ──
+var DEMO = /github\.io$/i.test(location.hostname) || /[?&]demo=1/.test(location.search);
+function demoLoad(){
+  var d=null; try{ d=JSON.parse(localStorage.getItem('budget_demo')||'null'); }catch(e){}
+  d=d||{}; ['transactions','categories','recurring','accounts'].forEach(function(k){ if(!Array.isArray(d[k])) d[k]=[]; });
+  ['budget','applied','epargne'].forEach(function(k){ if(!d[k]||typeof d[k]!=='object') d[k]={}; });
+  return d;
+}
+function demoSave(d){ try{ localStorage.setItem('budget_demo',JSON.stringify(d)); }catch(e){} }
+function demoTxn(t){
+  return { id:t.id||Date.now()+Math.random(), date:t.date, label:t.label, cat:t.cat||'', amount:parseFloat(t.amount)||0,
+    type:t.type||'dep', bank:t.bank||'', need:t.need||'', auto:t.auto?1:0, transfer_pair:t.transfer_pair||null,
+    created_by:currentUser, affect_year:t.affect_year||null,
+    affect_month_num:t.affect_month_num!==undefined?t.affect_month_num:null,
+    remb:t.remb?1:0, later_pay:t.later_pay?1:0, no_balance:t.no_balance?1:0, trip:t.trip||null };
+}
+function demoApi(method,path,data){
+  var d=demoLoad(), m, id;
+  function put(list,obj){ var i=list.findIndex(function(x){return String(x.id)===String(obj.id);}); if(i>=0) list[i]=obj; else list.push(obj); }
+  function del(list,key,val){ return list.filter(function(x){ return String(x[key])!==String(val); }); }
+  if(method==='GET'){
+    if(path==='/api/transactions') return d.transactions.slice().sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:b.id-a.id; });
+    if(path==='/api/budget') return d.budget;
+    if(path==='/api/categories') return d.categories;
+    if(path==='/api/recurring') return d.recurring;
+    if(path==='/api/applied-months') return d.applied;
+    if(path==='/api/epargne') return d.epargne;
+    if(path==='/api/accounts') return d.accounts.slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0)||a.id-b.id; });
+    return null;
+  }
+  if(method==='POST'){
+    if(path==='/api/transactions'){ var t=demoTxn(data); put(d.transactions,t); demoSave(d); return {ok:true,id:t.id}; }
+    if(path==='/api/transactions/bulk'){ (data.transactions||[]).forEach(function(x){ put(d.transactions,demoTxn(x)); }); demoSave(d); return {ok:true,count:(data.transactions||[]).length}; }
+    if(path==='/api/budget'){ Object.keys(data||{}).forEach(function(k){ d.budget[k]=parseFloat(data[k])||0; }); demoSave(d); return {ok:true}; }
+    if(path==='/api/categories'){
+      (data.categories||[]).forEach(function(c){
+        var o={key:c.key,label:c.label,group:c.group,icon:c.icon||'',builtin:!!c.builtin};
+        var i=d.categories.findIndex(function(x){return x.key===c.key;}); if(i>=0){ o.builtin=d.categories[i].builtin; d.categories[i]=o; } else d.categories.push(o);
+      });
+      demoSave(d); return {ok:true};
+    }
+    if(path==='/api/recurring'){
+      id=d.recurring.reduce(function(mx,x){return Math.max(mx,x.id);},0)+1;
+      d.recurring.push({id:id,label:data.label,cat:data.cat||'',bank:data.bank||'',amount:parseFloat(data.amount)||0,day:parseInt(data.day)||1,
+        next_month:parseInt(data.next_month)||0,to_bank:data.to_bank||null,start_key:data.start_key||null});
+      demoSave(d); return {ok:true,id:id};
+    }
+    if((m=path.match(/^\/api\/applied-months\/(.+)$/))){ d.applied[decodeURIComponent(m[1])]=true; demoSave(d); return {ok:true}; }
+    if((m=path.match(/^\/api\/epargne\/(.+)$/))){ d.epargne[decodeURIComponent(m[1])]={verse:parseFloat(data.verse)||0,objectif:parseFloat(data.objectif)||0}; demoSave(d); return {ok:true}; }
+    if(path==='/api/accounts'){
+      id=data.id||Date.now();
+      put(d.accounts,{id:id,name:data.name,color:data.color||'',solde:parseFloat(data.solde)||0,soldeDate:data.soldeDate||null,
+        soldeSetAt:data.soldeSetAt||null,sortOrder:parseInt(data.sortOrder)||0,bank:data.bank||'',type:data.type||'',
+        description:data.description||'',hidden:!!data.hidden});
+      demoSave(d); return {ok:true,id:id};
+    }
+    return {ok:true};
+  }
+  if(method==='DELETE'){
+    if((m=path.match(/^\/api\/transactions\/(.+)$/))) d.transactions=del(d.transactions,'id',decodeURIComponent(m[1]));
+    else if((m=path.match(/^\/api\/recurring\/(.+)$/))) d.recurring=del(d.recurring,'id',decodeURIComponent(m[1]));
+    else if((m=path.match(/^\/api\/accounts\/(.+)$/))) d.accounts=del(d.accounts,'id',decodeURIComponent(m[1]));
+    else if((m=path.match(/^\/api\/categories\/(.+)$/))) d.categories=d.categories.filter(function(x){ return x.builtin||x.key!==decodeURIComponent(m[1]); });
+    demoSave(d); return {ok:true};
+  }
+  return null;
+}
+if(DEMO){
+  var _ls=document.querySelector('#loginScreen .login-sub');
+  if(_ls) _ls.innerHTML='Mode démo — les données restent sur cet appareil';
+}
 var _cache = {txns:null,budget:null,cats:null,recurring:null,applied:null,epargne:null,accounts:null};
 
 function syncBar(on){ var b=document.getElementById('syncBar'); if(b) b.className=on?'sync-bar loading':'sync-bar'; }
 
 function doLogin(prenom){
   document.getElementById('loginError').style.display='none';
+  if(DEMO){
+    currentUser=prenom; localStorage.setItem('budget_user',prenom);
+    document.getElementById('loginScreen').style.display='none';
+    var dbadge=document.getElementById('userBadge'); dbadge.style.display='block';
+    dbadge.textContent=(prenom==='etienne'?'E':'N')+'. '+prenom.charAt(0).toUpperCase()+prenom.slice(1)+' (changer)';
+    document.body.classList.add('on-home');
+    initApp(); return;
+  }
   var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+'/api/login',true);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.onload=function(){
@@ -1597,6 +1677,7 @@ function logout(){
 }
 
 function apiGet(path,cb){
+  if(DEMO){ setTimeout(function(){ var r=demoApi('GET',path); if(r===null) cb(new Error('HTTP 404')); else cb(null,JSON.parse(JSON.stringify(r))); },0); return; }
   syncBar(true); var xhr=new XMLHttpRequest(); xhr.open('GET',API_BASE+path,true);
   xhr.setRequestHeader('x-user',currentUser);
   xhr.onload=function(){ syncBar(false); if(xhr.status===200){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}}else{cb(new Error('HTTP '+xhr.status));} };
@@ -1605,6 +1686,7 @@ function apiGet(path,cb){
 }
 
 function apiPost(path,data,cb){
+  if(DEMO){ setTimeout(function(){ var r=demoApi('POST',path,data||{}); if(cb) cb(null,r); },0); return; }
   var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+path,true);
   xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('x-user',currentUser);
   xhr.onload=function(){ if(cb){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}} };
@@ -1613,6 +1695,7 @@ function apiPost(path,data,cb){
 }
 
 function apiDelete(path,cb){
+  if(DEMO){ setTimeout(function(){ demoApi('DELETE',path); if(cb) cb(null); },0); return; }
   var xhr=new XMLHttpRequest(); xhr.open('DELETE',API_BASE+path,true);
   xhr.setRequestHeader('x-user',currentUser);
   xhr.onload=function(){ if(cb) cb(null); };
