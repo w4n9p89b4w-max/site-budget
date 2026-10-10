@@ -98,6 +98,16 @@ addColumnIfMissing('recurring', 'next_month', 'INTEGER DEFAULT 0');
 addColumnIfMissing('accounts', 'bank_key', 'TEXT');
 addColumnIfMissing('accounts', 'acc_type', 'TEXT');
 addColumnIfMissing('accounts', 'description', 'TEXT');
+// Options du parcours d ajout : rembourse, a payer plus tard, hors solde, voyage
+addColumnIfMissing('transactions', 'remb', 'INTEGER DEFAULT 0');
+addColumnIfMissing('transactions', 'later_pay', 'INTEGER DEFAULT 0');
+addColumnIfMissing('transactions', 'no_balance', 'INTEGER DEFAULT 0');
+addColumnIfMissing('transactions', 'trip', 'TEXT');
+// Transferts reguliers (compte destination) et premier mois d application
+addColumnIfMissing('recurring', 'to_bank', 'TEXT');
+addColumnIfMissing('recurring', 'start_key', 'TEXT');
+// Compte masque sur l accueil (hors Total Patrimoine)
+addColumnIfMissing('accounts', 'hidden', 'INTEGER DEFAULT 0');
 
 // ── Middleware auth ──
 function requireAuth(req, res, next) {
@@ -133,8 +143,8 @@ app.get('/api/transactions', requireAuth, (req, res) => {
 app.post('/api/transactions', requireAuth, (req, res) => {
   const t = req.body;
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num)
-    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num)
+    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip)
+    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip)
   `);
   const info = stmt.run({
     id: t.id || Date.now(),
@@ -149,7 +159,11 @@ app.post('/api/transactions', requireAuth, (req, res) => {
     transfer_pair: t.transfer_pair || null,
     created_by: req.user,
     affect_year: t.affect_year || null,
-    affect_month_num: t.affect_month_num !== undefined ? t.affect_month_num : null
+    affect_month_num: t.affect_month_num !== undefined ? t.affect_month_num : null,
+    remb: t.remb ? 1 : 0,
+    later_pay: t.later_pay ? 1 : 0,
+    no_balance: t.no_balance ? 1 : 0,
+    trip: t.trip || null
   });
   res.json({ ok: true, id: t.id || info.lastInsertRowid });
 });
@@ -158,8 +172,8 @@ app.post('/api/transactions', requireAuth, (req, res) => {
 app.post('/api/transactions/bulk', requireAuth, (req, res) => {
   const txns = req.body.transactions || [];
   const insert = db.prepare(`
-    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num)
-    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num)
+    INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip)
+    VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip)
   `);
   const insertMany = db.transaction((items) => {
     for (const t of items) {
@@ -176,7 +190,11 @@ app.post('/api/transactions/bulk', requireAuth, (req, res) => {
         transfer_pair: t.transfer_pair || null,
         created_by: req.user,
         affect_year: t.affect_year || null,
-        affect_month_num: t.affect_month_num !== undefined ? t.affect_month_num : null
+        affect_month_num: t.affect_month_num !== undefined ? t.affect_month_num : null,
+        remb: t.remb ? 1 : 0,
+        later_pay: t.later_pay ? 1 : 0,
+        no_balance: t.no_balance ? 1 : 0,
+        trip: t.trip || null
       });
     }
   });
@@ -250,8 +268,8 @@ app.get('/api/recurring', requireAuth, (req, res) => {
 app.post('/api/recurring', requireAuth, (req, res) => {
   const r = req.body;
   const info = db.prepare(
-    'INSERT INTO recurring (label, cat, bank, amount, day, next_month) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0);
+    'INSERT INTO recurring (label, cat, bank, amount, day, next_month, to_bank, start_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0, r.to_bank || null, r.start_key || null);
   res.json({ ok: true, id: info.lastInsertRowid });
 });
 
@@ -294,7 +312,7 @@ app.post('/api/epargne/:key', requireAuth, (req, res) => {
 function accountFromRow(r) {
   return {
     id: r.id, name: r.name, color: r.color, solde: r.solde, soldeDate: r.solde_date, soldeSetAt: r.solde_set_at,
-    bank: r.bank_key || '', type: r.acc_type || '', description: r.description || ''
+    bank: r.bank_key || '', type: r.acc_type || '', description: r.description || '', hidden: !!r.hidden
   };
 }
 
@@ -308,11 +326,11 @@ app.post('/api/accounts', requireAuth, (req, res) => {
   if (!a.name) return res.status(400).json({ error: 'Nom du compte manquant' });
   const id = a.id || Date.now();
   db.prepare(`
-    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description)
-    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description)
+    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description, hidden)
+    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description, @hidden)
     ON CONFLICT(id) DO UPDATE SET name=excluded.name, color=excluded.color, solde=excluded.solde,
       solde_date=excluded.solde_date, solde_set_at=excluded.solde_set_at, sort_order=excluded.sort_order,
-      bank_key=excluded.bank_key, acc_type=excluded.acc_type, description=excluded.description
+      bank_key=excluded.bank_key, acc_type=excluded.acc_type, description=excluded.description, hidden=excluded.hidden
   `).run({
     id: id,
     name: a.name,
@@ -324,7 +342,8 @@ app.post('/api/accounts', requireAuth, (req, res) => {
     created_by: req.user,
     bank_key: a.bank || '',
     acc_type: a.type || '',
-    description: a.description || ''
+    description: a.description || '',
+    hidden: a.hidden ? 1 : 0
   });
   res.json({ ok: true, id: id });
 });
