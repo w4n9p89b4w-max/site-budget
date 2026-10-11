@@ -659,6 +659,33 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .wiz-btn.soft{background:#ece3d1;color:#6f6455;}
 .wiz-btn.go{background:#2f5e3c;}
 .wiz{position:relative;}
+.cur-list{max-height:52vh;overflow-y:auto;margin:4px -4px 14px;padding:0 4px;display:flex;flex-direction:column;gap:8px;}
+.cur-row{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;border:2px solid transparent;border-radius:18px;background:#fff;font-family:inherit;text-align:left;color:var(--text);cursor:pointer;box-shadow:0 2px 8px rgba(80,55,20,.05);}
+.cur-row.on{border-color:#2f8a55;background:#f2f8f3;}
+.cur-sym{width:46px;height:46px;border-radius:14px;background:#efe9df;color:#5c4630;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;flex-shrink:0;}
+.cur-row.on .cur-sym{background:#dcebdf;color:#2f6b45;}
+.cur-name{flex:1;min-width:0;display:flex;flex-direction:column;}
+.cur-name b{font-size:16.5px;font-weight:900;}
+.cur-name span{font-size:13.5px;color:#8a7f72;}
+.cur-ok{width:32px;height:32px;border-radius:50%;background:#2f8a55;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cur-ok .ico{width:19px;height:19px;stroke-width:3;}
+.tour{position:fixed;inset:0;z-index:5000;}
+.tour-hole{position:fixed;border-radius:20px;box-shadow:0 0 0 9999px rgba(35,24,12,.62);transition:all .3s ease;pointer-events:none;}
+.tour-hole.none{left:50%!important;top:45%!important;width:0!important;height:0!important;}
+.tour-tip{position:fixed;left:16px;right:16px;max-width:400px;margin:0 auto;background:#fffdf9;border-radius:24px;padding:20px 20px 16px;box-shadow:0 14px 40px rgba(0,0,0,.25);transition:top .3s ease;}
+.tour-tip .tt-step{font-size:12.5px;font-weight:800;color:#a8873f;text-transform:uppercase;letter-spacing:.6px;}
+.tour-tip h3{margin:4px 0 6px;font-size:20px;font-weight:900;color:var(--text);}
+.tour-tip p{margin:0;font-size:15px;line-height:1.45;color:#5c5249;}
+.tour-foot{display:flex;align-items:center;gap:10px;margin-top:16px;}
+.tour-num{flex:1;font-size:14px;font-weight:800;color:#b3a794;}
+.tour-foot button{white-space:nowrap;font-family:inherit;font-size:15px;font-weight:800;border:none;cursor:pointer;border-radius:14px;padding:11px 16px;}
+.tour-skip{background:none;color:#8a7f72;}
+.tour-next{background:#a8873f;color:#fff;}
+.rate-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15.5px;font-weight:700;color:#5c4630;}
+.rate-row input{width:110px;padding:11px 10px;border:1.5px solid #e2d3b4;border-radius:12px;background:#fbf8f2;font-family:inherit;font-size:16px;font-weight:800;text-align:center;outline:none;}
+.rate-row.small{margin-top:8px;}
+.cur-pick{position:relative;cursor:pointer;}
+.cur-pick select{position:absolute;inset:0;opacity:0;cursor:pointer;}
 /* Ecran de connexion */
 .login-box{width:360px;padding:28px 24px;text-align:left;}
 .login-box .login-logo,.login-box .login-title,.login-box .login-sub{text-align:center;}
@@ -829,6 +856,9 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .oc-dt{display:flex;align-items:center;gap:8px;color:#a8842c;}
 .oc-dt{padding:13px 10px;gap:6px;}
 .oc-dt .ico{width:18px;height:18px;flex-shrink:0;}
+.oc-dt{cursor:pointer;text-align:left;}
+.oc-dt span{flex:1;font-size:15.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oc-cal{margin-top:10px;}
 .oc-dt input{flex:1;min-width:0;border:none;background:none;font-family:inherit;font-size:15px;font-weight:600;color:var(--text);outline:none;}
 .oc-go{flex:2.4!important;font-size:16px!important;padding:15px 8px!important;}
 .am.oc .am-cancel{font-size:16px;}
@@ -1264,7 +1294,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
     <div class="patri-amount">
       <span class="patri-pill"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2 22 12 12 22 2 12z"/><path d="M12 7l5 5-5 5-5-5z"/></svg></span>
       <span class="patri-val" id="patriVal">0</span>
-      <span class="patri-pill">&euro;</span>
+      <span class="patri-pill" id="patriCur">&euro;</span>
     </div>
     <div class="patri-next" id="patriNext"></div>
     <div class="acc-grid" id="accGrid"></div>
@@ -1739,7 +1769,7 @@ function demoApi(method,path,data){
       id=data.id||Date.now();
       put(d.accounts,{id:id,name:data.name,color:data.color||'',solde:parseFloat(data.solde)||0,soldeDate:data.soldeDate||null,
         soldeSetAt:data.soldeSetAt||null,sortOrder:parseInt(data.sortOrder)||0,bank:data.bank||'',type:data.type||'',
-        description:data.description||'',hidden:!!data.hidden,cycle:data.cycle||'',owner:data.owner||''});
+        description:data.description||'',hidden:!!data.hidden,cycle:data.cycle||'',owner:data.owner||'',currency:data.currency||''});
       demoSave(d); return {ok:true,id:id};
     }
     return {ok:true};
@@ -2111,6 +2141,115 @@ function testProxyUrl(){
   xhr.send();
 }
 
+// ---------- Visite guidee : la 1re fois sur chaque page, des bulles montrent les boutons un a un ----------
+var TOURS={
+  home:[
+    {t:'Bienvenue !',x:'Petite visite de l’accueil en quelques étapes. Tu pourras la revoir dans Réglages.'},
+    {s:'.patri-amount',t:'Total Patrimoine',x:'L’argent de tous tes comptes additionné.'},
+    {s:'#accGrid .acc-card',t:'Tes comptes',x:'Touche une carte pour voir ses dernières opérations. La petite roue sert à la modifier (nom, couleur, devise, mois de paie…).'},
+    {s:'.acc-add',t:'Ajouter un compte',x:'Crée ici chacun de tes comptes, avec le solde qu’il a aujourd’hui.'},
+    {s:'.quick-actions',t:'Ajouter une opération',x:'Une dépense, un revenu ou un transfert entre deux comptes : on te guide étape par étape.'},
+    {s:'.txn-panel',t:'Tes transactions',x:'Les opérations à venir et les plus récentes. Touche-en une pour la modifier. La loupe et les réglages ouvrent le journal complet.'},
+    {s:'.page-nav',t:'Le menu',x:'Passe d’une page à l’autre : Accueil, Budget, Stats et Réglages. Chaque page a sa petite visite.'}
+  ],
+  budget:[
+    {pre:function(){ if(BG.tab!=='calendrier'||BG.calView!=='mois'){ BG.calView='mois'; bgTab('calendrier'); } },t:'La page Budget',x:'Ici tu prévois ton mois : opérations régulières, budget par groupe et solde à venir.'},
+    {s:'#bgRoot .bg-months',t:'Changer de mois',x:'Touche le mois d’avant ou d’après pour te déplacer.'},
+    {s:'#bgRoot .bg-tabs',t:'Trois vues',x:'Calendrier : jour par jour. Budget : prévu et réel par groupe. Prévision : ton solde dans les jours qui viennent.'},
+    {s:'#bgRoot .bc-grid',t:'Le calendrier',x:'Touche un jour pour voir ses opérations ou en ajouter une à cette date.'},
+    {s:'#bgRoot .bg-tra',t:'Seulement le régulier',x:'Cet interrupteur masque les dépenses ponctuelles pour ne garder que les régulières.'},
+    {s:'#bgRoot .bc-pills',t:'Opérations régulières',x:'Loyer, salaire, abonnements… Ajoute-les une fois, elles reviennent toutes seules. À chaque échéance, il suffit de confirmer.'},
+    {pre:function(){ bgTab('budget'); },s:'#bgRoot .pv-chips',t:'Filtrer par compte',x:'Choisis un ou plusieurs comptes, ou « Tous ».'},
+    {s:'#bgRoot .bg-pv',t:'Prévu ou réel',x:'Compare ce que tu avais prévu à ce que tu as vraiment dépensé.'},
+    {s:'#bgRoot .bg-add:not(.green)',t:'Tes groupes',x:'Courses, Logement, Loisirs… Donne un budget à chaque groupe et touche-le pour voir le détail.'},
+    {pre:function(){ bgTab('prevision'); },s:'#bgRoot .pv-chart',t:'Prévision',x:'L’évolution de ton solde avec tout ce qui est prévu.'},
+    {pre:function(){ bgTab('calendrier'); },t:'C’est tout !',x:'Commence par ajouter tes opérations régulières : le reste se remplit tout seul.'}
+  ],
+  dashboard:[
+    {t:'Les Stats',x:'Où part ton argent et d’où il vient.'},
+    {s:'#page-dashboard .st-tabs',t:'La période',x:'7 jours, 1 mois, 1 an ou tout depuis le début.'},
+    {s:'#page-dashboard .st-head .bg-months',t:'Revenir en arrière',x:'Touche la période d’avant pour comparer.'},
+    {s:'#page-dashboard .st-filter',t:'Filtrer par compte',x:'Pour ne voir qu’un seul compte.'},
+    {s:'#page-dashboard .st-kind',t:'Dépenses ou revenus',x:'Passe des dépenses aux revenus.'},
+    {s:'#page-dashboard .st-split',t:'Le détail',x:'Regroupe par groupe ou par catégorie. Touche un bloc coloré pour voir ses opérations.'}
+  ],
+  settings:[
+    {t:'Les Réglages',x:'Ton compte, ton foyer, la devise et tes données.'},
+    {s:'#setRoot .set-list',t:'Tout se règle ici',x:'Mon foyer : invite jusqu’à 2 personnes avec un code pour partager le même budget. Devise : choisis la monnaie du site.'},
+    {s:'#setRoot .set-card',t:'Sauvegarde',x:'Tes données sont sur le serveur. Tu peux aussi en télécharger une copie.'},
+    {s:'#setRoot .set-tour',t:'Revoir la visite',x:'Touche ici quand tu veux pour relancer une visite guidée.'}
+  ]
+};
+var TOUR=null;
+function tourKey(){ return 'budget_tour_'+(currentUser||''); }
+function tourSeen(){ try{ return JSON.parse(localStorage.getItem(tourKey())||'{}')||{}; }catch(e){ return {}; } }
+function tourMark(page){ var d=tourSeen(); d[page]=1; try{ localStorage.setItem(tourKey(),JSON.stringify(d)); }catch(e){} }
+function tourMaybe(page){
+  if(!TOURS[page]||tourSeen()[page]) return;
+  setTimeout(function(){
+    // Pas de visite si une fenetre est ouverte ou si on a change de page entre-temps
+    if(currentPage!==page||TOUR||document.querySelector('.sheet-backdrop.open,.am-backdrop.open')) return;
+    var ls=document.getElementById('loginScreen'); if(ls&&ls.style.display!=='none') return;
+    tourStart(page);
+  },900);
+}
+function tourStart(page){
+  if(currentPage!==page){ switchPage(page); setTimeout(function(){ tourStart(page); },700); return; }
+  tourMark(page);
+  var el=document.getElementById('tour');
+  if(!el){ el=document.createElement('div'); el.id='tour'; el.className='tour'; document.body.appendChild(el); }
+  el.innerHTML='<div class="tour-hole none"></div><div class="tour-tip"></div>';
+  el.style.display='';
+  TOUR={page:page,i:-1};
+  tourGo(1);
+}
+function tourEl(st){
+  if(!st.s) return null;
+  var e=document.querySelector(st.s);
+  return e&&e.offsetParent?e:null;
+}
+function tourGo(dir){
+  var steps=TOURS[TOUR.page], i=TOUR.i;
+  // On saute les etapes dont l element n existe pas (ex : aucun compte encore)
+  do{
+    i+=dir;
+    if(i>=steps.length){ tourEnd(); return; }
+    if(steps[i].pre) steps[i].pre();
+  } while(steps[i].s&&!tourEl(steps[i]));
+  TOUR.i=i;
+  var st=steps[i], target=tourEl(st), root=document.getElementById('tour');
+  var hole=root.querySelector('.tour-hole'), tip=root.querySelector('.tour-tip');
+  var last=true;
+  for(var n=i+1;n<steps.length;n++) if(!steps[n].s||steps[n].pre||tourEl(steps[n])){ last=false; break; }
+  tip.innerHTML='<div class="tt-step">Visite guidée</div><h3>'+st.t+'</h3><p>'+st.x+'</p>'+
+    '<div class="tour-foot"><span class="tour-num">'+(i+1)+' / '+steps.length+'</span>'+
+    (last?'':'<button class="tour-skip" onclick="tourEnd()">Passer</button>')+
+    '<button class="tour-next" onclick="tourGo(1)">'+(last?'C’est parti !':'Suivant')+'</button></div>';
+  if(!target){ hole.classList.add('none'); tip.style.top=Math.max(16,(window.innerHeight-tip.offsetHeight)/2)+'px'; return; }
+  hole.classList.remove('none');
+  target.scrollIntoView({block:'center'});
+  var r=target.getBoundingClientRect(), pad=8, vh=window.innerHeight;
+  var top=Math.max(4,r.top-pad), bot=Math.min(vh-4,r.bottom+pad);
+  hole.style.left=(r.left-pad)+'px'; hole.style.top=top+'px';
+  hole.style.width=(r.width+pad*2)+'px'; hole.style.height=(bot-top)+'px';
+  var th=tip.offsetHeight;
+  // La bulle va en dessous si elle tient, sinon au-dessus, sinon en bas de l ecran
+  if(bot+16+th<vh-8) tip.style.top=(bot+16)+'px';
+  else if(top-16-th>8) tip.style.top=(top-16-th)+'px';
+  else tip.style.top=(vh-th-90)+'px';
+}
+function tourEnd(){
+  var el=document.getElementById('tour'); if(el){ el.style.display='none'; el.innerHTML=''; }
+  TOUR=null; window.scrollTo(0,0);
+}
+// Reglages : choisir quelle visite revoir
+function setTour(){
+  var pg=[['home','Accueil'],['budget','Budget'],['dashboard','Stats'],['settings','Réglages']], rows='';
+  for(var i=0;i<pg.length;i++) rows+='<button class="pop-row" onclick="closeSheet();tourStart(\''+pg[i][0]+'\')">'+pg[i][1]+'</button>';
+  openSheet(sheetHead('Visite guidée')+'<p class="sheet-note">Quelle page veux-tu découvrir ?</p>'+rows);
+}
+window.addEventListener('resize',function(){ if(TOUR){ TOUR.i--; tourGo(1); } });
+
 function switchPage(page) {
   var pages=['home','dashboard','budget','journal','settings'];
   for(var i=0;i<pages.length;i++){document.getElementById('page-'+pages[i]).classList.remove('active');}
@@ -2128,6 +2267,7 @@ function switchPage(page) {
   if(page==='budget'){ BG.detail=null; document.getElementById('bgDetail').classList.remove('open'); renderBudget(); loadBudgetData(renderBudget); }
   if(page==='journal'){ apiGet('/api/transactions',function(err,data){ if(!err) _cache.txns=data; initJournal(); renderJournal(); }); }
   if(page==='settings') renderSettingsPage();
+  if(!TOUR) tourMaybe(page);
 }
 
 function calcTotaux(data) {
@@ -3483,7 +3623,48 @@ function moneyHtml(v, hideZeroCents){
   var cents=(hideZeroCents&&parts[1]==='00')?'':'<small>,'+parts[1]+'</small>';
   return (neg?'− ':'')+ent+cents;
 }
-function fmtEur(v){ return v.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+// ---------- Devises : celle du site (totaux, Budget, Stats) et celle de chaque compte ----------
+var CURRENCIES=[['EUR','€','Euro'],['USD','$','Dollar américain'],['GBP','£','Livre sterling'],['CHF','CHF','Franc suisse'],
+  ['CAD','$CA','Dollar canadien'],['AUD','$AU','Dollar australien'],['JPY','¥','Yen japonais'],['CNY','¥','Yuan chinois'],
+  ['MAD','DH','Dirham marocain'],['XOF','FCFA','Franc CFA (Afrique de l’Ouest)'],['XAF','FCFA','Franc CFA (Afrique centrale)'],
+  ['XPF','F','Franc Pacifique'],['MUR','₨','Roupie mauricienne'],['BRL','R$','Réal brésilien'],['SEK','kr','Couronne suédoise'],
+  ['NOK','kr','Couronne norvégienne'],['DKK','kr','Couronne danoise'],['PLN','zł','Zloty polonais'],['TRY','₺','Livre turque'],['INR','₹','Roupie indienne']];
+function mainCur(){ return (_cache.settings&&_cache.settings.currency)||'EUR'; }
+function curInfo(c){ for(var i=0;i<CURRENCIES.length;i++){ if(CURRENCIES[i][0]===c) return CURRENCIES[i]; } return [c,c,c]; }
+function curSym(c){ return curInfo(c||mainCur())[1]; }
+function S(c){ return ' '+curSym(c); }
+function accCur(acc){ return (acc&&acc.currency)||mainCur(); }
+function bankCur(id){ return accCur(findAccount(id)); }
+// Taux : valeur de 1 unite de la devise c dans la devise du site
+function rateOf(c){ if(!c||c===mainCur()) return 1; var r=(_cache.settings&&_cache.settings.rates)||{}; return parseFloat(r[c])||1; }
+function toMain(v,bankId){ return (parseFloat(v)||0)*rateOf(bankCur(bankId)); }
+function amtMain(t){ return toMain(t.amount,t.bank); }
+function sumMain(list){ var s=0; for(var i=0;i<list.length;i++) s+=amtMain(list[i]); return Math.round(s*100)/100; }
+function curOptions(sel){
+  var o=''; for(var i=0;i<CURRENCIES.length;i++){ var c=CURRENCIES[i]; o+='<option value="'+c[0]+'"'+(c[0]===sel?' selected':'')+'>'+c[0]+' — '+c[2]+' ('+c[1]+')</option>'; }
+  return o;
+}
+function hasRate(c){ return !c||c===mainCur()||!!(((_cache.settings||{}).rates||{})[c]); }
+function saveRate(c,v){
+  var s=_cache.settings||(_cache.settings={}), r=s.rates||(s.rates={});
+  r[c]=Math.round(v*1e6)/1e6; apiPost('/api/settings/rates',{value:r},null);
+}
+// Demande le taux d une devise de compte (1 USD = ? EUR)
+function askRate(c,done){
+  var cur=((_cache.settings||{}).rates||{})[c];
+  openSheet(sheetHead('Taux de change')+
+    '<p class="sheet-note">Pour additionner ce compte avec les autres (Total, Budget, Stats), indique combien vaut <b>1 '+c+'</b> en '+mainCur()+'. Tu pourras le modifier dans Réglages → Devise.</p>'+
+    '<div class="rate-row"><span>1 '+esc(curSym(c))+' =</span><input type="number" id="rateIn" step="0.0001" min="0" inputmode="decimal" value="'+(cur||'')+'" placeholder="Ex : 0,92"><span>'+esc(curSym())+'</span></div>'+
+    '<button class="sheet-btn" onclick="askRateGo(\''+c+'\')">Enregistrer</button>');
+  window._rateDone=done;
+}
+function askRateGo(c){
+  var v=parseFloat(String(document.getElementById('rateIn').value).replace(',','.'));
+  if(!(v>0)){ showToast('Indique un taux'); return; }
+  saveRate(c,v); closeSheet(); refreshViews(); showToast('Taux enregistré');
+  if(window._rateDone){ var d=window._rateDone; window._rateDone=null; d(); }
+}
+function fmtEur(v,c){ return v.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+S(c); }
 
 // Effet d une transaction sur le solde de son compte
 function txnSign(t){ return (t.type==='rev'||t.type==='transfert_in')?1:-1; }
@@ -3550,7 +3731,7 @@ function renderHome(){
   for(var i=0;i<accs.length;i++){
     var a=accs[i], bal=accountBalance(a);
     if(a.hidden){ nHidden++; continue; }
-    total+=bal;
+    total+=toMain(bal,a.id);
     var card=document.createElement('button');
     applyCardLook(card,a);
     card.innerHTML=accCardInner(a,bal,false)+cardGear(a.id);
@@ -3579,11 +3760,12 @@ function renderHome(){
       }
     }
   }
-  var proj=0; for(var pj=0;pj<accs.length;pj++){ if(!accs[pj].hidden) proj+=accountProjected(accs[pj]); }
+  var proj=0; for(var pj=0;pj<accs.length;pj++){ if(!accs[pj].hidden) proj+=toMain(accountProjected(accs[pj]),accs[pj].id); }
   proj=Math.round(proj*100)/100;
   var pn=document.getElementById('patriNext');
   var anyPay=accs.some(function(x){ return !x.hidden&&x.cycle; });
   if(pn) pn.innerHTML=Math.abs(proj-total)>=0.005?'<span>'+(anyPay?'Avant les prochaines paies :':'Fin '+MONTHS_FR[new Date().getMonth()]+' :')+'</span><b class="'+(proj<total?'down':'up')+'">'+moneyHtml(proj,true)+' €</b>':'';
+  var pcu=document.getElementById('patriCur'); if(pcu) pcu.textContent=curSym();
   var pv=document.getElementById('patriVal');
   pv.innerHTML=moneyHtml(Math.round(total*100)/100,true);
   pv.className='patri-val'+(total<0?' neg':'');
@@ -3667,7 +3849,7 @@ function makeHomeTxnRow(t, soon){
   var shop=kind==='tra'?null:findMerchant(t.label);
   row.innerHTML=(kind==='tra'?'<span class="tx-icon">⇄</span>':(shop&&LOGOS['m:'+shop[0]]?'<span class="tx-icon img"><img src="'+LOGOS['m:'+shop[0]]+'" alt=""></span>':catIconHtml(cat,'tx-icon')))+
     '<span class="tx-main"><div class="tx-label">'+esc(t.label)+'</div><div class="tx-sub">'+esc(sub)+'</div></span>'+
-    '<span class="tx-amt '+kind+'">'+(txnSign(t)>0?'+ ':'– ')+fmtEur(parseFloat(t.amount)||0)+'</span>';
+    '<span class="tx-amt '+kind+'">'+(txnSign(t)>0?'+ ':'– ')+fmtEur(parseFloat(t.amount)||0,bankCur(t.bank))+'</span>';
   row.onclick=function(){ openTxnEdit(t.id); };
   return row;
 }
@@ -3678,7 +3860,7 @@ function makeHomeOccRow(oc){
   row.className='tx-row '+kind+' soon';
   row.innerHTML=itemIcon(oc.label,oc.cat,oc.kind,'tx-icon')+
     '<span class="tx-main"><div class="tx-label">'+esc(oc.label)+'</div><div class="tx-sub">'+(late?'<i class="bc-badge">À confirmer</i>'+(oc.date>todayStr()?relDay(oc.date):''):'Prévu '+relDay(oc.date).toLowerCase())+(oc.bank?' · '+esc(accountName(oc.bank)):'')+'</div></span>'+
-    '<span class="tx-amt '+kind+'">'+(oc.kind==='rev'?'+ ':'– ')+fmtEur(oc.amount)+'</span>';
+    '<span class="tx-amt '+kind+'">'+(oc.kind==='rev'?'+ ':'– ')+fmtEur(oc.amount,bankCur(oc.bank))+'</span>';
   row.onclick=function(){ bgOpenOcc(oc.key); };
   return row;
 }
@@ -3950,7 +4132,7 @@ function cvNext(acc,bal){
   if(acc.id==null||!getAccounts().some(function(a){ return String(a.id)===String(acc.id); })) return '';
   var p=accountProjected(acc); if(Math.abs(p-bal)<0.005) return '';
   var per=accountPeriod(acc), pe=parseDs(per.end), lbl=per.pay?'AVANT PAIE':(per.fixed?'AU '+pe.getDate()+' '+MONTHS_ABBR[pe.getMonth()].toUpperCase().replace('.',''):'FIN '+MONTHS_ABBR[new Date().getMonth()].toUpperCase().replace('.',''));
-  return '<span class="cv-next'+(p<0?' neg':'')+'"><i>'+lbl+'</i><b>→ '+moneyHtml(p)+' €</b></span>';
+  return '<span class="cv-next'+(p<0?' neg':'')+'"><i>'+lbl+'</i><b>→ '+moneyHtml(p)+S(accCur(acc))+'</b></span>';
 }
 // Puce des cartes (contacts de carte bancaire, couches a 90 degres)
 var CHIP_SVG='<svg viewBox="0 0 52 40"><g transform="translate(52 0) rotate(90)"><rect x="1" y="1" width="38" height="50" rx="8" fill="#dcd6c6" stroke="#8a8474" stroke-width="1.3"/><rect x="13" y="14" width="14" height="24" rx="3.5" fill="#e6e1d3" stroke="#8a8474" stroke-width="1.3"/><path d="M13 1.5V14M27 1.5V14M13 38V50.5M27 38V50.5M1.5 19H13M1.5 33H13M27 19H38.5M27 33H38.5" stroke="#8a8474" stroke-width="1.3" fill="none" stroke-linecap="round"/></g></svg>';
@@ -3970,7 +4152,7 @@ function accCardInner(acc,bal,big){
   return deco+wm+
     '<span class="cv-head">'+tile+'<span class="cv-name">'+esc(acc.name)+'</span></span>'+
     (acc.description?'<span class="cv-desc">'+esc(acc.description)+'</span>':'')+
-    '<span class="cv-chip">'+CHIP_SVG+'</span><span class="cv-lbl">SOLDE</span><span class="cv-bal">'+moneyHtml(bal)+' €</span>'+cvNext(acc,bal)+
+    '<span class="cv-chip">'+CHIP_SVG+'</span><span class="cv-lbl">SOLDE</span><span class="cv-bal">'+moneyHtml(bal)+S(accCur(acc))+'</span>'+cvNext(acc,bal)+
     (visa?'<span class="cv-visa">VISA</span>':'');
 }
 function bankLogoHtml(b){
@@ -4039,8 +4221,8 @@ function renderWiz(){
     updateWizDesc();
   } else if(W.step===4){
     body.innerHTML='<div class="wiz-title">Combien y a-t-il sur le compte ?</div>'+
-      '<div class="amt-pills"><span class="amt-pill">€ EUR</span><button class="amt-pill'+(W.neg?' on':'')+'" onclick="wizToggleNeg(this)">− Solde négatif</button></div>'+
-      '<label class="amt-big" id="wizAmtBox"><span class="neg" id="wizNegSign">−</span><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>€</span></label>';
+      '<div class="amt-pills"><label class="amt-pill cur-pick">'+curSym(W.currency||mainCur())+' '+(W.currency||mainCur())+'<select onchange="W.currency=this.value===mainCur()?\'\':this.value;renderWiz()">'+curOptions(W.currency||mainCur())+'</select></label><button class="amt-pill'+(W.neg?' on':'')+'" onclick="wizToggleNeg(this)">− Solde négatif</button></div>'+
+      '<label class="amt-big" id="wizAmtBox"><span class="neg" id="wizNegSign">−</span><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>'+curSym(W.currency||mainCur())+'</span></label>';
     var ai=document.getElementById('wizAmt'); ai.value=W.amount;
     ai.oninput=function(){
       var v=ai.value.replace(/[^0-9.,]/g,'').replace('.',',');
@@ -4109,7 +4291,7 @@ function updateWizAmt(){
 }
 function wizTempAccount(){
   var hasBankLook=W.bank&&W.bank!=='custom';
-  return {name:W.bankName,bank:W.bank,type:W.type,description:W.desc,color:W.color||(hasBankLook?'':W.fallback)};
+  return {name:W.bankName,bank:W.bank,type:W.type,description:W.desc,currency:W.currency||'',color:W.color||(hasBankLook?'':W.fallback)};
 }
 function wizAmount(){ var v=parseFloat(String(W.amount).replace(',','.'))||0; return W.neg?-Math.abs(v):v; }
 function updateWizCard(){
@@ -4143,12 +4325,13 @@ function initWheel(){
 function createWizAccount(){
   var tmp=wizTempAccount();
   var acc={id:Date.now(),name:W.bankName,bank:W.bank==='custom'?'custom':W.bank,type:W.type,description:W.desc,color:tmp.color,
-    solde:wizAmount(),soldeDate:todayStr(),soldeSetAt:Date.now(),sortOrder:getAccounts().length,owner:currentUser||''};
+    solde:wizAmount(),soldeDate:todayStr(),soldeSetAt:Date.now(),sortOrder:getAccounts().length,owner:currentUser||'',currency:W.currency||''};
   apiPost('/api/accounts',acc,function(err){
     if(err){ showToast('Erreur : '+err.message); return; }
     var list=getAccounts().slice(); list.push(acc); _cache.accounts=list;
     if(expResume) expResume[expResume.pick||'acc']=acc.id;
     closeWiz(); fillBankSelects(); refreshViews(); showToast('Compte créé');
+    if(acc.currency&&!hasRate(acc.currency)) askRate(acc.currency);
   });
 }
 
@@ -4159,7 +4342,7 @@ var AM_TYPE_BG={quotidien:'#e3eef1',credit:'#f8e9e6',epargne:'#e6f1e8',invest:'#
 function openAccountSheet(id){
   if(id==null){ openAccountWizard(); return; }
   var a=findAccount(id); if(!a) return;
-  AM={id:a.id,name:a.name,desc:a.description||'',solde:String(accountBalance(a)).replace('.',','),color:a.color||'',type:a.type||'quotidien',hidden:!!a.hidden,bank:a.bank||'',colors:false,cycle:a.cycle?String(a.cycle):'',owner:a.owner||''};
+  AM={id:a.id,name:a.name,desc:a.description||'',solde:String(accountBalance(a)).replace('.',','),color:a.color||'',type:a.type||'quotidien',hidden:!!a.hidden,bank:a.bank||'',colors:false,cycle:a.cycle?String(a.cycle):'',owner:a.owner||'',currency:a.currency||''};
   var types='';
   for(var i=0;i<ACC_TYPES.length;i++){
     var t=ACC_TYPES[i];
@@ -4175,7 +4358,7 @@ function openAccountSheet(id){
       '<input class="am-name" id="amName" maxlength="24" autocomplete="off">'+
       '<input class="am-desc" id="amDesc" maxlength="30" placeholder="Description" autocomplete="off">'+
       '<span class="am-chip">'+CHIP_SVG+'</span>'+
-      '<span class="am-bal"><input id="amSolde" inputmode="decimal" autocomplete="off"><span>€</span></span>'+
+      '<span class="am-bal"><input id="amSolde" inputmode="decimal" autocomplete="off"><span id="amSym">'+curSym(AM.currency||mainCur())+'</span></span>'+
     '</div>'+
     '<p class="am-hint">Touche le nom, la description ou le solde pour les modifier.</p>'+
     '<div class="am-types">'+types+'</div>'+amSettingsHtml()+
@@ -4196,7 +4379,12 @@ function openAccountSheet(id){
 function amSettingsHtml(){
   var who=(AUTH.household.members||[]).map(function(m){ return [String(m.id),m.name]; }).concat([['','Commun']]), seg='';
   for(var w=0;w<who.length;w++) seg+='<button class="'+(AM.owner===who[w][0]?'on':'')+'" onclick="AM.owner=\''+who[w][0]+'\';amRefreshSettings()">'+who[w][1]+'</button>';
-  var html='<div class="am-set" id="amSet"><label class="oc-lbl">Mois du compte</label>'+
+  var cc=AM.currency||mainCur(), foreign=cc!==mainCur(), rate=((_cache.settings||{}).rates||{})[cc];
+  var html='<div class="am-set" id="amSet"><label class="oc-lbl">Devise du compte</label>'+
+    '<select class="oc-in" onchange="AM.currency=this.value===mainCur()?\'\':this.value;amRefreshSettings();var s=document.getElementById(\'amSym\');if(s)s.textContent=curSym(this.value)">'+curOptions(cc)+'</select>'+
+    (foreign?'<div class="rate-row small"><span>1 '+esc(curSym(cc))+' =</span><input type="number" step="0.0001" min="0" inputmode="decimal" id="amRate" value="'+(rate||'')+'" placeholder="taux"><span>'+esc(curSym())+'</span></div>'+
+      '<p class="am-note">Sert à additionner ce compte avec les autres (Total, Budget, Stats).</p>':'')+
+    '<label class="oc-lbl">Mois du compte</label>'+
     '<button class="oc-in am-cyc" onclick="amToggleCycle()">'+svgIcon('calendar')+'<span>'+esc(cycleLabel(AM.cycle))+'</span>'+svgIcon('chev')+'</button>';
   if(AM.cycOpen) html+=amCycleCal();
   return html+'<label class="oc-lbl">Appartient à</label><div class="seg am-own">'+seg+'</div></div>';
@@ -4285,7 +4473,12 @@ function saveAccount(msg){
   var name=AM.name.trim(), solde=parseFloat(String(AM.solde).replace(',','.'));
   if(!name){ showToast('Donne un nom au compte'); return; }
   if(isNaN(solde)){ showToast('Indique un solde'); return; }
-  var acc={id:old.id,name:name,bank:old.bank||'',type:AM.type,description:AM.desc.trim(),color:AM.color,hidden:AM.hidden,cycle:AM.cycle||'',owner:AM.owner||'',
+  var re=document.getElementById('amRate');
+  if(AM.currency&&AM.currency!==mainCur()){
+    var rv=re?parseFloat(String(re.value).replace(',','.')):0;
+    if(rv>0) saveRate(AM.currency,rv); else if(!hasRate(AM.currency)){ showToast('Indique le taux de change de cette devise'); return; }
+  }
+  var acc={id:old.id,name:name,bank:old.bank||'',type:AM.type,description:AM.desc.trim(),color:AM.color,hidden:AM.hidden,cycle:AM.cycle||'',owner:AM.owner||'',currency:AM.currency||'',
     solde:old.solde,soldeDate:old.soldeDate,soldeSetAt:old.soldeSetAt,sortOrder:getAccounts().indexOf(old)};
   // Solde corrige a la main : on repart de ce nouveau solde a partir de maintenant
   if(Math.abs(accountBalance(old)-solde)>=0.005){ acc.solde=solde; acc.soldeDate=todayStr(); acc.soldeSetAt=Date.now(); }
@@ -4329,7 +4522,7 @@ function openTxnDetail(id){
   for(var r=0;r<rows.length;r++) list+='<div><span>'+esc(rows[r][0])+'</span><span>'+esc(rows[r][1])+'</span></div>';
   openSheet(sheetHead('Détail')+
     '<div class="detail-top">'+(kind==='tra'?'<span class="tx-icon">⇄</span>':catIconHtml(cat,'tx-icon'))+'<div style="font-size:18px;font-weight:800;">'+esc(t.label)+'</div>'+
-    '<div class="detail-amt tx-amt '+kind+'" style="background:none;padding:0;">'+(txnSign(t)>0?'+ ':'– ')+fmtEur(parseFloat(t.amount)||0)+'</div></div>'+
+    '<div class="detail-amt tx-amt '+kind+'" style="background:none;padding:0;">'+(txnSign(t)>0?'+ ':'– ')+fmtEur(parseFloat(t.amount)||0,bankCur(t.bank))+'</div></div>'+
     '<div class="detail-list">'+list+'</div>'+
     (Number(t.later_pay)?'<button class="sheet-btn" onclick="markTxnPaid(\''+Number(t.id)+'\')">Marquer comme payée</button>':'')+
     '<button class="sheet-btn ghost" onclick="deleteHomeTxn('+("'"+Number(t.id)+"'")+')">Supprimer'+(kind==='tra'?' le transfert':'')+'</button>');
@@ -4544,7 +4737,7 @@ function renderExp(){
     renderAccStep(tra?'Transfert depuis&nbsp;?':(E.kind==='rev'?'Sur quel compte&nbsp;?':'Depuis quel compte&nbsp;?'),'acc',getAccounts());
   } else if(E.step===2){
     body.innerHTML='<div class="wiz-title center">Pour quel montant&nbsp;?</div>'+
-      '<label class="amt-big exp-amt" id="wizAmtBox"><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>€</span></label>';
+      '<label class="amt-big exp-amt" id="wizAmtBox"><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>'+curSym(bankCur(E.acc))+'</span></label>';
     var ai=document.getElementById('wizAmt'); ai.value=E.amount;
     ai.oninput=function(){
       var v=ai.value.replace(/[^0-9.,]/g,'').replace('.',',');
@@ -4616,7 +4809,7 @@ function renderAccStep(title,key,accs){
         rows+='<button class="acc-row'+(String(a.id)===String(E[key])?' on':'')+'" data-id="'+esc(a.id)+'" onclick="expPickAcc(this.getAttribute(\'data-id\'))">'+
           (b?bankLogoHtml(b):'<span class="bank-logo"><span class="acc-card" data-look="'+esc(a.id)+'"></span></span>')+
           '<span class="acc-row-name"><b>'+esc(a.name)+'</b>'+(a.description?'<span>'+esc(a.description)+'</span>':'')+'</span>'+
-          '<span class="acc-row-bal'+(bal<0?' neg':'')+'">'+moneyHtml(bal,true)+' €</span></button>';
+          '<span class="acc-row-bal'+(bal<0?' neg':'')+'">'+moneyHtml(bal,true)+S(accCur(a))+'</span></button>';
       }
       if(rows) html+='<div class="acc-sec"><span>'+ACC_GROUPS[g][2]+'</span>'+ACC_GROUPS[g][1]+'</div>'+rows;
     }
@@ -4672,16 +4865,16 @@ function renderRecap(){
     var ic=getCatObj(E.cat), il=E.label.trim()||ic.label;
     html+='<div class="wiz-title center">Détails du revenu</div><p class="wiz-sub center">Ajouter des informations supplémentaires</p>'+
       '<div class="rc-head rev">'+catIconHtml(ic,'rc-hic')+'<span class="rc-main"><b>'+esc(il)+'</b><span>'+esc(ic.label+(E.acc?' · '+accountName(E.acc):''))+'</span></span>'+
-      '<span class="rc-amt">+ '+moneyHtml(amount,true)+' €</span></div>';
+      '<span class="rc-amt">+ '+moneyHtml(amount,true)+S(bankCur(E.acc))+'</span></div>';
   } else if(tra){
     html+='<div class="wiz-title center">Détails du transfert</div><p class="wiz-sub center">Ajouter des informations supplémentaires</p>'+
       '<div class="rc-head tra"><span class="rc-hic">'+svgIcon('swap')+'</span><span class="rc-main"><b>Transfert</b><span>'+esc(accountName(E.acc))+' → '+esc(accountName(E.to))+'</span></span>'+
-      '<span class="rc-amt">'+moneyHtml(amount,true)+' €</span></div>';
+      '<span class="rc-amt">'+moneyHtml(amount,true)+S(bankCur(E.acc))+'</span></div>';
   } else {
     var cat=getCatObj(E.cat), m=findMerchant(E.label), label=E.label.trim()||cat.label;
     html+='<div class="rc-head dep">'+(m?'<span class="rc-logo">'+merchantLogo(m)+'</span>':catIconHtml(cat,'rc-hic'))+
       '<span class="rc-main"><b>'+esc(label)+'</b><span>'+esc(cat.label+(E.acc?' · '+accountName(E.acc):''))+'</span></span>'+
-      '<span class="rc-amt">− '+moneyHtml(amount,true)+' €</span></div>'+
+      '<span class="rc-amt">− '+moneyHtml(amount,true)+S(bankCur(E.acc))+'</span></div>'+
       '<div class="rc-sec">Options</div><div class="rc-box">'+
       rcToggle('remb','people','#e6eefc','#4a76c9','Quelqu’un me rembourse','')+
       rcToggle('later','clock','#fdebdc','#d9822b','À payer plus tard','')+
@@ -4703,15 +4896,15 @@ function renderRecapSum(){
     var look=from?cardLook(from):{};
     html='<span class="sum-sq'+(look.cls?' '+look.cls:'')+'"'+(look.bg?' style="background:'+look.bg+'"':'')+'></span>'+
       '<span class="sum-main"><b>'+esc(accountName(E.acc))+' → '+esc(accountName(E.to))+'</b><span>'+esc(accountName(E.acc))+' enverra à '+esc(accountName(E.to))+'</span></span>'+
-      '<span class="sum-amt tra">'+moneyHtml(amount,true)+' €</span>';
+      '<span class="sum-amt tra">'+moneyHtml(amount,true)+S(bankCur(E.acc))+'</span>';
   } else {
     var b=from?findBank(from.bank):null, sub='Sans compte', rv=E.kind==='rev';
     if(from){
       var bal=accountBalance(from), after=(E.noBal||E.later)?bal:Math.round((bal+(rv?amount:-amount))*100)/100;
-      sub=(after===bal)?'Solde inchangé : '+fmtEur(bal):'<s>'+fmtEur(bal)+'</s> → '+fmtEur(after);
+      var fc=accCur(from); sub=(after===bal)?'Solde inchangé : '+fmtEur(bal,fc):'<s>'+fmtEur(bal,fc)+'</s> → '+fmtEur(after,fc);
     }
     html=(b?bankLogoHtml(b):'')+'<span class="sum-main"><b>'+esc(from?from.name:(rv?'Revenu':'Dépense'))+'</b><span>'+sub+'</span></span>'+
-      '<span class="sum-amt'+(rv?' rev':'')+'">'+(rv?'+ ':'− ')+moneyHtml(amount,true)+' €</span>';
+      '<span class="sum-amt'+(rv?' rev':'')+'">'+(rv?'+ ':'− ')+moneyHtml(amount,true)+S(bankCur(E.acc))+'</span>';
   }
   el.innerHTML='<div class="wiz-sum">'+html+'</div>';
 }
@@ -4819,7 +5012,7 @@ function expShowAcc(idx){
   E[E.pick]=acc.id;
   for(var i=0;i<dots.length;i++) dots[i].classList.toggle('on',i===idx);
   document.getElementById('expAccName').textContent=accLabel(acc);
-  document.getElementById('expAccBal').innerHTML=moneyHtml(accountBalance(acc))+' €';
+  document.getElementById('expAccBal').innerHTML=moneyHtml(accountBalance(acc))+S(accCur(acc));
 }
 function expAmount(){ return parseFloat(String(E.amount).replace(',','.'))||0; }
 function updateExpAmt(){
@@ -4974,9 +5167,9 @@ function daysIn(y,m){ return new Date(y,m+1,0).getDate(); }
 function fmtE(v,keepCents){
   var r=Math.round(v*100)/100, neg=r<0; r=Math.abs(r);
   var s=(keepCents||r%1)?r.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}):r.toLocaleString('fr-FR');
-  return (neg?'-':'')+s+' €';
+  return (neg?'-':'')+s+S();
 }
-function fmtK(v){ var a=Math.abs(v); return a>=1000?(v<0?'-':'')+(a/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})+'k €':fmtE(Math.round(v)); }
+function fmtK(v){ var a=Math.abs(v); return a>=1000?(v<0?'-':'')+(a/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})+'k'+S():fmtE(Math.round(v)); }
 
 // Echeances d un mois : une par operation reguliere, confirmee si une transaction porte son rec_key
 function occurrences(y,m){
@@ -5083,7 +5276,7 @@ function monthStats(y,m){
   var rg=bgRange(y,m), tx=rangeTxns(rg), occ=rangeOccs(rg), groups=getGroups();
   var st={spent:0,upDep:0,incReal:0,incUp:0,epReal:0,byGroup:{},upByGroup:{},other:0,otherUp:0};
   for(var i=0;i<tx.length;i++){
-    var t=tx[i], k=txnKind(t), a=parseFloat(t.amount)||0;
+    var t=tx[i], k=txnKind(t), a=amtMain(t);
     if(k==='dep'){
       var g=groupOfCat(t.cat), gk=g?g.key:'_autres';
       if(isPending(t)){ st.upDep+=a; st.upByGroup[gk]=(st.upByGroup[gk]||0)+a; }
@@ -5097,8 +5290,9 @@ function monthStats(y,m){
   }
   for(var o=0;o<occ.length;o++){
     var oc=occ[o]; if(oc.done) continue;
-    if(oc.kind==='dep'){ var og=groupOfCat(oc.cat), ok=og?og.key:'_autres'; st.upDep+=oc.amount; st.upByGroup[ok]=(st.upByGroup[ok]||0)+oc.amount; }
-    if(oc.kind==='rev') st.incUp+=oc.amount;
+    var ocm=toMain(oc.amount,oc.bank);
+    if(oc.kind==='dep'){ var og=groupOfCat(oc.cat), ok=og?og.key:'_autres'; st.upDep+=ocm; st.upByGroup[ok]=(st.upByGroup[ok]||0)+ocm; }
+    if(oc.kind==='rev') st.incUp+=ocm;
   }
   st.incPlanned=sumMonthly(regulars('rev'));
   if(!st.incPlanned) st.incPlanned=st.incReal+st.incUp;
@@ -5194,7 +5388,7 @@ function monthlyAmt(r){
   if(f==='year') return a/12/ev;
   return a/ev;
 }
-function sumMonthly(list){ var s=0; for(var i=0;i<list.length;i++) s+=monthlyAmt(list[i]); return Math.round(s*100)/100; }
+function sumMonthly(list){ var s=0; for(var i=0;i<list.length;i++) s+=monthlyAmt(list[i])*rateOf(bankCur(list[i].bank)); return Math.round(s*100)/100; }
 function freqLabel(r){
   var f=r.freq||'month', an=r.anchor?parseDs(r.anchor):null, ev=recEvery(r), t;
   if(f==='week') t=(ev>1?'Toutes les '+ev+' semaines, le ':'Chaque ')+WEEKDAYS_FR[an?an.getDay():1];
@@ -5237,7 +5431,7 @@ function openRegularList(kind){
       var r=list[n];
       html+='<button class="rl-item" onclick="closeAccModal();bgEditRegular('+r.id+')">'+itemIcon(r.label,r.cat,kind,'bg-ic')+
         '<span class="rl-mid"><b>'+esc(r.label)+(late[r.id]?'<i class="rl-dot" title="À confirmer"></i>':'')+'</b><span class="rl-pill">'+esc(freqLabel(r))+'</span></span>'+
-        '<span class="rl-right"><span class="'+(rev?'green':'red')+' rl-amt">'+(rev?'+':'')+fmtE(parseFloat(r.amount)||0)+'</span>'+
+        '<span class="rl-right"><span class="'+(rev?'green':'red')+' rl-amt">'+(rev?'+':'')+fmtEur(parseFloat(r.amount)||0,bankCur(r.bank))+'</span>'+
         (late[r.id]?'<span class="rl-ok'+(rev?' rev':'')+'" onclick="event.stopPropagation();closeAccModal();bgOpenOcc(\''+late[r.id]+'\')">'+(rev?'Reçu ?':'Payé ?')+'</span>':'')+'</span></button>';
     }
     html+='</div>';
@@ -5441,15 +5635,15 @@ function renderBgBudgetInner(){
     var it=incs[r], o=null;
     for(var k=0;k<occ.length;k++){ if(occ[k].r===it) o=occ[k]; }
     var pend=o&&!o.done, late=pend, act=pend?'bgOpenOcc(\''+o.key+'\')':'bgEditRegular('+it.id+')';
-    if(!reel) html+=bgRow(itemIcon(it.label,it.cat,'rev','bg-ic'),it.label,(late?'À confirmer · ':'')+freqLabel(it),'<b class="green">'+fmtE(it.amount)+'</b>',act,null,null,late?'late':'');
+    if(!reel) html+=bgRow(itemIcon(it.label,it.cat,'rev','bg-ic'),it.label,(late?'À confirmer · ':'')+freqLabel(it),'<b class="green">'+fmtE(toMain(it.amount,it.bank))+'</b>',act,null,null,late?'late':'');
     else {
       var got=o&&o.done?parseFloat(o.done.amount)||0:0, dd=o?parseInt(o.date.slice(8),10):it.day;
       html+=bgRow(itemIcon(it.label,it.cat,'rev','bg-ic'),it.label,(got?'Reçu le ':'À confirmer · attendu le ')+dd+' '+MONTHS_ABBR[m].toLowerCase().replace('.',''),
-        '<b class="'+(got?'green':'muted')+'">'+fmtE(got)+'</b><small>/ '+fmtE(it.amount)+'</small>',act,got/(parseFloat(it.amount)||1),'#2f6b45',late?'late':'');
+        '<b class="'+(got?'green':'muted')+'">'+fmtE(toMain(got,it.bank))+'</b><small>/ '+fmtE(toMain(it.amount,it.bank))+'</small>',act,got/(parseFloat(it.amount)||1),'#2f6b45',late?'late':'');
     }
   }
   // revenus recus ce mois qui ne viennent pas d un revenu regulier
-  var extra=sumAmt(rangeTxns(st.range).filter(function(t){ return txnKind(t)==='rev'&&!isPending(t)&&!t.rec_key; }));
+  var extra=sumMain(rangeTxns(st.range).filter(function(t){ return txnKind(t)==='rev'&&!isPending(t)&&!t.rec_key; }));
   if(reel&&extra>0.005) html+=bgRow('<span class="bg-ic" style="background:#e3f3ea;color:#2f8a55">'+svgIcon('plus')+'</span>','Autres revenus','Reçus ce mois','<b class="green">'+fmtE(extra)+'</b>','');
   html+='<button class="bg-add green" onclick="openRegularWizard({kind:\'rev\'})">+ Ajouter un revenu régulier</button></div>';
   // Groupes
@@ -5500,7 +5694,7 @@ function renderGroupDetailInner(){
   }
   var b=groupBudget(g), pct=st.incPlanned?Math.round(b/st.incPlanned*100):0, sp=st.byGroup[g.key]||0;
   html+='<div class="gd-card"><span class="gd-lbl">Budget</span><label class="gd-amt">'+
-    '<input id="gdBudget" inputmode="decimal" value="'+String(b).replace('.',',')+'" onchange="bgSetBudget(this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"><span>€</span>'+svgIcon('pencil')+'</label>'+
+    '<input id="gdBudget" inputmode="decimal" value="'+String(b).replace('.',',')+'" onchange="bgSetBudget(this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"><span>'+curSym()+'</span>'+svgIcon('pencil')+'</label>'+
     '<span class="bg-prog big"><i style="width:'+Math.min(100,pct)+'%;background:'+g.color+'"></i></span>'+
     '<span class="gd-pct">'+pct+' % de tes revenus du mois · dépensé : '+fmtE(sp)+'</span></div>';
   var regs=groupRegulars(g);
@@ -5510,7 +5704,7 @@ function renderGroupDetailInner(){
     var r=regs[i];
     html+='<div class="bg-row">'+itemIcon(r.label,r.cat,'dep','bg-ic')+'<span class="bg-mid" onclick="bgEditRegular('+r.id+')"><b>'+esc(r.label)+'</b><span>'+esc(freqLabel(r))+'</span>'+
       '<span class="bg-prog"><i style="width:'+(b?Math.min(100,monthlyAmt(r)/b*100):0)+'%;background:'+g.color+'"></i></span></span>'+
-      '<span class="bg-amt"><b>'+fmtE(r.amount,true)+'</b></span><button class="gd-x" onclick="bgDeleteRegular('+r.id+')" title="Supprimer">✕</button></div>';
+      '<span class="bg-amt"><b>'+fmtEur(parseFloat(r.amount)||0,bankCur(r.bank))+'</b></span><button class="gd-x" onclick="bgDeleteRegular('+r.id+')" title="Supprimer">✕</button></div>';
   }
   html+='<button class="bg-add" onclick="openRegularWizard()">+ Ajouter une dépense régulière</button></div>';
   // Depenses deja faites ce mois dans ce groupe
@@ -5518,7 +5712,7 @@ function renderGroupDetailInner(){
   if(tx.length){
     html+='<div class="gd-sec">Dépensé ce mois</div><div class="bg-list">';
     tx.sort(function(a,c){ return c.date.localeCompare(a.date); });
-    for(var t=0;t<tx.length;t++) html+=bgRow(itemIcon(tx[t].label,tx[t].cat,'dep','bg-ic'),tx[t].label,dayLabel(tx[t].date)+(isPending(tx[t])?' · à venir':''),'<b class="red">-'+fmtE(parseFloat(tx[t].amount)||0)+'</b>','openTxnEdit(\''+Number(tx[t].id)+'\')');
+    for(var t=0;t<tx.length;t++) html+=bgRow(itemIcon(tx[t].label,tx[t].cat,'dep','bg-ic'),tx[t].label,dayLabel(tx[t].date)+(isPending(tx[t])?' · à venir':''),'<b class="red">-'+fmtEur(parseFloat(tx[t].amount)||0,bankCur(tx[t].bank))+'</b>','openTxnEdit(\''+Number(tx[t].id)+'\')');
     html+='</div>';
   }
   // Suggestions : categories du groupe et abonnements connus
@@ -5571,7 +5765,7 @@ function bgRegularSheet(kind,opt,existing){
     catField='<div class="sf"><label>Catégorie</label><select id="rgCat">'+co+'</select></div>';
   }
   openSheet(sheetHead(existing?(kind==='rev'?'Revenu régulier':'Dépense régulière'):(kind==='rev'?'Nouveau revenu régulier':'Nouvelle dépense régulière'))+
-    '<div class="amt-field '+(kind==='rev'?'rev':'dep')+'"><input type="number" id="rgAmount" inputmode="decimal" step="0.01" min="0" placeholder="0" value="'+(r.amount||'')+'"><span>€</span></div>'+
+    '<div class="amt-field '+(kind==='rev'?'rev':'dep')+'"><input type="number" id="rgAmount" inputmode="decimal" step="0.01" min="0" placeholder="0" value="'+(r.amount||'')+'"><span>'+curSym()+'</span></div>'+
     '<div class="sf"><label>Nom</label><input type="text" id="rgLabel" maxlength="40" placeholder="'+(kind==='rev'?'Ex : Salaire':'Ex : Netflix')+'" value="'+esc(r.label)+'"></div>'+
     catField+
     '<div class="sf-row"><div class="sf"><label>Jour du mois</label><input type="number" id="rgDay" min="1" max="31" value="'+(r.day||1)+'"></div>'+
@@ -5710,7 +5904,7 @@ function renderOccModal(){
     (edit?'':'<button class="oc-flag" onclick="bgSkipOcc()" title="Ignorer cette échéance (pas cette fois)"><svg class="ico" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>')+
     '<button class="am-del" onclick="'+(edit?'deleteTxnFromEdit()':'bgDeleteRegularFromOcc()')+'" title="'+(edit?'Supprimer':'Supprimer l’opération régulière')+'"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button></div>'+
     '<label class="oc-lbl">Nom</label><input class="oc-in" id="ocName" maxlength="40" value="'+esc(OC.label)+'">'+
-    '<div class="oc-row"><div><label class="oc-lbl">Montant</label><div class="oc-amt"><input class="oc-in" id="ocAmount" inputmode="decimal" value="'+esc(OC.amount)+'"><span>€</span></div></div>'+
+    '<div class="oc-row"><div><label class="oc-lbl">Montant</label><div class="oc-amt"><input class="oc-in" id="ocAmount" inputmode="decimal" value="'+esc(OC.amount)+'"><span>'+curSym(bankCur(OC.bank))+'</span></div></div>'+
     (tra?'':'<div><label class="oc-lbl">Catégorie</label><button class="oc-in oc-cat" onclick="OC.picking=!OC.picking;renderOccModal()">'+catIconHtml(cat,'oc-cic')+'<span>'+esc(cat.label)+'</span></button></div>')+'</div>';
   if(OC.picking){
     var list=rev?customIncCats().concat(INC_CATS):customExpCats().concat(EXP_CATS), tiles='';
@@ -5718,8 +5912,9 @@ function renderOccModal(){
     html+='<div class="cat-panel oc-cats">'+tiles+'</div>';
   }
   html+='<label class="oc-lbl">'+(rev?'Compte crédité':'Compte débité')+(OC.bank?'':' <i class="rl-dot"></i>')+'</label>'+(cards?'<div class="exp-car oc-deck" id="ocCar">'+cards+'</div><div class="exp-dots" id="ocDots"></div>':'<span class="oc-none">Aucun compte</span>')+
-    '<div class="oc-row"><div class="oc-date"><label class="oc-lbl">Date</label><label class="oc-in oc-dt">'+svgIcon('calendar')+'<input type="date" id="ocDate" value="'+OC.date+'"></label></div>'+
+    '<div class="oc-row"><div class="oc-date"><label class="oc-lbl">Date</label><button class="oc-in oc-dt" onclick="ocToggleCal()">'+svgIcon('calendar')+'<span>'+esc(niceDate(OC.date))+'</span></button></div>'+
     '<div><label class="oc-lbl">Note</label><input class="oc-in" id="ocNote" maxlength="80" placeholder="Note facultative…" value="'+esc(OC.note)+'"></div></div>'+
+    (OC.calOpen?ocCalHtml():'')+
     (edit&&OC.later?'<button class="cyc-reset" onclick="closeAccModal();markTxnPaid(\''+Number(OC.txnId)+'\')">Marquer comme payée</button>':'')+
     '<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save oc-go" onclick="'+(edit?'saveTxnEdit()':'bgConfirmOcc()')+'">'+btn+'</button></div></div>';
   var m=document.getElementById('accModal'), y=m.firstChild?m.firstChild.scrollTop:0;
@@ -5742,7 +5937,28 @@ function renderOccModal(){
   document.getElementById('ocName').oninput=function(){ OC.label=this.value; };
   document.getElementById('ocAmount').oninput=function(){ OC.amount=this.value; };
   document.getElementById('ocNote').oninput=function(){ OC.note=this.value; };
-  document.getElementById('ocDate').onchange=function(){ OC.date=this.value||todayStr(); renderOccModal(); };
+
+}
+// Grand calendrier (comme le reste du site) pour la date de l operation
+function ocToggleCal(){
+  OC.calOpen=!OC.calOpen;
+  if(OC.calOpen){ var d=parseDs(OC.date); OC.cy=d.getFullYear(); OC.cm=d.getMonth(); }
+  renderOccModal();
+}
+function ocCalMove(n){ var d=new Date(OC.cy,OC.cm+n,1); OC.cy=d.getFullYear(); OC.cm=d.getMonth(); renderOccModal(); }
+function ocPickDate(ds){ OC.date=ds; OC.calOpen=false; renderOccModal(); }
+function ocCalHtml(){
+  var y=OC.cy, m=OC.cm, first=(new Date(y,m,1).getDay()+6)%7, dim=daysIn(y,m), today=todayStr();
+  var h='<div class="cyc oc-cal"><div class="cal-head"><button class="cal-nav" onclick="ocCalMove(-1)" title="Mois précédent"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>'+
+    '<b>'+MONTHS_FR[m]+' '+y+'</b><button class="cal-nav" onclick="ocCalMove(1)" title="Mois suivant">'+svgIcon('chev')+'</button></div><div class="cal-grid">';
+  var dows=['L','M','M','J','V','S','D'];
+  for(var w=0;w<7;w++) h+='<span class="cal-dow">'+dows[w]+'</span>';
+  for(var s=0;s<first;s++) h+='<span></span>';
+  for(var d=1;d<=dim;d++){
+    var ds=mPrefix(y,m)+'-'+pad(d);
+    h+='<button class="cal-day'+(ds===OC.date?' on':'')+(ds===today?' today':'')+'" onclick="ocPickDate(\''+ds+'\')">'+d+'</button>';
+  }
+  return h+'</div><div class="cal-quick"><button onclick="ocPickDate(\''+shiftDay(-1)+'\')">Hier</button><button onclick="ocPickDate(\''+today+'\')">Aujourd’hui</button><button onclick="ocPickDate(\''+shiftDay(1)+'\')">Demain</button></div></div>';
 }
 function bgConfirmOcc(){
   var o=bgOcc(OC.key); if(!o) return;
@@ -5783,15 +5999,15 @@ function dayItems(y,m){
     var t=tx[i], k=txnKind(t);
     if(k==='tra'&&!t.rec_key) continue;          // virements ponctuels : pas dans le calendrier
     if(BG.onlyReg&&!t.rec_key) continue;         // interrupteur : seulement les operations regulieres
-    add(parseInt(t.date.slice(8),10),{label:t.label,cat:t.cat,kind:k,amount:(k==='rev'||t.type==='transfert_in'?1:-1)*(parseFloat(t.amount)||0),txn:t,pending:isPending(t)});
+    add(parseInt(t.date.slice(8),10),{label:t.label,cat:t.cat,kind:k,amount:(k==='rev'||t.type==='transfert_in'?1:-1)*amtMain(t),txn:t,pending:isPending(t)});
   }
   for(var o=0;o<occ.length;o++){
     var oc=occ[o]; if(oc.done) continue;
-    add(oc.day,{label:oc.label,cat:oc.cat,kind:oc.kind,amount:(oc.kind==='rev'?1:-1)*oc.amount,occ:oc,pending:true});
+    add(oc.day,{label:oc.label,cat:oc.cat,kind:oc.kind,amount:(oc.kind==='rev'?1:-1)*toMain(oc.amount,oc.bank),occ:oc,pending:true});
   }
   return out;
 }
-function visibleBalance(){ var s=0, a=getAccounts(); for(var i=0;i<a.length;i++){ if(!a[i].hidden) s+=accountBalance(a[i]); } return Math.round(s*100)/100; }
+function visibleBalance(){ var s=0, a=getAccounts(); for(var i=0;i<a.length;i++){ if(!a[i].hidden) s+=toMain(accountBalance(a[i]),a[i].id); } return Math.round(s*100)/100; }
 function renderBgCal(){
   var y=BG.y, m=BG.m, st=monthStats(y,m), items=dayItems(y,m), today=todayStr(), cur=visibleBalance(), html='';
   var tot=Math.max(cur,0)+st.incUp||1;
@@ -5920,7 +6136,7 @@ function renderBgPrev(){
   var accs=getAccounts().filter(function(a){ return !a.hidden; }), html='<div class="bg-card">'+accChipsHtml(), sel=BG.prevAcc;
   var ids=selectedIds()||accs.map(function(a){ return String(a.id); });
   function inSel(b){ return ids.indexOf(String(b))>=0; }
-  var cur=0; for(var a=0;a<accs.length;a++){ if(inSel(accs[a].id)) cur+=accountBalance(accs[a]); }
+  var cur=0; for(var a=0;a<accs.length;a++){ if(inSel(accs[a].id)) cur+=toMain(accountBalance(accs[a]),accs[a].id); }
   var today=todayStr(), t0=new Date(); t0.setHours(0,0,0,0);
   function dstr(n){ var d=new Date(t0); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
   // mouvements par jour (passes : transactions ; a venir : transactions + echeances)
@@ -5928,7 +6144,7 @@ function renderBgPrev(){
   var txns=getTxns();
   for(var t=0;t<txns.length;t++){
     var x=txns[t]; if(!inSel(x.bank)||Number(x.no_balance)) continue;
-    var v=txnSign(x)*(parseFloat(x.amount)||0);
+    var v=txnSign(x)*amtMain(x);
     if(isPending(x)&&x.type==='rev') continue; // revenu pas encore recu
     if(isPending(x)){ var dd=x.date>today?x.date:today; if(dd<=end){ moves[dd]=(moves[dd]||0)+v; upcoming.push({label:x.label,cat:x.cat,kind:txnKind(x),amount:v,txn:x,date:dd}); } }
     else if(x.date>start) moves[x.date]=(moves[x.date]||0)+v;
@@ -5941,9 +6157,9 @@ function renderBgPrev(){
       var oc=occ[o]; if(oc.done) continue;
       var od=oc.date<today?today:oc.date; if(od>end) continue;
       var ov=0;
-      if(oc.kind==='tra'){ if(inSel(oc.bank)) ov-=oc.amount; if(inSel(oc.r.to_bank)) ov+=oc.amount; }
+      if(oc.kind==='tra'){ if(inSel(oc.bank)) ov-=toMain(oc.amount,oc.bank); if(inSel(oc.r.to_bank)) ov+=toMain(oc.amount,oc.r.to_bank); }
       else if(oc.kind==='rev') continue; // revenu regulier : compte seulement une fois confirme
-      else if(inSel(oc.bank)||(!oc.bank&&sel==='all')) ov=-oc.amount;
+      else if(inSel(oc.bank)||(!oc.bank&&sel==='all')) ov=-toMain(oc.amount,oc.bank);
       if(!ov) continue;
       moves[od]=(moves[od]||0)+ov;
       upcoming.push({label:oc.label,cat:oc.cat,kind:oc.kind,amount:ov,occ:oc,date:od});
@@ -5951,7 +6167,7 @@ function renderBgPrev(){
   }
   // Soldes de fin de journee, en partant du solde actuel
   var pastToday=0;
-  for(var tx2=0;tx2<txns.length;tx2++){ var z=txns[tx2]; if(inSel(z.bank)&&!isPending(z)&&!Number(z.no_balance)&&z.date===today) pastToday+=txnSign(z)*(parseFloat(z.amount)||0); }
+  for(var tx2=0;tx2<txns.length;tx2++){ var z=txns[tx2]; if(inSel(z.bank)&&!isPending(z)&&!Number(z.no_balance)&&z.date===today) pastToday+=txnSign(z)*amtMain(z); }
   var bars=[], b=cur-pastToday;   // solde a la fin d hier
   for(var j=1;j<=4;j++){ bars.unshift({d:dstr(-j),b:b,past:true}); b-=(moves[dstr(-j)]||0); }
   var run=cur+((moves[today]||0)-pastToday);
@@ -6029,13 +6245,13 @@ function stBuckets(r,tx){
       b.push({key:mPrefix(m.getFullYear(),m.getMonth()),lbl:MONTHS_ABBR[m.getMonth()].replace('.','')+(ST.per==='tout'&&m.getMonth()===0?' '+String(m.getFullYear()).slice(2):''),v:0});
   }
   var idx={}; for(var i=0;i<b.length;i++) idx[b[i].key]=b[i];
-  for(var j=0;j<tx.length;j++){ var k=byMonth?tx[j].date.slice(0,7):tx[j].date; if(idx[k]) idx[k].v+=parseFloat(tx[j].amount)||0; }
+  for(var j=0;j<tx.length;j++){ var k=byMonth?tx[j].date.slice(0,7):tx[j].date; if(idx[k]) idx[k].v+=amtMain(tx[j]); }
   return b;
 }
 function renderDashboard(){
   var page=document.getElementById('page-dashboard'); if(!page) return;
-  var r=stRange(ST.per,ST.off), tx=stTxns(r), total=sumAmt(tx), rev=ST.kind==='rev';
-  var prevR=ST.per==='tout'?null:stRange(ST.per,ST.off-1), prev=prevR?sumAmt(stTxns(prevR)):0, diff=Math.round((total-prev)*100)/100;
+  var r=stRange(ST.per,ST.off), tx=stTxns(r), total=sumMain(tx), rev=ST.kind==='rev';
+  var prevR=ST.per==='tout'?null:stRange(ST.per,ST.off-1), prev=prevR?sumMain(stTxns(prevR)):0, diff=Math.round((total-prev)*100)/100;
   var endEff=r.end<todayStr()?r.end:todayStr(), days=Math.max(1,Math.round((parseDs(endEff)-parseDs(r.start))/86400000)+1);
   var byMonth=ST.per==='1a'||ST.per==='tout', months=Math.max(1,Math.ceil(days/30.4));
   var avg=byMonth?total/months:total/days;
@@ -6088,13 +6304,13 @@ function stBlocks(tx,total){
       if(ST.split==='group'&&!rev){ var g=groupOfCat(t.cat); key=g?g.key:'_autres'; label=g?g.label:'Autres dépenses'; color=g?g.color:'#a99e90'; ic=g?g.ic:null; }
       else { var c=getCatObj(t.cat); key=t.cat||'_'; label=c.label; color=c.color&&c.color.charAt(0)==='#'&&c.color.length===7&&hexLum(c.color)<.7?c.color:(rev?'#3d8a5a':'#a99e90'); ic=c.ic&&ICONS[c.ic]?c.ic:null; }
       if(!map[key]) map[key]={key:key,label:label,color:color,ic:ic,v:0,tx:[]};
-      map[key].v+=parseFloat(t.amount)||0; map[key].tx.push(t);
+      map[key].v+=amtMain(t); map[key].tx.push(t);
     }
     for(var k in map) parts.push(map[k]);
     parts.sort(function(a,b){ return b.v-a.v; });
   }
   // Rien sur la periode : on affiche quand meme le total (0 €)
-  if(!total) return '<div class="st-blocks"><div class="st-block empty"><b>0,00 €</b><span>'+(rev?'Aucun revenu':'Aucune dépense')+' sur cette période</span></div></div>';
+  if(!total) return '<div class="st-blocks"><div class="st-block empty"><b>'+fmtE(0,true)+'</b><span>'+(rev?'Aucun revenu':'Aucune dépense')+' sur cette période</span></div></div>';
   var html=(ST.split!=='none'?'<div class="st-tot"><span>Total</span><b class="'+(rev?'green':'red')+'">'+fmtE(total,true)+'</b></div>':'')+'<div class="st-blocks">';
   for(var p=0;p<parts.length;p++){
     var pt=parts[p], pct=Math.round(pt.v/total*100), h=Math.max(58,Math.round(pt.v/total*260));
@@ -6110,7 +6326,7 @@ function stBlocks(tx,total){
   for(var l=0;l<Math.min(list.length,40);l++){
     var t2=list[l];
     html+=bgRow(itemIcon(t2.label,t2.cat,txnKind(t2),'bg-ic'),t2.label,dayLabel(t2.date)+(t2.bank?' · '+accountName(t2.bank):''),
-      '<b class="'+(rev?'green':'red')+'">'+(rev?'+':'-')+fmtE(parseFloat(t2.amount)||0,true)+'</b>','openTxnEdit(\''+Number(t2.id)+'\')');
+      '<b class="'+(rev?'green':'red')+'">'+(rev?'+':'-')+fmtEur(parseFloat(t2.amount)||0,bankCur(t2.bank))+'</b>','openTxnEdit(\''+Number(t2.id)+'\')');
   }
   if(list.length>40) html+='<div class="bg-empty">… et '+(list.length-40)+' autres</div>';
   return html+'</div>';
@@ -6146,12 +6362,13 @@ function renderSettingsPage(){
     '<div class="set-list">'+
       row(svgIcon('user'),'Mon compte','','setAccount()')+
       row(svgIcon('people'),'Mon foyer',(AUTH.household.members||[]).length+' / 3','setHousehold()')+
-      row('<span class="set-eu">€</span>','Devise','€ EUR','showToast(\'Le site fonctionne en euros\')')+
+      row('<span class="set-eu">'+esc(curSym())+'</span>','Devise',esc(curSym())+' '+mainCur(),'setCurrency()')+
       row(svgIcon('db'),'Mes données','','setData()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
       row(svgIcon('bell'),'Notifications','','setSoon(\'Notifications\',\'Un rappel « T’as bien noté tes dépenses ? » pourra s’afficher chaque soir.\')')+
       row(svgIcon('bolt'),'Ajout éclair','','setSoon(\'Ajout éclair\',\'Ajouter une dépense en un seul geste depuis l’écran d’accueil du téléphone.\')')+
       row(svgIcon('lock'),'Confidentialité','','setPrivacy()')+
+      row('<span class="set-eu">?</span>','Visite guidée','','setTour()','set-tour')+
       row(svgIcon('flag'),'Signaler un problème','','setBug()','bug')+
     '</div>'+
     '<p class="set-foot">'+na+' compte'+(na>1?'s':'')+' · '+nb+' opération'+(nb>1?'s':'')+' · '+nr+' régulière'+(nr>1?'s':'')+'</p>';
@@ -6186,6 +6403,39 @@ function setExport(){
   a.href=URL.createObjectURL(blob); a.download='budget-sauvegarde-'+todayStr()+'.json';
   document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
   showToast('Sauvegarde téléchargée');
+}
+// Devise du site et taux de change des comptes dans une autre devise
+function setCurrency(){
+  var used={}, accs=getAccounts();
+  for(var i=0;i<accs.length;i++){ var c=accs[i].currency; if(c&&c!==mainCur()) used[c]=1; }
+  var rates=((_cache.settings||{}).rates)||{}, rows='';
+  for(var k in used) rows+='<div class="rate-row"><span>1 '+esc(curSym(k))+' ('+k+') =</span><input type="number" step="0.0001" min="0" inputmode="decimal" data-c="'+k+'" value="'+(rates[k]||'')+'" placeholder="taux"><span>'+esc(curSym())+'</span></div>';
+  window._curSel=mainCur();
+  openSheet(sheetHead('Devise')+
+    '<p class="sheet-note">Devise des totaux, du Budget et des Stats. Chaque compte peut avoir sa propre devise (petite roue sur sa carte).</p>'+
+    '<div class="cur-list" id="curList">'+curListHtml()+'</div>'+
+    (rows?'<div class="sf"><label>Taux de change</label>'+rows+'</div>':'')+
+    '<button class="sheet-btn" onclick="setCurrencyGo()">Enregistrer</button>');
+}
+// Liste des devises : symbole, code, nom, et une coche sur celle choisie
+function curListHtml(){
+  var h='';
+  for(var i=0;i<CURRENCIES.length;i++){
+    var c=CURRENCIES[i], on=c[0]===window._curSel;
+    h+='<button class="cur-row'+(on?' on':'')+'" onclick="window._curSel=\''+c[0]+'\';document.getElementById(\'curList\').innerHTML=curListHtml()">'+
+      '<span class="cur-sym">'+esc(c[1])+'</span><span class="cur-name"><b>'+c[0]+'</b><span>'+esc(c[2])+'</span></span>'+
+      (on?'<span class="cur-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>':'')+'</button>';
+  }
+  return h;
+}
+function setCurrencyGo(){
+  var c=window._curSel||mainCur(), s=_cache.settings||(_cache.settings={});
+  var ins=document.querySelectorAll('#sheetBody .rate-row input'), r=s.rates||{};
+  for(var i=0;i<ins.length;i++){ var v=parseFloat(String(ins[i].value).replace(',','.')); if(v>0) r[ins[i].getAttribute('data-c')]=v; }
+  s.rates=r; apiPost('/api/settings/rates',{value:r},null);
+  if(c!==mainCur()){ s.currency=c; apiPost('/api/settings/currency',{value:c},null); showToast('Devise du site : '+c+'. Vérifie les taux de change.'); }
+  else showToast('Enregistré');
+  closeSheet(); renderSettingsPage(); refreshViews();
 }
 function setPrivacy(){
   openSheet(sheetHead('Confidentialité')+

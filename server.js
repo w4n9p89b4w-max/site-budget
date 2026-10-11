@@ -114,6 +114,8 @@ addColumnIfMissing('accounts', 'hidden', 'INTEGER DEFAULT 0');
 addColumnIfMissing('accounts', 'cycle_rec', 'TEXT');
 // Proprietaire du compte : etienne, noa ou vide (commun)
 addColumnIfMissing('accounts', 'owner', 'TEXT');
+// Devise du compte (vide = devise du site)
+addColumnIfMissing('accounts', 'currency', 'TEXT');
 // Page Budget : type d operation reguliere (dep, rev, tra) et lien transaction <-> echeance confirmee
 addColumnIfMissing('recurring', 'kind', 'TEXT');
 // Frequence : month (defaut), week, day (tous les "every" jours), year ; anchor = date de la premiere echeance
@@ -548,7 +550,7 @@ function accountFromRow(r) {
   return {
     id: r.id, name: r.name, color: r.color, solde: r.solde, soldeDate: r.solde_date, soldeSetAt: r.solde_set_at,
     bank: r.bank_key || '', type: r.acc_type || '', description: r.description || '', hidden: !!r.hidden,
-    cycle: r.cycle_rec || '', owner: r.owner || ''
+    cycle: r.cycle_rec || '', owner: r.owner || '', currency: r.currency || ''
   };
 }
 
@@ -563,12 +565,12 @@ app.post('/api/accounts', requireAuth, (req, res) => {
   const id = a.id || Date.now();
   if (foreignRow('accounts', id, req.hid)) return res.status(403).json({ error: 'Compte introuvable' });
   db.prepare(`
-    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description, hidden, cycle_rec, owner, household_id)
-    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description, @hidden, @cycle_rec, @owner, @household_id)
+    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description, hidden, cycle_rec, owner, currency, household_id)
+    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description, @hidden, @cycle_rec, @owner, @currency, @household_id)
     ON CONFLICT(id) DO UPDATE SET name=excluded.name, color=excluded.color, solde=excluded.solde,
       solde_date=excluded.solde_date, solde_set_at=excluded.solde_set_at, sort_order=excluded.sort_order,
       bank_key=excluded.bank_key, acc_type=excluded.acc_type, description=excluded.description, hidden=excluded.hidden,
-      cycle_rec=excluded.cycle_rec, owner=excluded.owner
+      cycle_rec=excluded.cycle_rec, owner=excluded.owner, currency=excluded.currency
   `).run({
     id: id,
     name: a.name,
@@ -584,6 +586,7 @@ app.post('/api/accounts', requireAuth, (req, res) => {
     hidden: a.hidden ? 1 : 0,
     cycle_rec: a.cycle ? String(a.cycle) : null,
     owner: a.owner || null,
+    currency: /^[A-Z]{3}$/.test(a.currency || '') ? a.currency : null,
     household_id: req.hid
   });
   res.json({ ok: true, id: id });
