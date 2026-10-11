@@ -801,6 +801,22 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .nt-admin .nt-row:last-of-type{border-bottom:none;}
 .nt-bc{margin-top:10px;}
 .nt-bc textarea{width:100%;font-family:inherit;font-size:15px;padding:10px 12px;border:1.5px solid #e2d9cb;border-radius:14px;resize:vertical;}
+.avatar svg.mj,.set-av svg.mj,.ave-big svg.mj,.mj-th svg.mj{width:100%;height:100%;display:block;}
+.ave-big:has(svg.mj){align-items:flex-end;overflow:hidden;}
+.mj-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px 12px;padding:0 20px 2px;}
+.mj-tabs::-webkit-scrollbar{display:none;}
+.mj-tabs button{flex-shrink:0;padding:8px 14px;border-radius:99px;border:1.5px solid #e2d9cb;background:#fff;font-family:inherit;font-size:14px;font-weight:800;color:#8a7f72;cursor:pointer;}
+.mj-tabs button.on{background:#2a2118;border-color:#2a2118;color:#fff;}
+.mj-opts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:#fff;border-radius:20px;padding:12px;margin-bottom:10px;}
+.mj-opt{display:flex;flex-direction:column;align-items:center;gap:4px;border:none;background:none;font-family:inherit;cursor:pointer;padding:0;}
+.mj-th{width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;border:3px solid transparent;display:block;}
+.mj-opt.on .mj-th{border-color:#2a2118;}
+.mj-opt small{font-size:11.5px;font-weight:700;color:#6f6455;text-align:center;line-height:1.2;}
+.mj-cols{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;background:#fff;border-radius:20px;padding:14px;margin-bottom:10px;}
+.mj-col{aspect-ratio:1;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #e2d9cb;cursor:pointer;}
+.mj-col.on{box-shadow:0 0 0 3px #2a2118;}
+.mj-rand{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;margin-bottom:12px;border-radius:16px;border:2px dashed #d9c3a0;background:none;font-family:inherit;font-size:15px;font-weight:800;color:#8b6b35;cursor:pointer;}
+.mj-rand .ico{width:18px;height:18px;}
 .rate-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15.5px;font-weight:700;color:#5c4630;}
 .rate-row input{width:110px;padding:11px 10px;border:1.5px solid #e2d3b4;border-radius:12px;background:#fcf3f2;font-family:inherit;font-size:16px;font-weight:800;text-align:center;outline:none;}
 .rate-row.small{margin-top:8px;}
@@ -5569,6 +5585,104 @@ function checkBudgetPush(){
 }
 // Le site s installe comme une appli (et garde le service des notifications a jour)
 if('serviceWorker' in navigator&&!DEMO&&location.protocol!=='file:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+// ---------- Personnage (façon Memoji) : dessine en SVG a partir de choix simples ----------
+var MJ_SKIN=['#fbe0cf','#f5d7b8','#f3cfb3','#e8b48f','#d79a6e','#b97a4f','#8d5a36','#5e3a22'];
+var MJ_HAIRC=['#1f1a17','#3b2a20','#6b4a2e','#a77a43','#d9b26a','#b5522b','#9a9a9a','#e8e4dc','#e58fb0','#4f7cc2'];
+var MJ_EYEC=['#6b4423','#2b1d14','#3d7cc9','#3f8f5a','#8a6a2c','#7d8a96'];
+var MJ_SHIRT=['#2e9a78','#c47f86','#3f7fae','#e0892e','#8b6bd6','#2a2a30','#f3f0ea','#d64545'];
+var MJ_OPTS={
+  face:[['round','Rond'],['oval','Ovale'],['square','Carré'],['heart','Cœur']],
+  hair:[['court','Court'],['raie','Raie'],['meche','Mèche'],['rase','Rasé'],['boucles','Bouclés'],['afro','Afro'],['carre','Carré'],['long','Longs'],['ondule','Ondulés'],['chignon','Chignon'],['queue','Queue'],['chauve','Chauve']],
+  eyes:[['rond','Ronds'],['amande','Amande'],['rieur','Rieurs'],['clin','Clin d’œil']],
+  brows:[['normal','Normaux'],['epais','Épais'],['arque','Arqués'],['droit','Droits'],['aucun','Aucun']],
+  nose:[['fin','Fin'],['rond','Rond'],['bouton','Bouton']],
+  mouth:[['sourire','Sourire'],['grand','Grand sourire'],['neutre','Neutre'],['ouvert','Étonné'],['langue','Langue']],
+  beard:[['aucune','Aucune'],['moustache','Moustache'],['barbe3','Barbe 3 jours'],['bouc','Bouc'],['pleine','Barbe']],
+  glasses:[['aucune','Aucune'],['rondes','Rondes'],['carrees','Carrées'],['fines','Fines dorées'],['soleil','Soleil']],
+  hat:[['aucun','Aucun'],['bonnet','Bonnet'],['casquette','Casquette']],
+  extra:[['aucun','Aucun'],['rousseur','Taches de rousseur'],['joues','Joues roses'],['boucles','Boucles d’oreilles']]
+};
+var MJ_TABS=[['skin','Peau'],['face','Visage'],['hair','Coiffure'],['hairc','Cheveux'],['eyes','Yeux'],['eyec','Couleur des yeux'],['brows','Sourcils'],['nose','Nez'],['mouth','Bouche'],['beard','Barbe'],['glasses','Lunettes'],['hat','Chapeau'],['extra','Détails'],['shirt','Haut'],['bg','Fond']];
+function mjDefault(){ return {skin:'#f3cfb3',face:'round',hair:'court',hairc:'#3b2a20',eyes:'rond',eyec:'#6b4423',brows:'normal',nose:'fin',mouth:'sourire',beard:'aucune',glasses:'aucune',hat:'aucun',extra:'aucun',shirt:'#2e9a78'}; }
+function mjShade(c,a){ return shadeHex(c,a); }
+function memojiSvg(c){
+  c=Object.assign(mjDefault(),c||{});
+  var sk=c.skin, skD=mjShade(sk,-.12), hc=c.hairc, s='';
+  var back='', front='';
+  // coiffure : partie derriere la tete puis partie devant
+  switch(c.hair){
+    case 'court': front='<path d="M54 100 Q50 46 100 42 Q150 46 146 100 Q141 72 119 63 Q96 74 70 69 Q58 78 54 100Z" fill="'+hc+'"/>'; break;
+    case 'raie': front='<path d="M54 104 Q48 44 102 40 Q152 44 146 104 Q144 74 128 62 Q102 54 80 70 Q64 68 54 104Z" fill="'+hc+'"/><path d="M80 70 Q90 56 104 50" stroke="'+mjShade(hc,-.25)+'" stroke-width="2" fill="none" stroke-linecap="round"/>'; break;
+    case 'meche': front='<path d="M55 98 Q48 40 96 33 Q132 28 147 60 Q151 80 145 98 Q137 70 112 66 Q84 70 66 74 Q58 82 55 98Z" fill="'+hc+'"/>'; break;
+    case 'rase': front='<path d="M57 90 Q58 50 100 47 Q142 50 143 90 Q131 62 100 60 Q69 62 57 90Z" fill="'+hc+'" opacity=".55"/>'; break;
+    case 'boucles':
+      for(var i=0;i<11;i++){ var a=Math.PI*(1.08+i*0.084), x=100+Math.cos(a)*48, y=96+Math.sin(a)*50; front+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="14" fill="'+hc+'"/>'; }
+      break;
+    case 'afro': back='<circle cx="100" cy="86" r="68" fill="'+hc+'"/>'; front='<path d="M54 94 Q54 44 100 42 Q146 44 146 94 Q132 68 100 68 Q68 68 54 94Z" fill="'+hc+'"/>'; break;
+    case 'carre': back='<path d="M50 96 Q46 44 100 42 Q154 44 150 96 L150 138 Q132 144 126 128 L74 128 Q68 144 50 138Z" fill="'+hc+'"/>'; front='<path d="M56 92 Q56 50 100 48 Q144 50 144 92 L144 84 Q100 70 56 84Z" fill="'+hc+'"/>'; break;
+    case 'long': back='<path d="M50 100 Q46 44 100 40 Q154 44 150 100 L154 172 Q130 178 126 150 L74 150 Q70 178 46 172Z" fill="'+hc+'"/>'; front='<path d="M56 98 Q54 50 100 46 Q146 50 144 98 Q132 66 100 64 Q76 64 66 78 Q60 86 56 98Z" fill="'+hc+'"/>'; break;
+    case 'ondule': back='<path d="M50 100 Q44 44 100 40 Q156 44 150 100 Q160 120 150 138 Q160 156 148 172 Q130 176 128 150 L72 150 Q70 176 52 172 Q40 156 50 138 Q40 120 50 100Z" fill="'+hc+'"/>'; front='<path d="M56 98 Q54 50 100 46 Q146 50 144 98 Q130 70 108 66 Q120 74 116 80 Q96 64 70 74 Q60 84 56 98Z" fill="'+hc+'"/>'; break;
+    case 'chignon': back='<circle cx="100" cy="38" r="20" fill="'+hc+'"/>'; front='<path d="M56 96 Q54 50 100 48 Q146 50 144 96 Q138 66 100 62 Q62 66 56 96Z" fill="'+hc+'"/>'; break;
+    case 'queue': back='<path d="M136 70 Q176 80 168 140 Q160 120 146 104Z" fill="'+hc+'"/>'; front='<path d="M56 96 Q54 50 100 48 Q146 50 144 96 Q138 66 100 62 Q62 66 56 96Z" fill="'+hc+'"/>'; break;
+  }
+  s+=back;
+  // cou et haut
+  s+='<rect x="87" y="132" width="26" height="30" rx="8" fill="'+skD+'"/>';
+  s+='<path d="M36 200 C40 166 66 152 100 152 C134 152 160 166 164 200Z" fill="'+c.shirt+'"/>';
+  s+='<path d="M84 152 Q100 166 116 152" stroke="'+mjShade(c.shirt,-.2)+'" stroke-width="3" fill="none"/>';
+  // oreilles et tete
+  s+='<circle cx="56" cy="106" r="9" fill="'+sk+'"/><circle cx="144" cy="106" r="9" fill="'+sk+'"/>';
+  var head={round:'<ellipse cx="100" cy="102" rx="45" ry="50" fill="'+sk+'"/>',oval:'<ellipse cx="100" cy="102" rx="41" ry="54" fill="'+sk+'"/>',
+    square:'<path d="M57 72 Q57 52 77 52 H123 Q143 52 143 72 V118 Q143 152 100 154 Q57 152 57 118Z" fill="'+sk+'"/>',
+    heart:'<path d="M55 94 Q55 52 100 52 Q145 52 145 94 Q145 132 100 157 Q55 132 55 94Z" fill="'+sk+'"/>'};
+  s+=head[c.face]||head.round;
+  // details de peau
+  if(c.extra==='joues') s+='<ellipse cx="76" cy="124" rx="9" ry="5.5" fill="#f08a8a" opacity=".38"/><ellipse cx="124" cy="124" rx="9" ry="5.5" fill="#f08a8a" opacity=".38"/>';
+  if(c.extra==='rousseur'){ [[74,118],[79,122],[70,123],[84,119],[126,118],[121,122],[130,123],[116,119]].forEach(function(p){ s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="1.5" fill="'+mjShade(sk,-.35)+'"/>'; }); }
+  // yeux
+  function eye(x,shape,closed){
+    if(closed||shape==='rieur') return '<path d="M'+(x-7)+' 106 Q'+x+' 99 '+(x+7)+' 106" stroke="#2b1d14" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    var w=shape==='amande'?'<path d="M'+(x-10.5)+' 105 Q'+x+' 94 '+(x+10.5)+' 105 Q'+x+' 113 '+(x-10.5)+' 105Z" fill="#fff"/>':'<ellipse cx="'+x+'" cy="105" rx="9" ry="9.6" fill="#fff"/>';
+    return w+'<circle cx="'+x+'" cy="105" r="5.8" fill="'+c.eyec+'"/><circle cx="'+x+'" cy="105" r="2.9" fill="#1a1210"/><circle cx="'+(x+2)+'" cy="102.8" r="1.7" fill="#fff"/>';
+  }
+  s+=eye(82,c.eyes,false)+eye(118,c.eyes,c.eyes==='clin');
+  // sourcils
+  var bw={normal:3.5,epais:6,arque:3.8,droit:4}[c.brows], bc=mjShade(hc==='#e8e4dc'?'#b9b2a6':hc,-.05);
+  if(c.brows!=='aucun'){
+    var bp=c.brows==='arque'?['M73 93 Q82 83 91 90','M127 93 Q118 83 109 90']:(c.brows==='droit'?['M73 91 L91 90','M127 91 L109 90']:['M73 92 Q82 87 91 91','M127 92 Q118 87 109 91']);
+    s+='<path d="'+bp[0]+'" stroke="'+bc+'" stroke-width="'+bw+'" fill="none" stroke-linecap="round"/><path d="'+bp[1]+'" stroke="'+bc+'" stroke-width="'+bw+'" fill="none" stroke-linecap="round"/>';
+  }
+  // nez
+  var nd=mjShade(sk,-.22);
+  if(c.nose==='fin') s+='<path d="M99 110 Q95 121 101 123" stroke="'+nd+'" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+  else if(c.nose==='rond') s+='<path d="M94 119 Q100 127 106 119" stroke="'+nd+'" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="100" cy="116" r="5" fill="'+nd+'" opacity=".25"/>';
+  else s+='<ellipse cx="100" cy="119" rx="5" ry="3.6" fill="'+nd+'" opacity=".55"/>';
+  // barbe (avant la bouche, sauf moustache)
+  var beardC=hc;
+  if(c.beard==='barbe3') s+='<path d="M58 110 Q60 152 100 157 Q140 152 142 110 Q138 142 100 145 Q62 142 58 110Z" fill="'+beardC+'" opacity=".35"/>';
+  if(c.beard==='pleine') s+='<path d="M56 104 Q56 160 100 166 Q144 160 144 104 Q140 128 124 132 Q112 126 100 127 Q88 126 76 132 Q60 128 56 104Z" fill="'+beardC+'"/>';
+  if(c.beard==='bouc') s+='<path d="M88 140 Q100 162 112 140 Q106 146 100 146 Q94 146 88 140Z" fill="'+beardC+'"/>';
+  // bouche
+  if(c.mouth==='sourire') s+='<path d="M88 133 Q100 143 112 133" stroke="#8a3a3a" stroke-width="3.2" fill="none" stroke-linecap="round"/>';
+  else if(c.mouth==='grand') s+='<path d="M85 131 Q100 150 115 131Z" fill="#7a2a2a"/><path d="M88 132 L112 132 L110 137 Q100 139 90 137Z" fill="#fff"/>';
+  else if(c.mouth==='neutre') s+='<path d="M90 136 L110 136" stroke="#8a3a3a" stroke-width="3.2" stroke-linecap="round"/>';
+  else if(c.mouth==='ouvert') s+='<ellipse cx="100" cy="137" rx="6" ry="7.5" fill="#7a2a2a"/>';
+  else s+='<path d="M86 132 Q100 146 114 132Z" fill="#7a2a2a"/><path d="M95 138 Q100 150 105 138Z" fill="#e8778a"/>';
+  if(c.beard==='moustache') s+='<path d="M85 129 Q93 123 100 127 Q107 123 115 129 Q107 133 100 130 Q93 133 85 129Z" fill="'+beardC+'"/>';
+  if(c.beard==='pleine') s+='<path d="M84 129 Q93 123 100 127 Q107 123 116 129 Q107 132 100 130 Q93 132 84 129Z" fill="'+mjShade(beardC,-.1)+'"/>';
+  // cheveux devant
+  s+=front;
+  // chapeau
+  if(c.hat==='bonnet') s+='<path d="M52 92 Q50 36 100 34 Q150 36 148 92Z" fill="#c47f86"/><rect x="50" y="80" width="100" height="16" rx="8" fill="'+mjShade('#c47f86',-.15)+'"/><circle cx="100" cy="32" r="9" fill="#f3e3e1"/>';
+  if(c.hat==='casquette') s+='<path d="M54 84 Q54 40 100 38 Q146 40 146 84Z" fill="#2e9a78"/><path d="M92 82 Q140 76 176 90 Q150 96 100 92Z" fill="'+mjShade('#2e9a78',-.2)+'"/><circle cx="100" cy="40" r="4" fill="'+mjShade('#2e9a78',-.25)+'"/>';
+  // lunettes
+  if(c.glasses==='rondes') s+='<g fill="none" stroke="#2a2118" stroke-width="3"><circle cx="82" cy="105" r="12"/><circle cx="118" cy="105" r="12"/><path d="M94 104 Q100 100 106 104"/></g>';
+  if(c.glasses==='carrees') s+='<g fill="none" stroke="#2a2118" stroke-width="3.2"><rect x="68" y="95" width="28" height="20" rx="5"/><rect x="104" y="95" width="28" height="20" rx="5"/><path d="M96 103 L104 103"/></g>';
+  if(c.glasses==='fines') s+='<g fill="none" stroke="#c79a3b" stroke-width="2"><circle cx="82" cy="105" r="11"/><circle cx="118" cy="105" r="11"/><path d="M93 104 Q100 101 107 104"/></g>';
+  if(c.glasses==='soleil') s+='<g stroke="#1a1210" stroke-width="2.5"><path d="M68 98 H96 V108 Q96 118 82 118 Q68 118 68 108Z" fill="#1a1210" fill-opacity=".85"/><path d="M104 98 H132 V108 Q132 118 118 118 Q104 118 104 108Z" fill="#1a1210" fill-opacity=".85"/><path d="M96 101 L104 101"/></g>';
+  if(c.extra==='boucles') s+='<circle cx="55" cy="118" r="3.6" fill="#d9b26a"/><circle cx="145" cy="118" r="3.6" fill="#d9b26a"/>';
+  return '<svg class="mj" viewBox="18 22 164 178" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>';
+}
 // ---------- Avatar : initiales, emoji ou photo sur un fond de couleur (comme sur iPhone) ----------
 var AV_BGS=['linear-gradient(160deg,#f3d9b8,#e0a96d)','linear-gradient(160deg,#a8b5c8,#6b7c96)','linear-gradient(160deg,#f6b4b0,#e07a76)','linear-gradient(160deg,#ffd27a,#f2a23a)',
   'linear-gradient(160deg,#9fd8b4,#3fa46a)','linear-gradient(160deg,#8fd3e0,#3f9fb8)','linear-gradient(160deg,#a9c3ff,#5b7fe0)','linear-gradient(160deg,#c9b2f2,#8b6bd6)',
@@ -5578,6 +5692,7 @@ function initialsOf(n){ var p=String(n||'?').trim().split(/\s+/); return ((p[0]|
 function avatarInner(u){
   var a=u&&u.avatar, bg=a&&a.bg||AV_BGS[0];
   if(a&&a.type==='photo'&&a.img) return {bg:'url('+a.img+') center/cover',html:''};
+  if(a&&a.type==='memoji') return {bg:bg,html:memojiSvg(a.mj)};
   if(a&&a.type==='emoji'&&a.emoji) return {bg:bg,html:'<span class="av-emo">'+a.emoji+'</span>'};
   return {bg:bg,html:esc(a&&a.text?a.text:initialsOf(u&&u.name))};
 }
@@ -5586,23 +5701,52 @@ function avatarDemoLoad(){ if(!DEMO||!AUTH.user) return; try{ var a=JSON.parse(l
 var AVE=null;
 function openAvatarEditor(){
   var a=(AUTH.user&&AUTH.user.avatar)||{};
-  AVE={type:a.type||'initials',bg:a.bg||AV_BGS[0],text:a.text||initialsOf(currentName),emoji:a.emoji||'😀',img:a.img||''};
+  AVE={type:a.type||'memoji',bg:a.bg||AV_BGS[5],text:a.text||initialsOf(currentName),emoji:a.emoji||'😀',img:a.img||'',mj:Object.assign(mjDefault(),a.mj||{}),tab:'hair'};
   renderAvatarEditor();
 }
 function renderAvatarEditor(){
-  var tabs=[['initials','Initiales'],['emoji','Emoji'],['photo','Photo']], th='', body='';
+  var tabs=[['memoji','Personnage'],['initials','Initiales'],['emoji','Emoji'],['photo','Photo']], th='', body='';
   for(var i=0;i<tabs.length;i++) th+='<button class="'+(AVE.type===tabs[i][0]?'on':'')+'" onclick="AVE.type=\''+tabs[i][0]+'\';renderAvatarEditor()">'+tabs[i][1]+'</button>';
-  if(AVE.type==='initials') body='<div class="sf"><label>Tes initiales (2 lettres max)</label><input id="aveText" maxlength="2" value="'+esc(AVE.text)+'" oninput="AVE.text=this.value.toUpperCase();aveRefresh()"></div>';
+  if(AVE.type==='memoji') body=mjEditorHtml();
+  else if(AVE.type==='initials') body='<div class="sf"><label>Tes initiales (2 lettres max)</label><input id="aveText" maxlength="2" value="'+esc(AVE.text)+'" oninput="AVE.text=this.value.toUpperCase();aveRefresh()"></div>';
   else if(AVE.type==='emoji'){ var e=''; for(var k=0;k<AV_EMOJIS.length;k++) e+='<button class="ave-emo'+(AVE.emoji===AV_EMOJIS[k]?' on':'')+'" onclick="AVE.emoji=\''+AV_EMOJIS[k]+'\';renderAvatarEditor()">'+AV_EMOJIS[k]+'</button>'; body='<div class="ave-emos">'+e+'</div>'; }
   else body='<label class="sheet-btn ghost ave-pick">'+(AVE.img?'Changer de photo':'Choisir une photo')+'<input type="file" accept="image/*" onchange="if(this.files[0])aveLoad(this.files[0])"></label>';
   var cols='';
-  if(AVE.type!=='photo') for(var c=0;c<AV_BGS.length;c++) cols+='<button class="ave-col'+(AVE.bg===AV_BGS[c]?' on':'')+'" style="background:'+AV_BGS[c]+'" onclick="AVE.bg=AV_BGS['+c+'];renderAvatarEditor()"></button>';
+  if(AVE.type!=='photo'&&AVE.type!=='memoji') for(var c=0;c<AV_BGS.length;c++) cols+='<button class="ave-col'+(AVE.bg===AV_BGS[c]?' on':'')+'" style="background:'+AV_BGS[c]+'" onclick="AVE.bg=AV_BGS['+c+'];renderAvatarEditor()"></button>';
+  var sb=document.getElementById('sheetBody'), sy=sb&&document.getElementById('aveBig')?sb.parentNode.scrollTop:0, tx=document.querySelector('.mj-tabs')?document.querySelector('.mj-tabs').scrollLeft:0;
   openSheet(sheetHead('Mon avatar')+'<div class="ave-prev"><span class="ave-big" id="aveBig"></span></div>'+
     '<div class="seg ave-tabs">'+th+'</div>'+body+(cols?'<div class="ave-cols">'+cols+'</div>':'')+
     '<button class="sheet-btn" onclick="saveAvatar()">Enregistrer</button>');
   aveRefresh();
+  if(sy) document.getElementById('sheetBody').parentNode.scrollTop=sy;
+  var mt=document.querySelector('.mj-tabs'); if(mt) mt.scrollLeft=tx;
 }
-function aveRefresh(){ paintAvatar(document.getElementById('aveBig'),{name:currentName,avatar:{type:AVE.type,bg:AVE.bg,text:AVE.text,emoji:AVE.emoji,img:AVE.img}}); }
+function aveRefresh(){ paintAvatar(document.getElementById('aveBig'),{name:currentName,avatar:{type:AVE.type,bg:AVE.bg,text:AVE.text,emoji:AVE.emoji,img:AVE.img,mj:AVE.mj}}); }
+// Editeur du personnage : une rangee de categories, puis les choix en vignettes (comme sur iPhone)
+function mjEditorHtml(){
+  var t=AVE.tab, tabs='', grid='';
+  for(var i=0;i<MJ_TABS.length;i++) tabs+='<button class="'+(t===MJ_TABS[i][0]?'on':'')+'" onclick="AVE.tab=\''+MJ_TABS[i][0]+'\';renderAvatarEditor()">'+MJ_TABS[i][1]+'</button>';
+  var colors={skin:MJ_SKIN,hairc:MJ_HAIRC,eyec:MJ_EYEC,shirt:MJ_SHIRT,bg:AV_BGS}[t];
+  if(colors){
+    for(var c=0;c<colors.length;c++){ var on=t==='bg'?AVE.bg===colors[c]:AVE.mj[t]===colors[c];
+      grid+='<button class="mj-col'+(on?' on':'')+'" style="background:'+colors[c]+'" onclick="mjSet(\''+t+'\','+c+')"></button>'; }
+    grid='<div class="mj-cols">'+grid+'</div>';
+  } else {
+    var opts=MJ_OPTS[t]||[];
+    for(var o=0;o<opts.length;o++){ var cfg=Object.assign({},AVE.mj); cfg[t]=opts[o][0];
+      grid+='<button class="mj-opt'+(AVE.mj[t]===opts[o][0]?' on':'')+'" onclick="AVE.mj.'+t+'=\''+opts[o][0]+'\';renderAvatarEditor()"><span class="mj-th" style="background:'+AVE.bg+'">'+memojiSvg(cfg)+'</span><small>'+opts[o][1]+'</small></button>'; }
+    grid='<div class="mj-opts">'+grid+'</div>';
+  }
+  return '<div class="mj-tabs">'+tabs+'</div>'+grid+'<button class="mj-rand" onclick="mjRandom()">'+svgIcon('repeat')+' Au hasard</button>';
+}
+function mjSet(t,i){ if(t==='bg') AVE.bg=AV_BGS[i]; else AVE.mj[t]={skin:MJ_SKIN,hairc:MJ_HAIRC,eyec:MJ_EYEC,shirt:MJ_SHIRT}[t][i]; renderAvatarEditor(); }
+function mjRandom(){
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+  var m={skin:pick(MJ_SKIN),hairc:pick(MJ_HAIRC.slice(0,8)),eyec:pick(MJ_EYEC),shirt:pick(MJ_SHIRT)};
+  for(var k in MJ_OPTS) m[k]=pick(MJ_OPTS[k])[0];
+  if(Math.random()<.6) m.beard='aucune'; if(Math.random()<.6) m.glasses='aucune'; if(Math.random()<.75) m.hat='aucun';
+  AVE.mj=m; AVE.bg=pick(AV_BGS); renderAvatarEditor();
+}
 // Photo : recadree en carre et reduite
 function aveLoad(file){
   var r=new FileReader();
@@ -5619,6 +5763,7 @@ function saveAvatar(){
   if(AVE.type==='initials') av.text=(AVE.text||initialsOf(currentName)).slice(0,2);
   if(AVE.type==='emoji') av.emoji=AVE.emoji;
   if(AVE.type==='photo') av.img=AVE.img;
+  if(AVE.type==='memoji') av.mj=AVE.mj;
   function done(a){
     AUTH.user.avatar=a;
     (AUTH.household.members||[]).forEach(function(m){ if(String(m.id)===currentUser) m.avatar=a; });
