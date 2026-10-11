@@ -659,6 +659,24 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .wiz-btn.soft{background:#ece3d1;color:#6f6455;}
 .wiz-btn.go{background:#2f5e3c;}
 .wiz{position:relative;}
+/* Ecran de connexion */
+.login-box{width:360px;padding:28px 24px;text-align:left;}
+.login-box .login-logo,.login-box .login-title,.login-box .login-sub{text-align:center;}
+.login-title{font-size:24px;font-weight:900;}
+.login-sub{margin-bottom:18px;}
+.au-f{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.au-f span{font-size:13px;font-weight:700;color:#6f6455;}
+.au-f input{width:100%;padding:13px 14px;border:1.5px solid #e2d9cb;border-radius:14px;background:#fbf8f2;font-family:inherit;font-size:16px;outline:none;}
+.au-f input:focus{border-color:var(--accent);background:#fff;}
+.au-btn{width:100%;margin-top:4px;padding:14px;border:none;border-radius:99px;background:#2f5e3c;color:#fff;font-family:inherit;font-size:16.5px;font-weight:800;cursor:pointer;}
+.au-btn.ghost{background:#f3eee4;color:#5c4630;border:1.5px solid #e2d3b4;}
+.au-link{display:block;margin:12px auto 0;border:none;background:none;font-family:inherit;font-size:14px;font-weight:700;color:#8b6b35;cursor:pointer;}
+.au-sep{display:flex;align-items:center;gap:10px;margin:18px 0 10px;color:#a3978a;font-size:13px;}
+.au-sep::before,.au-sep::after{content:'';flex:1;height:1px;background:#ece4d6;}
+.au-help{font-size:14px;color:#6f6455;line-height:1.45;margin-bottom:14px;text-align:center;}
+.au-err{margin-top:12px;padding:10px 12px;border-radius:12px;background:#fbe5e3;color:#a3271d;font-size:14px;font-weight:700;text-align:center;}
+.au-ok{margin-top:12px;padding:10px 12px;border-radius:12px;background:#e3efe6;color:#2f6b45;font-size:14px;font-weight:700;text-align:center;}
+.inv-code{margin:6px 0 16px;padding:18px;border-radius:18px;background:#f6f1e8;text-align:center;font-size:34px;font-weight:900;letter-spacing:8px;color:#2a2118;}
 /* ===== Page Reglages ===== */
 #page-settings.active{padding-bottom:110px;}
 #setRoot{max-width:560px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 18px 0;}
@@ -1220,18 +1238,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
   </div>
 </div>
 <div class="sync-bar" id="syncBar"></div>
-<div class="login-screen" id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">&#x1F4B0;</div>
-    <div class="login-title">Budget Mensuel</div>
-    <div class="login-sub">Etienne &amp; Noa</div>
-    <div class="login-btns">
-      <button class="login-btn" onclick="doLogin('etienne')">&#x1F454; Etienne</button>
-      <button class="login-btn" onclick="doLogin('noa')">&#x1F457; Noa</button>
-    </div>
-    <div id="loginError" style="margin-top:12px;font-size:12px;color:var(--red);display:none;">Connexion impossible. Le serveur local est-il lancé (node server.js) ?</div>
-  </div>
-</div>
+<div class="login-screen" id="loginScreen" style="display:none"><div class="login-box" id="authBox"></div></div>
 <header>
   <div class="logo">
     <div class="logo-icon">$</div>
@@ -1754,44 +1761,11 @@ var _cache = {txns:null,budget:null,cats:null,recurring:null,applied:null,epargn
 
 function syncBar(on){ var b=document.getElementById('syncBar'); if(b) b.className=on?'sync-bar loading':'sync-bar'; }
 
-function doLogin(prenom){
-  document.getElementById('loginError').style.display='none';
-  if(DEMO){
-    currentUser=prenom; localStorage.setItem('budget_user',prenom);
-    document.getElementById('loginScreen').style.display='none';
-    var dbadge=document.getElementById('userBadge'); dbadge.style.display='block';
-    dbadge.textContent=(prenom==='etienne'?'E':'N')+'. '+prenom.charAt(0).toUpperCase()+prenom.slice(1)+' (changer)';
-    document.body.classList.add('on-home');
-    initApp(); return;
-  }
-  var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+'/api/login',true);
-  xhr.setRequestHeader('Content-Type','application/json');
-  xhr.onload=function(){
-    if(xhr.status===200){
-      currentUser=prenom; localStorage.setItem('budget_user',prenom);
-      document.getElementById('loginScreen').style.display='none';
-      var badge=document.getElementById('userBadge'); badge.style.display='block';
-      badge.textContent=(prenom==='etienne'?'E':'N')+'. '+prenom.charAt(0).toUpperCase()+prenom.slice(1)+' (changer)';
-      document.body.classList.add('on-home');
-      initApp();
-    } else { document.getElementById('loginError').style.display='block'; }
-  };
-  xhr.onerror=function(){ document.getElementById('loginError').style.display='block'; };
-  xhr.send(JSON.stringify({prenom:prenom}));
-}
-
-function logout(){
-  currentUser=''; localStorage.removeItem('budget_user');
-  _cache={txns:null,budget:null,cats:null,recurring:null,applied:null,epargne:null,accounts:null};
-  document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('userBadge').style.display='none';
-}
-
 function apiGet(path,cb){
   if(DEMO){ setTimeout(function(){ var r=demoApi('GET',path); if(r===null) cb(new Error('HTTP 404')); else cb(null,JSON.parse(JSON.stringify(r))); },0); return; }
   syncBar(true); var xhr=new XMLHttpRequest(); xhr.open('GET',API_BASE+path,true);
-  xhr.setRequestHeader('x-user',currentUser);
-  xhr.onload=function(){ syncBar(false); if(xhr.status===200){var d; try{d=cleanIds(JSON.parse(xhr.responseText));}catch(e){cb(e);return;} cb(null,d);}else{cb(new Error('HTTP '+xhr.status));} };
+  xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
+  xhr.onload=function(){ syncBar(false); if(xhr.status===401){ authExpired(); cb(new Error('HTTP 401')); return; } if(xhr.status===200){var d; try{d=cleanIds(JSON.parse(xhr.responseText));}catch(e){cb(e);return;} cb(null,d);}else{cb(new Error('HTTP '+xhr.status));} };
   xhr.onerror=function(){ syncBar(false); cb(new Error('reseau')); };
   xhr.send();
 }
@@ -1804,8 +1778,8 @@ function cleanIds(d){
 function apiPost(path,data,cb){
   if(DEMO){ setTimeout(function(){ var r=demoApi('POST',path,data||{}); if(cb) cb(null,r); },0); return; }
   var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+path,true);
-  xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('x-user',currentUser);
-  xhr.onload=function(){ if(cb){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}} };
+  xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
+  xhr.onload=function(){ if(xhr.status===401){ authExpired(); if(cb) cb(new Error('HTTP 401')); return; } if(cb){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}} };
   xhr.onerror=function(){ if(cb) cb(new Error('reseau')); };
   xhr.send(JSON.stringify(data));
 }
@@ -1813,8 +1787,8 @@ function apiPost(path,data,cb){
 function apiDelete(path,cb){
   if(DEMO){ setTimeout(function(){ demoApi('DELETE',path); if(cb) cb(null); },0); return; }
   var xhr=new XMLHttpRequest(); xhr.open('DELETE',API_BASE+path,true);
-  xhr.setRequestHeader('x-user',currentUser);
-  xhr.onload=function(){ if(cb) cb(null); };
+  xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
+  xhr.onload=function(){ if(xhr.status===401){ authExpired(); if(cb) cb(new Error('HTTP 401')); return; } if(cb) cb(null); };
   xhr.onerror=function(){ if(cb) cb(new Error('reseau')); };
   xhr.send();
 }
@@ -3569,7 +3543,7 @@ function accountProjected(acc){
 var showHiddenAccs=false;
 function renderHome(){
   var av=document.getElementById('homeAvatar');
-  if(av) av.textContent=(currentUser||'?').charAt(0).toUpperCase();
+  if(av) av.textContent=(currentName||'?').charAt(0).toUpperCase();
   var accs=getAccounts(), total=0;
   var grid=document.getElementById('accGrid'); grid.innerHTML='';
   var nHidden=0;
@@ -3746,7 +3720,7 @@ function openJournal(focusSearch){
 }
 
 function askLogout(){
-  if(confirm('Changer d’utilisateur ?')){ logout(); document.body.classList.remove('on-home'); }
+  if(confirm('Se déconnecter ?')) logout();
 }
 
 // Remplit toutes les listes "banque" de l ancien journal avec les comptes crees
@@ -4220,7 +4194,7 @@ function openAccountSheet(id){
 }
 // Reglages du compte : mois (calendaire ou selon une paie) et proprietaire
 function amSettingsHtml(){
-  var who=[['etienne','Etienne'],['noa','Noa'],['','Commun']], seg='';
+  var who=(AUTH.household.members||[]).map(function(m){ return [String(m.id),m.name]; }).concat([['','Commun']]), seg='';
   for(var w=0;w<who.length;w++) seg+='<button class="'+(AM.owner===who[w][0]?'on':'')+'" onclick="AM.owner=\''+who[w][0]+'\';amRefreshSettings()">'+who[w][1]+'</button>';
   var html='<div class="am-set" id="amSet"><label class="oc-lbl">Mois du compte</label>'+
     '<button class="oc-in am-cyc" onclick="amToggleCycle()">'+svgIcon('calendar')+'<span>'+esc(cycleLabel(AM.cycle))+'</span>'+svgIcon('chev')+'</button>';
@@ -6154,7 +6128,8 @@ function stFilter(){
 var SET_BUBBLES=['T’as bien noté toutes tes dépenses ?','Un petit point sur ton budget ?','Pense à confirmer tes revenus !','Tout est à jour ? Bravo !'];
 function renderSettingsPage(){
   var root=document.getElementById('setRoot'); if(!root) return;
-  var who=currentUser==='noa'?'Noa':'Etienne', other=currentUser==='noa'?'Etienne':'Noa';
+  var who=currentName||'Moi', others=(AUTH.household.members||[]).filter(function(m){ return String(m.id)!==currentUser; }).map(function(m){ return m.name; });
+  var other=others.join(' et ');
   var bubble=SET_BUBBLES[new Date().getDate()%SET_BUBBLES.length];
   function row(ic,label,right,action,cls){
     return '<button class="set-row'+(cls?' '+cls:'')+'" onclick="'+action+'"><span class="set-ic">'+ic+'</span><b>'+label+'</b>'+
@@ -6163,13 +6138,14 @@ function renderSettingsPage(){
   var nb=getTxns().length, na=getAccounts().length, nr=getRecurring().filter(function(r){ return r.kind; }).length;
   root.innerHTML='<div class="set-top"><span class="set-bubble">'+bubble+'</span><span class="set-av">'+who.charAt(0)+'</span></div>'+
     '<div class="set-title"><h1>Mon budget</h1><span>Budget Mensuel</span></div>'+
-    '<div class="set-user"><b>'+who+'</b><span>Compte partagé avec '+other+'</span></div>'+
+    '<div class="set-user"><b>'+esc(who)+'</b><span>'+(others.length?'Foyer partagé avec '+esc(other):'Seul dans ton foyer')+'</span></div>'+
     '<div class="set-card"><b>'+svgIcon('cloud')+' Tes données sont sauvegardées</b>'+
-      '<p>Tes comptes, opérations et budgets sont enregistrés sur le serveur du site, communs à '+who+' et '+other+'. '+
+      '<p>Tes comptes, opérations et budgets sont enregistrés sur le serveur du site'+(others.length?', communs à ton foyer':'')+'. '+
       'Tu peux aussi en garder une copie sur ton appareil.</p>'+
       '<button onclick="setExport()">Télécharger une sauvegarde</button></div>'+
     '<div class="set-list">'+
       row(svgIcon('user'),'Mon compte','','setAccount()')+
+      row(svgIcon('people'),'Mon foyer',(AUTH.household.members||[]).length+' / 3','setHousehold()')+
       row('<span class="set-eu">€</span>','Devise','€ EUR','showToast(\'Le site fonctionne en euros\')')+
       row(svgIcon('db'),'Mes données','','setData()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
@@ -6183,12 +6159,15 @@ function renderSettingsPage(){
 }
 // Mon compte : qui est connecte, changer d utilisateur
 function setAccount(){
-  var who=currentUser==='noa'?'Noa':'Etienne', mine=getAccounts().filter(function(a){ return a.owner===currentUser; }).map(function(a){ return a.name; });
+  var u=AUTH.user||{}, mine=getAccounts().filter(function(a){ return a.owner===currentUser; }).map(function(a){ return a.name; });
   openSheet(sheetHead('Mon compte')+
-    '<div class="detail-list"><div><span>Connecté en tant que</span><span>'+who+'</span></div>'+
+    '<div class="detail-list"><div><span>Prénom</span><span>'+esc(u.name||'')+'</span></div>'+
+    (u.email?'<div><span>Mail</span><span>'+esc(u.email)+'</span></div>':'')+
+    (u.login?'<div><span>Identifiant</span><span>'+esc(u.login)+'</span></div>':'')+
     '<div><span>Mes comptes</span><span>'+(mine.length?esc(mine.join(', ')):'Aucun pour l’instant')+'</span></div></div>'+
     '<p class="sheet-note">Pour attribuer un compte, touche sa carte sur l’accueil puis la petite roue, et choisis « Appartient à ».</p>'+
-    '<button class="sheet-btn" onclick="closeSheet();askLogout()">Changer d’utilisateur</button>');
+    (DEMO?'':'<button class="sheet-btn ghost" onclick="setPassword()">Changer mon mot de passe</button>')+
+    '<button class="sheet-btn" onclick="closeSheet();askLogout()">Se déconnecter</button>');
 }
 // Mes donnees : chiffres et sauvegarde
 function setData(){
@@ -6201,7 +6180,7 @@ function setData(){
 }
 // Sauvegarde : un fichier avec toutes les donnees du site
 function setExport(){
-  var data={exportedAt:new Date().toISOString(),by:currentUser,accounts:getAccounts(),transactions:getTxns(),recurring:getRecurring(),
+  var data={exportedAt:new Date().toISOString(),by:currentName,accounts:getAccounts(),transactions:getTxns(),recurring:getRecurring(),
     categories:getCats(),settings:_cache.settings||{}};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}), a=document.createElement('a');
   a.href=URL.createObjectURL(blob); a.download='budget-sauvegarde-'+todayStr()+'.json';
@@ -6223,20 +6202,212 @@ function setBug(){
 }
 function setCopyBug(){
   var t=document.getElementById('bugTxt').value.trim(); if(!t){ showToast('Écris d’abord ton message'); return; }
-  var msg='Problème signalé ('+currentUser+', '+todayStr()+', page '+currentPage+') : '+t;
+  var msg='Problème signalé ('+currentName+', '+todayStr()+', page '+currentPage+') : '+t;
   if(navigator.clipboard) navigator.clipboard.writeText(msg).then(function(){ closeSheet(); showToast('Message copié'); },function(){ showToast('Copie impossible'); });
   else showToast('Copie impossible sur cet appareil');
 }
 
-var savedUser=localStorage.getItem('budget_user');
-if(savedUser){
-  currentUser=savedUser;
-  var badge=document.getElementById('userBadge');
-  if(badge){ badge.style.display='block'; badge.textContent=(savedUser==='etienne'?'E':'N')+'. '+savedUser.charAt(0).toUpperCase()+savedUser.slice(1)+' (changer)'; }
+// ============================================================
+// COMPTES UTILISATEURS : connexion, creation, mot de passe oublie
+// ============================================================
+var AUTH={token:'',user:null,household:{members:[]}};
+var currentName='';
+var authMode='login', authMsg='', authErr='', resetToken='';
+function memberName(id){ var m=(AUTH.household.members||[]).filter(function(x){ return String(x.id)===String(id); })[0]; return m?m.name:''; }
+
+function renderAuth(mode){
+  if(mode) authMode=mode;
+  var box=document.getElementById('authBox'), h='<div class="login-logo">💰</div><div class="login-title">Budget Mensuel</div>';
+  function field(id,label,type,ph,ac){
+    return '<label class="au-f"><span>'+label+'</span><input id="'+id+'" type="'+type+'" placeholder="'+(ph||'')+'" autocomplete="'+(ac||'off')+'"'+(type==='password'?' minlength="8"':'')+'></label>';
+  }
+  if(DEMO){
+    h+='<div class="login-sub">Mode démo — les données restent sur cet appareil</div>'+field('auName','Ton prénom','text','Ex : Etienne','given-name')+
+      '<button class="au-btn" onclick="authDemo()">Entrer</button>';
+  } else if(authMode==='register'){
+    h+='<div class="login-sub">Crée ton compte</div>'+
+      field('auName','Prénom','text','Ex : Etienne','given-name')+
+      field('auEmail','Adresse mail','email','toi@exemple.fr','email')+
+      field('auLogin','Identifiant (facultatif)','text','Ex : etienne','username')+
+      field('auPw','Mot de passe (8 caractères minimum)','password','','new-password')+
+      field('auPw2','Confirme le mot de passe','password','','new-password')+
+      '<button class="au-btn" onclick="authRegister()">Créer mon compte</button>'+
+      '<button class="au-link" onclick="authErr=\'\';authMsg=\'\';renderAuth(\'login\')">J’ai déjà un compte</button>';
+  } else if(authMode==='forgot'){
+    h+='<div class="login-sub">Mot de passe oublié</div><p class="au-help">Indique le mail de ton compte : tu recevras un lien pour choisir un nouveau mot de passe.</p>'+
+      field('auEmail','Adresse mail','email','toi@exemple.fr','email')+
+      '<button class="au-btn" onclick="authForgot()">Envoyer le lien</button>'+
+      '<button class="au-link" onclick="authErr=\'\';authMsg=\'\';renderAuth(\'login\')">Retour à la connexion</button>';
+  } else if(authMode==='reset'){
+    h+='<div class="login-sub">Choisis un nouveau mot de passe</div>'+
+      field('auPw','Nouveau mot de passe (8 caractères minimum)','password','','new-password')+
+      field('auPw2','Confirme le mot de passe','password','','new-password')+
+      '<button class="au-btn" onclick="authReset()">Enregistrer</button>';
+  } else {
+    h+='<div class="login-sub">Connecte-toi pour accéder à ton budget</div>'+
+      field('auIdent','Mail ou identifiant','text','','username')+
+      field('auPw','Mot de passe','password','','current-password')+
+      '<button class="au-btn" onclick="authLogin()">Se connecter</button>'+
+      '<button class="au-link" onclick="authErr=\'\';authMsg=\'\';renderAuth(\'forgot\')">Mot de passe oublié ?</button>'+
+      '<div class="au-sep"><span>Pas encore de compte ?</span></div>'+
+      '<button class="au-btn ghost" onclick="authErr=\'\';authMsg=\'\';renderAuth(\'register\')">Créer un compte</button>';
+  }
+  if(authErr) h+='<div class="au-err">'+esc(authErr)+'</div>';
+  if(authMsg) h+='<div class="au-ok">'+esc(authMsg)+'</div>';
+  box.innerHTML=h;
+  // Entree = valider
+  var ins=box.querySelectorAll('input');
+  for(var i=0;i<ins.length;i++) ins[i].onkeydown=function(e){ if(e.key==='Enter'){ var b=box.querySelector('.au-btn'); if(b) b.click(); } };
+  if(ins[0]) setTimeout(function(){ ins[0].focus(); },100);
+  document.getElementById('loginScreen').style.display='flex';
+}
+function auVal(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
+function authFail(msg){ authErr=msg; authMsg=''; renderAuth(); }
+// Appel au serveur sans etre connecte
+function authCall(path,body,cb){
+  var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+path,true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){ var d={}; try{ d=JSON.parse(xhr.responseText); }catch(e){} if(xhr.status===200) cb(null,d); else cb(new Error(d.error||'Erreur '+xhr.status)); };
+  xhr.onerror=function(){ cb(new Error('Connexion au serveur impossible. Le site est-il lancé ?')); };
+  xhr.send(JSON.stringify(body));
+}
+function authLogin(){
+  var ident=auVal('auIdent'), pw=document.getElementById('auPw').value;
+  if(!ident||!pw){ authFail('Remplis ton identifiant et ton mot de passe'); return; }
+  authCall('/api/auth/login',{ident:ident,password:pw},function(err,d){ if(err) authFail(err.message); else authDone(d); });
+}
+function authRegister(){
+  var pw=document.getElementById('auPw').value, pw2=document.getElementById('auPw2').value;
+  if(pw!==pw2){ authFail('Les deux mots de passe ne sont pas identiques'); return; }
+  authCall('/api/auth/register',{name:auVal('auName'),email:auVal('auEmail'),login:auVal('auLogin'),password:pw},function(err,d){ if(err) authFail(err.message); else authDone(d); });
+}
+function authForgot(){
+  var email=auVal('auEmail'); if(!email){ authFail('Indique ton adresse mail'); return; }
+  authCall('/api/auth/forgot',{email:email},function(err,d){
+    if(err){ authFail(err.message); return; }
+    authErr=''; authMsg=d.mail?'Si un compte existe avec ce mail, un lien vient d’être envoyé. Pense à regarder dans les indésirables.':
+      'L’envoi de mails n’est pas encore configuré sur le serveur : le lien s’affiche dans la fenêtre du serveur.';
+    renderAuth('login');
+  });
+}
+function authReset(){
+  var pw=document.getElementById('auPw').value, pw2=document.getElementById('auPw2').value;
+  if(pw!==pw2){ authFail('Les deux mots de passe ne sont pas identiques'); return; }
+  authCall('/api/auth/reset',{token:resetToken,password:pw},function(err,d){
+    if(err){ authFail(err.message); return; }
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+    authDone(d); showToast('Mot de passe modifié');
+  });
+}
+// Connexion reussie : on garde le jeton sur l appareil et on ouvre le site
+function authDone(d){
+  if(d.token){ AUTH.token=d.token; try{ localStorage.setItem('budget_token',d.token); }catch(e){} }
+  AUTH.user=d.user; AUTH.household=d.household||{members:[]};
+  currentUser=String(d.user.id); currentName=d.user.name;
+  authErr=''; authMsg='';
   document.getElementById('loginScreen').style.display='none';
   document.body.classList.add('on-home');
-  initApp();
+  switchPage('home'); initApp();
 }
+function authDemo(){
+  var n=auVal('auName')||'Moi';
+  try{ localStorage.setItem('budget_user',n); }catch(e){}
+  authDone({user:{id:'demo',name:n},household:{members:[{id:'demo',name:n}]}});
+}
+// Session expiree ou refusee par le serveur
+function authExpired(){
+  if(!AUTH.token) return;
+  AUTH.token=''; try{ localStorage.removeItem('budget_token'); }catch(e){}
+  authErr='Ta session a expiré, reconnecte-toi.'; renderAuth('login');
+}
+function logout(){
+  if(!DEMO&&AUTH.token){ var x=new XMLHttpRequest(); x.open('POST',API_BASE+'/api/auth/logout',true); x.setRequestHeader('Authorization','Bearer '+AUTH.token); x.send(); }
+  AUTH={token:'',user:null,household:{members:[]}}; currentUser=''; currentName='';
+  try{ localStorage.removeItem('budget_token'); localStorage.removeItem('budget_user'); }catch(e){}
+  _cache={txns:null,budget:null,cats:null,recurring:null,applied:null,epargne:null,accounts:null};
+  document.body.classList.remove('on-home');
+  authErr=''; authMsg=''; renderAuth('login');
+}
+// Au chargement : lien "nouveau mot de passe", session gardee sur l appareil, ou ecran de connexion
+function authStart(){
+  var m=/[?&]reset=([^&]+)/.exec(location.search);
+  if(m&&!DEMO){ resetToken=decodeURIComponent(m[1]); renderAuth('reset'); return; }
+  if(DEMO){ var n=null; try{ n=localStorage.getItem('budget_user'); }catch(e){} if(n){ authDone({user:{id:'demo',name:n},household:{members:[{id:'demo',name:n}]}}); return; } renderAuth('login'); return; }
+  var t=null; try{ t=localStorage.getItem('budget_token'); }catch(e){}
+  if(!t){ renderAuth('login'); return; }
+  AUTH.token=t;
+  var xhr=new XMLHttpRequest(); xhr.open('GET',API_BASE+'/api/auth/me',true); xhr.setRequestHeader('Authorization','Bearer '+t);
+  xhr.onload=function(){ if(xhr.status===200){ var d=JSON.parse(xhr.responseText); authDone(d); } else { AUTH.token=''; try{ localStorage.removeItem('budget_token'); }catch(e){} renderAuth('login'); } };
+  xhr.onerror=function(){ authErr='Connexion au serveur impossible. Le site est-il lancé ?'; renderAuth('login'); };
+  xhr.send();
+}
+// Mise a jour des membres du foyer (apres une invitation acceptee, etc.)
+function refreshMe(cb){
+  if(DEMO){ if(cb) cb(); return; }
+  apiGet('/api/auth/me',function(err,d){ if(!err&&d){ AUTH.user=d.user; AUTH.household=d.household; currentName=d.user.name; } if(cb) cb(); });
+}
+
+// ---------- Reglages : foyer et mot de passe ----------
+function setHousehold(){
+  var ms=AUTH.household.members||[], rows='';
+  for(var i=0;i<ms.length;i++) rows+='<div><span>'+esc(ms[i].name)+'</span><span>'+(String(ms[i].id)===currentUser?'Toi':'Membre')+'</span></div>';
+  openSheet(sheetHead('Mon foyer')+
+    '<p class="sheet-note">Les personnes du foyer partagent les mêmes comptes, budgets et opérations (3 personnes maximum).</p>'+
+    '<div class="detail-list">'+rows+'</div>'+
+    (DEMO?'<p class="sheet-note">Pas de foyer en mode démo.</p>':
+    (ms.length<3?'<button class="sheet-btn" onclick="setInvite()">Inviter quelqu’un</button>':'')+
+    '<button class="sheet-btn ghost" onclick="setJoin()">Rejoindre un autre foyer</button>'+
+    (ms.length>1?'<button class="cyc-reset" onclick="setLeave()">Quitter ce foyer</button>':'')));
+}
+function setInvite(){
+  apiPost('/api/household/invite',{},function(err,d){
+    if(err||!d||!d.code){ showToast((d&&d.error)||'Impossible de créer le code'); return; }
+    openSheet(sheetHead('Code d’invitation')+
+      '<p class="sheet-note">Donne ce code à la personne à inviter. Elle crée son compte, puis va dans Réglages → Mon foyer → « Rejoindre un autre foyer ». Il est valable 24 heures.</p>'+
+      '<div class="inv-code">'+esc(d.code)+'</div>'+
+      '<button class="sheet-btn" onclick="setCopy(\''+d.code+'\')">Copier le code</button>');
+  });
+}
+function setCopy(t){ if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ showToast('Code copié'); },function(){ showToast('Copie impossible'); }); }
+function setJoin(){
+  openSheet(sheetHead('Rejoindre un foyer')+
+    '<p class="sheet-note">Saisis le code reçu. Tu verras alors les comptes et opérations de ce foyer. Ce que tu as saisi seul jusqu’ici ne sera plus visible.</p>'+
+    '<div class="sf"><input type="text" id="joinCode" maxlength="6" placeholder="Ex : K7M2QX" style="text-transform:uppercase;letter-spacing:4px;text-align:center;font-size:22px;"></div>'+
+    '<button class="sheet-btn" onclick="setJoinGo()">Rejoindre</button>');
+}
+function setJoinGo(){
+  var c=auVal('joinCode'); if(c.length<6){ showToast('Le code fait 6 caractères'); return; }
+  apiPost('/api/household/join',{code:c},function(err,d){
+    if(err||!d||!d.ok){ showToast((d&&d.error)||'Code refusé'); return; }
+    AUTH.household=d.household; closeSheet(); showToast('Bienvenue dans le foyer !');
+    loadAllData(function(){ bgDefaultSelection(); refreshViews(); renderSettingsPage(); });
+  });
+}
+function setLeave(){
+  if(!confirm('Quitter ce foyer ? Tu repartiras avec un budget vide, les autres gardent leurs données.')) return;
+  apiPost('/api/household/leave',{},function(err,d){
+    if(err||!d||!d.ok){ showToast((d&&d.error)||'Impossible'); return; }
+    AUTH.household=d.household; closeSheet(); showToast('Tu as quitté le foyer');
+    loadAllData(function(){ bgDefaultSelection(); refreshViews(); renderSettingsPage(); });
+  });
+}
+function setPassword(){
+  openSheet(sheetHead('Changer mon mot de passe')+
+    '<div class="sf"><label>Mot de passe actuel</label><input type="password" id="pwCur" autocomplete="current-password"></div>'+
+    '<div class="sf"><label>Nouveau mot de passe (8 caractères minimum)</label><input type="password" id="pwNew" autocomplete="new-password"></div>'+
+    '<div class="sf"><label>Confirme le nouveau mot de passe</label><input type="password" id="pwNew2" autocomplete="new-password"></div>'+
+    '<button class="sheet-btn" onclick="setPasswordGo()">Enregistrer</button>');
+}
+function setPasswordGo(){
+  var a=document.getElementById('pwNew').value;
+  if(a!==document.getElementById('pwNew2').value){ showToast('Les deux mots de passe ne sont pas identiques'); return; }
+  apiPost('/api/auth/password',{current:document.getElementById('pwCur').value,password:a},function(err,d){
+    if(err||!d||!d.ok){ showToast((d&&d.error)||'Erreur'); return; }
+    closeSheet(); showToast('Mot de passe modifié');
+  });
+}
+
+authStart();
 </script>
 </body>
 </html>

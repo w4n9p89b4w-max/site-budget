@@ -3,3 +3,6 @@ node_modules/
 budget.db
 budget.db-*
 *.zip
+
+# Identifiants du service de mail (ne jamais envoyer sur GitHub)
+mail.config.json

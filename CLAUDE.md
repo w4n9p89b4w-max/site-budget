@@ -17,7 +17,10 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 - `IMG_*.PNG` : captures/maquettes envoyées par l'utilisateur comme modèles de design.
 
 ## Points importants
-- Les données sont communes à Etienne et Noa (le serveur ne filtre pas par utilisateur).
+- Comptes utilisateurs (depuis le 11/10/2026) : connexion par mail ou identifiant + mot de passe (empreinte scrypt, sessions par jeton).
+  Un « foyer » regroupe jusqu'à 3 comptes liés par un code d'invitation ; chaque foyer ne voit que ses données (colonne household_id, ou clé préfixée « h<id>| »).
+  Les données d'avant les comptes sont mises de côté dans la base (sans foyer), invisibles.
+- Mot de passe oublié : lien par mail via nodemailer, réglé dans `mail.config.json` (jamais sur GitHub, voir .gitignore). Sans ce fichier, le lien s'affiche dans la fenêtre du serveur.
 - En ligne, le serveur sert la page depuis un dossier `public/`. Mise en ligne = copier `index.html` dans `public/` ET remplacer `server.js` (sinon les comptes ne s'enregistrent pas).
 - Mode démo : sur github.io (GitHub Pages) ou avec `?demo=1`, la page n'appelle pas le serveur et garde les données dans le navigateur (clé `budget_demo`). Sans effet sur le vrai site.
 - Ne jamais lire `J:\budget mensuel\cles api.txt` (clés API).
