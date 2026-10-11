@@ -147,6 +147,7 @@ db.exec(`
 addColumnIfMissing('transactions', 'household_id', 'INTEGER');
 addColumnIfMissing('accounts', 'household_id', 'INTEGER');
 addColumnIfMissing('recurring', 'household_id', 'INTEGER');
+addColumnIfMissing('users', 'avatar', 'TEXT');
 
 const MAX_MEMBERS = 3;
 const SESSION_DAYS = 60;
@@ -171,9 +172,10 @@ function newSession(userId) {
   return token;
 }
 function isAdmin(u) { return !!u && ADMIN_EMAILS.indexOf(String(u.email || '').toLowerCase()) >= 0; }
-function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '', admin: isAdmin(u) }; }
+function parseAvatar(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '', admin: isAdmin(u), avatar: parseAvatar(u.avatar) }; }
 function householdInfo(hid) {
-  return { id: hid, members: db.prepare('SELECT id, name FROM users WHERE household_id = ? ORDER BY id').all(hid) };
+  return { id: hid, members: db.prepare('SELECT id, name, avatar FROM users WHERE household_id = ? ORDER BY id').all(hid).map(m => ({ id: m.id, name: m.name, avatar: parseAvatar(m.avatar) })) };
 }
 
 // Trop d essais rates : on bloque quelques minutes (par adresse IP et par identifiant)
@@ -285,6 +287,21 @@ app.get('/api/admin/users', requireAuth, (req, res) => {
   });
   const households = db.prepare('SELECT id, created_at FROM households ORDER BY id').all();
   res.json({ users, households });
+});
+
+// Avatar : initiales, emoji ou photo sur un fond de couleur
+app.post('/api/auth/avatar', requireAuth, (req, res) => {
+  const a = req.body.avatar || {}, type = ['initials', 'emoji', 'photo'].indexOf(a.type) >= 0 ? a.type : null;
+  if (!type) return res.status(400).json({ error: 'Avatar invalide' });
+  const av = { type, bg: /^[#a-z0-9(),.% -]{3,80}$/i.test(a.bg || '') ? a.bg : '#e6b98a' };
+  if (type === 'initials') av.text = String(a.text || '').slice(0, 2);
+  if (type === 'emoji') av.emoji = String(a.emoji || '').slice(0, 16);
+  if (type === 'photo') {
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(a.img || '') || a.img.length > 300000) return res.status(400).json({ error: 'Photo trop lourde' });
+    av.img = a.img;
+  }
+  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(JSON.stringify(av), req.uid);
+  res.json({ ok: true, avatar: av });
 });
 
 app.post('/api/auth/password', requireAuth, (req, res) => {
@@ -626,7 +643,20 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, user_id INTEGER NOT NULL, household_id INTEGER NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')));
   CREATE TABLE IF NOT EXISTS push_prefs (user_id INTEGER PRIMARY KEY, daily INTEGER DEFAULT 1, hour TEXT DEFAULT '20:00', due INTEGER DEFAULT 1, budget INTEGER DEFAULT 1, last_daily TEXT, last_due TEXT);
   CREATE TABLE IF NOT EXISTS push_log (key TEXT PRIMARY KEY, sent_at TEXT DEFAULT (datetime('now')));
+  CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT);
 `);
+// Ce que l administrateur autorise pour tout le site (chaque compte choisit ensuite parmi ces categories)
+const PUSH_DEFAULTS = { daily: true, hour: '20:00', due: true, dueHour: '09:00', budget: true };
+function pushAdmin() {
+  const r = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('push');
+  let v = {}; try { v = r ? JSON.parse(r.value) : {}; } catch (e) {}
+  return Object.assign({}, PUSH_DEFAULTS, v);
+}
+function requireAdmin(req, res) {
+  const me = db.prepare('SELECT * FROM users WHERE id = ?').get(req.uid);
+  if (!isAdmin(me)) { res.status(403).json({ error: 'Réservé à l’administrateur' }); return false; }
+  return true;
+}
 const b64u = buf => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Buffer.from(String(s).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 const VAPID_FILE = process.env.VAPID_FILE || path.join(__dirname, 'vapid.json');
@@ -703,13 +733,28 @@ app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
 });
 app.get('/api/push/prefs', requireAuth, (req, res) => {
   const p = prefsOf(req.uid);
-  res.json({ daily: !!p.daily, hour: p.hour, due: !!p.due, budget: !!p.budget, devices: db.prepare('SELECT COUNT(*) n FROM push_subs WHERE user_id = ?').get(req.uid).n });
+  res.json({ daily: !!p.daily, due: !!p.due, budget: !!p.budget, admin: pushAdmin(), devices: db.prepare('SELECT COUNT(*) n FROM push_subs WHERE user_id = ?').get(req.uid).n });
 });
+// Chaque compte autorise (ou non) les categories ouvertes par l admin
 app.post('/api/push/prefs', requireAuth, (req, res) => {
-  const b = req.body, p = prefsOf(req.uid), hour = /^\d{2}:\d{2}$/.test(b.hour || '') ? b.hour : p.hour;
-  db.prepare('UPDATE push_prefs SET daily = ?, hour = ?, due = ?, budget = ? WHERE user_id = ?')
-    .run(b.daily ? 1 : 0, hour, b.due ? 1 : 0, b.budget ? 1 : 0, req.uid);
+  const b = req.body; prefsOf(req.uid);
+  db.prepare('UPDATE push_prefs SET daily = ?, due = ?, budget = ? WHERE user_id = ?').run(b.daily ? 1 : 0, b.due ? 1 : 0, b.budget ? 1 : 0, req.uid);
   res.json({ ok: true });
+});
+// Administration des notifications : categories ouvertes, heures d envoi, annonce a tout le monde
+app.post('/api/push/admin', requireAuth, (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const b = req.body, cur = pushAdmin(), hh = v => /^\d{2}:\d{2}$/.test(v || '') ? v : null;
+  const v = { daily: !!b.daily, hour: hh(b.hour) || cur.hour, due: !!b.due, dueHour: hh(b.dueHour) || cur.dueHour, budget: !!b.budget };
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('push', JSON.stringify(v));
+  res.json({ ok: true, admin: v });
+});
+app.post('/api/push/broadcast', requireAuth, async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const body = String(req.body.body || '').trim().slice(0, 200);
+  if (!body) return res.status(400).json({ error: 'Message vide' });
+  const st = await Promise.all(db.prepare('SELECT * FROM push_subs').all().map(s => sendPush(s, { title: String(req.body.title || 'Budget Mensuel').slice(0, 80), body, url: '/' })));
+  res.json({ ok: true, sent: st.filter(x => x >= 200 && x < 300).length, devices: st.length });
 });
 app.post('/api/push/test', requireAuth, async (req, res) => {
   const st = await pushToUser(req.uid, { title: 'Budget Mensuel', body: 'Les notifications fonctionnent sur cet appareil 🎉', url: '/' });
@@ -721,6 +766,7 @@ app.post('/api/push/budget', requireAuth, async (req, res) => {
   if (!req.body.key || db.prepare('SELECT 1 FROM push_log WHERE key = ?').get(key)) return res.json({ ok: true, skipped: true });
   db.prepare('INSERT INTO push_log (key) VALUES (?)').run(key);
   const msg = { title: String(req.body.title || 'Budget').slice(0, 80), body: String(req.body.body || '').slice(0, 200), url: '/' };
+  if (!pushAdmin().budget) return res.json({ ok: true, off: true });
   const users = db.prepare('SELECT user_id FROM push_prefs WHERE budget = 1').all().map(r => r.user_id);
   await Promise.all(db.prepare('SELECT * FROM push_subs WHERE household_id = ?').all(req.hid).filter(s => users.indexOf(s.user_id) >= 0).map(s => sendPush(s, msg)));
   res.json({ ok: true });
@@ -760,14 +806,14 @@ function dueToday(hid, today) {
 }
 const euro = v => (Math.round(v * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 function pushTick() {
-  const now = parisNow();
+  const now = parisNow(), ad = pushAdmin();
   db.prepare('SELECT p.*, u.household_id hid FROM push_prefs p JOIN users u ON u.id = p.user_id').all().forEach(p => {
     if (!db.prepare('SELECT 1 FROM push_subs WHERE user_id = ?').get(p.user_id)) return;
-    if (p.daily && p.hour === now.time && p.last_daily !== now.date) {
+    if (ad.daily && p.daily && ad.hour === now.time && p.last_daily !== now.date) {
       db.prepare('UPDATE push_prefs SET last_daily = ? WHERE user_id = ?').run(now.date, p.user_id);
       pushToUser(p.user_id, { title: 'Budget Mensuel', body: 'T’as bien noté tes dépenses aujourd’hui ?', url: '/' });
     }
-    if (p.due && now.time >= '09:00' && p.last_due !== now.date) {
+    if (ad.due && p.due && now.time >= ad.dueHour && p.last_due !== now.date) {
       db.prepare('UPDATE push_prefs SET last_due = ? WHERE user_id = ?').run(now.date, p.user_id);
       const due = dueToday(p.hid, now.date);
       if (due.length) pushToUser(p.user_id, { title: due.length > 1 ? due.length + ' échéances aujourd’hui' : 'Échéance aujourd’hui',

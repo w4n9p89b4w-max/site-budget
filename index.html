@@ -780,6 +780,27 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .nt-steps{display:flex;flex-direction:column;gap:10px;margin:6px 0 4px;}
 .nt-steps div{display:flex;align-items:flex-start;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;font-size:15px;line-height:1.4;}
 .nt-steps div>b:first-child{width:26px;height:26px;border-radius:50%;background:#0f6650;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.avatar,.set-av{overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.18);letter-spacing:-.5px;}
+.av-emo{font-size:1.25em;line-height:1;text-shadow:none;}
+.set-av{cursor:pointer;font-family:inherit;}
+.ave-prev{display:flex;justify-content:center;margin:4px 0 16px;}
+.ave-big{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:900;letter-spacing:-1px;box-shadow:0 8px 24px rgba(60,40,20,.2);border:4px solid #fff;text-shadow:0 2px 6px rgba(0,0,0,.18);}
+.ave-big .av-emo{font-size:64px;}
+.ave-tabs{margin-bottom:14px;}
+.ave-emos{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:200px;overflow-y:auto;background:#fff;border-radius:18px;padding:10px;margin-bottom:14px;}
+.ave-emo{aspect-ratio:1;border:none;background:none;border-radius:12px;font-size:26px;cursor:pointer;}
+.ave-emo.on{background:#f1dedb;box-shadow:0 0 0 2px #8b6b35;}
+.ave-cols{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:4px 0 16px;}
+.ave-col{aspect-ratio:1;border-radius:50%;border:3px solid #fff;cursor:pointer;box-shadow:0 0 0 1px #e2d9cb;}
+.ave-col.on{box-shadow:0 0 0 3px #2a2118;}
+.ave-pick{position:relative;display:flex;justify-content:center;align-items:center;}
+.ave-pick input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.nt-admin{margin-top:22px;padding:16px;border-radius:20px;background:#fff;border:2px dashed #e2c9c4;}
+.nt-ah{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:900;color:#8b6b35;margin-bottom:6px;}
+.nt-ah .ico{width:18px;height:18px;}
+.nt-admin .nt-row:last-of-type{border-bottom:none;}
+.nt-bc{margin-top:10px;}
+.nt-bc textarea{width:100%;font-family:inherit;font-size:15px;padding:10px 12px;border:1.5px solid #e2d9cb;border-radius:14px;resize:vertical;}
 .rate-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15.5px;font-weight:700;color:#5c4630;}
 .rate-row input{width:110px;padding:11px 10px;border:1.5px solid #e2d3b4;border-radius:12px;background:#fcf3f2;font-family:inherit;font-size:16px;font-weight:800;text-align:center;outline:none;}
 .rate-row.small{margin-top:8px;}
@@ -1388,7 +1409,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
   <div class="home">
     <div class="home-top">
       <div class="patri-label">Total Patrimoine</div>
-      <button class="avatar" id="homeAvatar" onclick="askLogout()" title="Changer d'utilisateur"></button>
+      <button class="avatar" id="homeAvatar" onclick="openAvatarEditor()" title="Mon avatar"></button>
     </div>
     <div class="patri-amount">
       <span class="patri-pill"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2 22 12 12 22 2 12z"/><path d="M12 7l5 5-5 5-5-5z"/></svg></span>
@@ -1990,7 +2011,7 @@ function accountProjected(acc){
 var showHiddenAccs=false;
 function renderHome(){
   var av=document.getElementById('homeAvatar');
-  if(av) av.textContent=(currentName||'?').charAt(0).toUpperCase();
+  paintAvatar(av,AUTH.user||{name:currentName});
   var accs=getAccounts(), total=0;
   var grid=document.getElementById('accGrid'); grid.innerHTML='';
   var nHidden=0;
@@ -5034,7 +5055,7 @@ function renderSettingsPage(){
       (right?'<span class="set-val">'+right+'</span>':'<span class="set-chev">'+svgIcon('chev')+'</span>')+'</button>';
   }
   var nb=getTxns().length, na=getAccounts().length, nr=getRecurring().filter(function(r){ return r.kind; }).length;
-  root.innerHTML='<div class="set-top"><span class="set-bubble">'+bubble+'</span><span class="set-av">'+who.charAt(0).toUpperCase()+'</span></div>'+
+  root.innerHTML='<div class="set-top"><span class="set-bubble">'+bubble+'</span><button class="set-av" id="setAv" onclick="openAvatarEditor()" title="Modifier mon avatar"></button></div>'+
     '<div class="set-title"><h1>Mon budget</h1><span>Budget Mensuel</span></div>'+
     '<div class="set-user"><b>'+esc(who)+'</b><span>'+(others.length?'Foyer partagé avec '+esc(other):'Seul dans ton foyer')+'</span></div>'+
     '<div class="set-card"><b>'+svgIcon('cloud')+' Tes données sont sauvegardées</b>'+
@@ -5056,8 +5077,10 @@ function renderSettingsPage(){
       row(svgIcon('flag'),'Signaler un problème','','setBug()','bug')+
     '</div>'+
     '<p class="set-foot">'+na+' compte'+(na>1?'s':'')+' · '+nb+' opération'+(nb>1?'s':'')+' · '+nr+' régulière'+(nr>1?'s':'')+'</p>';
+  setAccountAv();
 }
 // Mon compte : qui est connecte, changer d utilisateur
+function setAccountAv(){ paintAvatar(document.getElementById('setAv'),AUTH.user||{name:currentName}); }
 function setAccount(){
   var u=AUTH.user||{}, mine=getAccounts().filter(function(a){ return a.owner===currentUser; }).map(function(a){ return a.name; });
   openSheet(sheetHead('Mon compte')+
@@ -5066,6 +5089,7 @@ function setAccount(){
     (u.login?'<div><span>Identifiant</span><span>'+esc(u.login)+'</span></div>':'')+
     '<div><span>Mes comptes</span><span>'+(mine.length?esc(mine.join(', ')):'Aucun pour l’instant')+'</span></div></div>'+
     '<p class="sheet-note">Pour attribuer un compte, touche sa carte sur l’accueil puis la petite roue, et choisis « Appartient à ».</p>'+
+    '<button class="sheet-btn ghost" onclick="openAvatarEditor()">Modifier mon avatar</button>'+
     (DEMO?'':'<button class="sheet-btn ghost" onclick="setPassword()">Changer mon mot de passe</button>')+
     '<button class="sheet-btn" onclick="closeSheet();askLogout()">Se déconnecter</button>');
 }
@@ -5244,7 +5268,7 @@ function pwToggle(b){
 function authDone(d){
   if(d.token){ AUTH.token=d.token; try{ localStorage.setItem('budget_token',d.token); }catch(e){} }
   AUTH.user=d.user; AUTH.household=d.household||{members:[]};
-  currentUser=String(d.user.id); currentName=d.user.name;
+  currentUser=String(d.user.id); currentName=d.user.name; avatarDemoLoad();
   authErr=''; authMsg='';
   document.getElementById('loginScreen').style.display='none';
   document.body.classList.add('on-home');
@@ -5466,22 +5490,42 @@ function setNotif(){
   }
   openSheet(sheetHead('Notifications')+'<p class="sheet-note">Chargement…</p>');
   Promise.all([pushSubscription(),new Promise(function(res){ apiGet('/api/push/prefs',function(e,d){ res(e?null:d); }); })]).then(function(r){
-    NP=r[1]||{daily:true,hour:'20:00',due:true,budget:true}; NP.on=!!r[0]&&Notification.permission==='granted';
+    NP=r[1]||{daily:true,due:true,budget:true,admin:{daily:true,hour:'20:00',due:true,dueHour:'09:00',budget:true}}; NP.admin=NP.admin||{}; NP.on=!!r[0]&&Notification.permission==='granted';
     renderNotif();
   },function(){ openSheet(sheetHead('Notifications')+'<p class="sheet-note">Ce navigateur bloque les notifications pour ce site. Ouvre le site dans Chrome, Edge, Firefox ou Safari (ou depuis son icône sur l’iPhone), puis réessaie.</p>'); });
 }
+function hLabel(v){ var p=v.split(':'); return parseInt(p[0],10)+' h'+(p[1]==='00'?'':' '+p[1]); }
+function hourOpts(sel,from,to){ var h=''; for(var i=from;i<=to;i++){ ['00','30'].forEach(function(mn){ var v=pad(i)+':'+mn; h+='<option value="'+v+'"'+(sel===v?' selected':'')+'>'+i+' h'+(mn==='30'?' 30':'')+'</option>'; }); } return h; }
 function renderNotif(){
-  var hours='', on=NP.on;
-  for(var h=17;h<=23;h++){ var v=pad(h)+':00'; hours+='<option value="'+v+'"'+(NP.hour===v?' selected':'')+'>'+h+' h</option>'; var v2=pad(h)+':30'; hours+='<option value="'+v2+'"'+(NP.hour===v2?' selected':'')+'>'+h+' h 30</option>'; }
-  function opt(k,title,sub,extra){ return '<div class="nt-row'+(on?'':' off')+'"><span><b>'+title+'</b><small>'+sub+'</small>'+(extra||'')+'</span><button class="sw'+(NP[k]?' on':'')+'" onclick="NP.'+k+'=!NP.'+k+';saveNotifPrefs()"'+(on?'':' disabled')+'></button></div>'; }
+  var on=NP.on, ad=NP.admin||{}, cats='';
+  function opt(k,title,sub){ return '<div class="nt-row'+(on?'':' off')+'"><span><b>'+title+'</b><small>'+sub+'</small></span><button class="sw'+(NP[k]?' on':'')+'" onclick="NP.'+k+'=!NP.'+k+';saveNotifPrefs()"'+(on?'':' disabled')+'></button></div>'; }
+  // chaque compte autorise seulement les categories ouvertes par l administrateur
+  if(ad.daily) cats+=opt('daily','Rappel du soir','« T’as bien noté tes dépenses aujourd’hui ? » vers '+hLabel(ad.hour||'20:00'));
+  if(ad.due) cats+=opt('due','Échéances du jour','Loyer, salaire, abonnements… à confirmer, vers '+hLabel(ad.dueHour||'09:00'));
+  if(ad.budget) cats+=opt('budget','Alertes de budget','Quand un groupe atteint 80 % puis 100 % de son budget');
+  var admin='';
+  if(AUTH.user&&AUTH.user.admin){
+    function aopt(k,title,extra){ return '<div class="nt-row"><span><b>'+title+'</b>'+(extra||'')+'</span><button class="sw'+(ad[k]?' on':'')+'" onclick="NP.admin.'+k+'=!NP.admin.'+k+';saveNotifAdmin()"></button></div>'; }
+    admin='<div class="nt-admin"><div class="nt-ah">'+svgIcon('lock')+' Administration</div><p class="sheet-note">Les catégories que tu ouvres ici sont proposées à tous les comptes ; chacun choisit ensuite celles qu’il accepte.</p>'+
+      aopt('daily','Rappel du soir','<select class="nt-hour" onchange="NP.admin.hour=this.value;saveNotifAdmin()">'+hourOpts(ad.hour||'20:00',17,23)+'</select>')+
+      aopt('due','Échéances du jour','<select class="nt-hour" onchange="NP.admin.dueHour=this.value;saveNotifAdmin()">'+hourOpts(ad.dueHour||'09:00',6,12)+'</select>')+
+      aopt('budget','Alertes de budget')+
+      '<div class="sf nt-bc"><label>Annonce à tous les appareils</label><textarea id="ntMsg" rows="2" maxlength="200" placeholder="Ex : Pensez à noter vos dépenses de vacances !"></textarea></div>'+
+      '<button class="sheet-btn" onclick="sendBroadcast()">Envoyer l’annonce</button></div>';
+  }
   openSheet(sheetHead('Notifications')+
     '<div class="nt-main'+(on?' on':'')+'"><span class="nt-bell">'+svgIcon('bell')+'</span><span><b>'+(on?'Activées sur cet appareil':'Désactivées sur cet appareil')+'</b>'+
       '<small>'+(Notification.permission==='denied'?'Bloquées dans les réglages du navigateur : autorise-les pour ce site, puis réessaie.':'Chaque appareil s’active séparément (téléphone, ordinateur…).')+'</small></span>'+
       '<button class="sw'+(on?' on':'')+'" onclick="toggleNotif()"></button></div>'+
-    opt('daily','Rappel du soir','« T’as bien noté tes dépenses aujourd’hui ? »','<select class="nt-hour" onchange="NP.hour=this.value;saveNotifPrefs()"'+(on&&NP.daily?'':' disabled')+'>'+hours+'</select>')+
-    opt('due','Échéances du jour','Loyer, salaire, abonnements… à confirmer (le matin)')+
-    opt('budget','Alertes de budget','Quand un groupe atteint 80 % puis 100 % de son budget')+
-    (on?'<button class="sheet-btn ghost" onclick="testNotif()">Envoyer une notification de test</button>':''));
+    (cats||'<p class="sheet-note">Aucune notification n’est ouverte pour le moment.</p>')+
+    (on?'<button class="sheet-btn ghost" onclick="testNotif()">Envoyer une notification de test</button>':'')+admin);
+}
+function saveNotifAdmin(){
+  apiPost('/api/push/admin',NP.admin,function(e,d){ if(d&&d.admin) NP.admin=d.admin; else if(d&&d.error) showToast(d.error); renderNotif(); });
+}
+function sendBroadcast(){
+  var t=(document.getElementById('ntMsg').value||'').trim(); if(!t){ showToast('Écris le message'); return; }
+  apiPost('/api/push/broadcast',{body:t},function(e,d){ if(e||!d||!d.ok){ showToast((d&&d.error)||'Erreur'); return; } showToast('Annonce envoyée à '+d.sent+' appareil'+(d.sent>1?'s':'')); });
 }
 function toggleNotif(){
   if(NP.on){
@@ -5505,7 +5549,7 @@ function toggleNotif(){
     });
   });
 }
-function saveNotifPrefs(){ apiPost('/api/push/prefs',{daily:NP.daily,hour:NP.hour,due:NP.due,budget:NP.budget},null); renderNotif(); }
+function saveNotifPrefs(){ apiPost('/api/push/prefs',{daily:NP.daily,due:NP.due,budget:NP.budget},null); renderNotif(); }
 function testNotif(){
   apiPost('/api/push/test',{},function(err,d){
     if(err){ showToast('Erreur : '+err.message); return; }
@@ -5525,6 +5569,64 @@ function checkBudgetPush(){
 }
 // Le site s installe comme une appli (et garde le service des notifications a jour)
 if('serviceWorker' in navigator&&!DEMO&&location.protocol!=='file:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+// ---------- Avatar : initiales, emoji ou photo sur un fond de couleur (comme sur iPhone) ----------
+var AV_BGS=['linear-gradient(160deg,#f3d9b8,#e0a96d)','linear-gradient(160deg,#a8b5c8,#6b7c96)','linear-gradient(160deg,#f6b4b0,#e07a76)','linear-gradient(160deg,#ffd27a,#f2a23a)',
+  'linear-gradient(160deg,#9fd8b4,#3fa46a)','linear-gradient(160deg,#8fd3e0,#3f9fb8)','linear-gradient(160deg,#a9c3ff,#5b7fe0)','linear-gradient(160deg,#c9b2f2,#8b6bd6)',
+  'linear-gradient(160deg,#f7b3d6,#d9679f)','linear-gradient(160deg,#3a3a40,#16161a)','linear-gradient(160deg,#2e9a78,#0f6650)','linear-gradient(160deg,#c47f86,#8e4a55)'];
+var AV_EMOJIS=['😀','😄','😎','🥰','😇','🤓','🥳','😴','🤠','🧐','🙂','😉','👩','👨','👱‍♀️','👱‍♂️','👩‍🦰','👨‍🦰','👩‍🦱','👨‍🦱','👩‍🦳','👨‍🦳','👧','👦','👵','👴','🧑‍💻','👩‍🍳','🐶','🐱','🦊','🐻','🐼','🐨','🐯','🦁','🐸','🐵','🦄','🐰','🌸','🌻','⭐️','🔥','💎','🍀','☀️','🌈'];
+function initialsOf(n){ var p=String(n||'?').trim().split(/\s+/); return ((p[0]||'?').charAt(0)+(p[1]?p[1].charAt(0):'')).toUpperCase(); }
+function avatarInner(u){
+  var a=u&&u.avatar, bg=a&&a.bg||AV_BGS[0];
+  if(a&&a.type==='photo'&&a.img) return {bg:'url('+a.img+') center/cover',html:''};
+  if(a&&a.type==='emoji'&&a.emoji) return {bg:bg,html:'<span class="av-emo">'+a.emoji+'</span>'};
+  return {bg:bg,html:esc(a&&a.text?a.text:initialsOf(u&&u.name))};
+}
+function paintAvatar(el,u){ if(!el) return; var v=avatarInner(u); el.style.background=v.bg; el.innerHTML=v.html; el.classList.toggle('has-img',!!(u&&u.avatar&&u.avatar.type==='photo')); }
+function avatarDemoLoad(){ if(!DEMO||!AUTH.user) return; try{ var a=JSON.parse(localStorage.getItem('budget_demo_avatar')||'null'); if(a) AUTH.user.avatar=a; }catch(e){} }
+var AVE=null;
+function openAvatarEditor(){
+  var a=(AUTH.user&&AUTH.user.avatar)||{};
+  AVE={type:a.type||'initials',bg:a.bg||AV_BGS[0],text:a.text||initialsOf(currentName),emoji:a.emoji||'😀',img:a.img||''};
+  renderAvatarEditor();
+}
+function renderAvatarEditor(){
+  var tabs=[['initials','Initiales'],['emoji','Emoji'],['photo','Photo']], th='', body='';
+  for(var i=0;i<tabs.length;i++) th+='<button class="'+(AVE.type===tabs[i][0]?'on':'')+'" onclick="AVE.type=\''+tabs[i][0]+'\';renderAvatarEditor()">'+tabs[i][1]+'</button>';
+  if(AVE.type==='initials') body='<div class="sf"><label>Tes initiales (2 lettres max)</label><input id="aveText" maxlength="2" value="'+esc(AVE.text)+'" oninput="AVE.text=this.value.toUpperCase();aveRefresh()"></div>';
+  else if(AVE.type==='emoji'){ var e=''; for(var k=0;k<AV_EMOJIS.length;k++) e+='<button class="ave-emo'+(AVE.emoji===AV_EMOJIS[k]?' on':'')+'" onclick="AVE.emoji=\''+AV_EMOJIS[k]+'\';renderAvatarEditor()">'+AV_EMOJIS[k]+'</button>'; body='<div class="ave-emos">'+e+'</div>'; }
+  else body='<label class="sheet-btn ghost ave-pick">'+(AVE.img?'Changer de photo':'Choisir une photo')+'<input type="file" accept="image/*" onchange="if(this.files[0])aveLoad(this.files[0])"></label>';
+  var cols='';
+  if(AVE.type!=='photo') for(var c=0;c<AV_BGS.length;c++) cols+='<button class="ave-col'+(AVE.bg===AV_BGS[c]?' on':'')+'" style="background:'+AV_BGS[c]+'" onclick="AVE.bg=AV_BGS['+c+'];renderAvatarEditor()"></button>';
+  openSheet(sheetHead('Mon avatar')+'<div class="ave-prev"><span class="ave-big" id="aveBig"></span></div>'+
+    '<div class="seg ave-tabs">'+th+'</div>'+body+(cols?'<div class="ave-cols">'+cols+'</div>':'')+
+    '<button class="sheet-btn" onclick="saveAvatar()">Enregistrer</button>');
+  aveRefresh();
+}
+function aveRefresh(){ paintAvatar(document.getElementById('aveBig'),{name:currentName,avatar:{type:AVE.type,bg:AVE.bg,text:AVE.text,emoji:AVE.emoji,img:AVE.img}}); }
+// Photo : recadree en carre et reduite
+function aveLoad(file){
+  var r=new FileReader();
+  r.onload=function(){ var im=new Image(); im.onload=function(){
+    var s=Math.min(im.width,im.height), cv=document.createElement('canvas'); cv.width=cv.height=256;
+    cv.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,256,256);
+    AVE.img=cv.toDataURL('image/jpeg',.8); AVE.type='photo'; renderAvatarEditor();
+  }; im.src=r.result; };
+  r.readAsDataURL(file);
+}
+function saveAvatar(){
+  if(AVE.type==='photo'&&!AVE.img){ showToast('Choisis une photo'); return; }
+  var av={type:AVE.type,bg:AVE.bg};
+  if(AVE.type==='initials') av.text=(AVE.text||initialsOf(currentName)).slice(0,2);
+  if(AVE.type==='emoji') av.emoji=AVE.emoji;
+  if(AVE.type==='photo') av.img=AVE.img;
+  function done(a){
+    AUTH.user.avatar=a;
+    (AUTH.household.members||[]).forEach(function(m){ if(String(m.id)===currentUser) m.avatar=a; });
+    closeSheet(); renderHome(); renderSettingsPage(); showToast('Avatar enregistré');
+  }
+  if(DEMO){ try{ localStorage.setItem('budget_demo_avatar',JSON.stringify(av)); }catch(e){} done(av); return; }
+  apiPost('/api/auth/avatar',{avatar:av},function(err,d){ if(err||!d||!d.ok){ showToast((d&&d.error)||'Erreur'); return; } done(d.avatar); });
+}
 applyTheme();
 authStart();
 </script>
