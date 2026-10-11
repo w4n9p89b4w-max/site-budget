@@ -108,6 +108,10 @@ addColumnIfMissing('recurring', 'to_bank', 'TEXT');
 addColumnIfMissing('recurring', 'start_key', 'TEXT');
 // Compte masque sur l accueil (hors Total Patrimoine)
 addColumnIfMissing('accounts', 'hidden', 'INTEGER DEFAULT 0');
+// Mois du compte : vide = calendaire (1 -> 31), sinon id du revenu regulier (paie) qui fait commencer le mois
+addColumnIfMissing('accounts', 'cycle_rec', 'TEXT');
+// Proprietaire du compte : etienne, noa ou vide (commun)
+addColumnIfMissing('accounts', 'owner', 'TEXT');
 // Page Budget : type d operation reguliere (dep, rev, tra) et lien transaction <-> echeance confirmee
 addColumnIfMissing('recurring', 'kind', 'TEXT');
 // Frequence : month (defaut), week, day (tous les "every" jours), year ; anchor = date de la premiere echeance
@@ -164,7 +168,7 @@ app.post('/api/transactions', requireAuth, (req, res) => {
     cat: t.cat || '',
     amount: parseFloat(t.amount) || 0,
     type: t.type || 'dep',
-    bank: t.bank || '',
+    bank: t.bank == null ? '' : String(t.bank),
     need: t.need || '',
     auto: t.auto ? 1 : 0,
     transfer_pair: t.transfer_pair || null,
@@ -197,7 +201,7 @@ app.post('/api/transactions/bulk', requireAuth, (req, res) => {
         cat: t.cat || '',
         amount: parseFloat(t.amount) || 0,
         type: t.type || 'dep',
-        bank: t.bank || '',
+        bank: t.bank == null ? '' : String(t.bank),
         need: t.need || '',
         auto: t.auto ? 1 : 0,
         transfer_pair: t.transfer_pair || null,
@@ -297,12 +301,12 @@ app.post('/api/recurring', requireAuth, (req, res) => {
   // Mise a jour d une operation reguliere existante
   if (r.id) {
     db.prepare('UPDATE recurring SET label=?, cat=?, bank=?, amount=?, day=?, to_bank=?, kind=? WHERE id=?')
-      .run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, r.to_bank || null, r.kind || null, r.id);
+      .run(r.label, r.cat || '', r.bank == null ? '' : String(r.bank), parseFloat(r.amount) || 0, parseInt(r.day)||1, r.to_bank == null || r.to_bank === '' ? null : String(r.to_bank), r.kind || null, r.id);
     return res.json({ ok: true, id: r.id });
   }
   const info = db.prepare(
     'INSERT INTO recurring (label, cat, bank, amount, day, next_month, to_bank, start_key, kind, freq, every, anchor, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(r.label, r.cat || '', r.bank || '', parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0, r.to_bank || null, r.start_key || null, r.kind || null,
+  ).run(r.label, r.cat || '', r.bank == null ? '' : String(r.bank), parseFloat(r.amount) || 0, parseInt(r.day)||1, parseInt(r.next_month)||0, r.to_bank == null || r.to_bank === '' ? null : String(r.to_bank), r.start_key || null, r.kind || null,
     r.freq || null, parseInt(r.every) || null, r.anchor || null, r.end_date || null);
   res.json({ ok: true, id: info.lastInsertRowid });
 });
@@ -346,7 +350,8 @@ app.post('/api/epargne/:key', requireAuth, (req, res) => {
 function accountFromRow(r) {
   return {
     id: r.id, name: r.name, color: r.color, solde: r.solde, soldeDate: r.solde_date, soldeSetAt: r.solde_set_at,
-    bank: r.bank_key || '', type: r.acc_type || '', description: r.description || '', hidden: !!r.hidden
+    bank: r.bank_key || '', type: r.acc_type || '', description: r.description || '', hidden: !!r.hidden,
+    cycle: r.cycle_rec || '', owner: r.owner || ''
   };
 }
 
@@ -360,11 +365,12 @@ app.post('/api/accounts', requireAuth, (req, res) => {
   if (!a.name) return res.status(400).json({ error: 'Nom du compte manquant' });
   const id = a.id || Date.now();
   db.prepare(`
-    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description, hidden)
-    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description, @hidden)
+    INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description, hidden, cycle_rec, owner)
+    VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description, @hidden, @cycle_rec, @owner)
     ON CONFLICT(id) DO UPDATE SET name=excluded.name, color=excluded.color, solde=excluded.solde,
       solde_date=excluded.solde_date, solde_set_at=excluded.solde_set_at, sort_order=excluded.sort_order,
-      bank_key=excluded.bank_key, acc_type=excluded.acc_type, description=excluded.description, hidden=excluded.hidden
+      bank_key=excluded.bank_key, acc_type=excluded.acc_type, description=excluded.description, hidden=excluded.hidden,
+      cycle_rec=excluded.cycle_rec, owner=excluded.owner
   `).run({
     id: id,
     name: a.name,
@@ -377,7 +383,9 @@ app.post('/api/accounts', requireAuth, (req, res) => {
     bank_key: a.bank || '',
     acc_type: a.type || '',
     description: a.description || '',
-    hidden: a.hidden ? 1 : 0
+    hidden: a.hidden ? 1 : 0,
+    cycle_rec: a.cycle ? String(a.cycle) : null,
+    owner: a.owner || null
   });
   res.json({ ok: true, id: id });
 });
