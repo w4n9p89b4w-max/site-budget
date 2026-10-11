@@ -6,3 +6,4 @@ budget.db-*
 
 # Identifiants du service de mail (ne jamais envoyer sur GitHub)
 mail.config.json
+sauvegardes/

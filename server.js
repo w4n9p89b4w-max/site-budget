@@ -16,6 +16,8 @@ try { nodemailer = require('nodemailer'); } catch (e) {}
 const app = express();
 const PORT = process.env.PORT || 3003;
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'budget.db');
+// Comptes administrateurs (par mail) : ils voient la liste de tous les comptes du site
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'etienne@ecotole.re').toLowerCase().split(',').map(e => e.trim()).filter(Boolean);
 
 
 app.use(cors());
@@ -168,7 +170,8 @@ function newSession(userId) {
   db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(sha256(token), userId, Date.now() + SESSION_DAYS * DAY);
   return token;
 }
-function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '' }; }
+function isAdmin(u) { return !!u && ADMIN_EMAILS.indexOf(String(u.email || '').toLowerCase()) >= 0; }
+function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '', admin: isAdmin(u) }; }
 function householdInfo(hid) {
   return { id: hid, members: db.prepare('SELECT id, name FROM users WHERE household_id = ? ORDER BY id').all(hid) };
 }
@@ -265,6 +268,23 @@ app.post('/api/auth/logout', requireAuth, (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const u = db.prepare('SELECT * FROM users WHERE id = ?').get(req.uid);
   res.json({ user: publicUser(u), household: householdInfo(req.hid) });
+});
+
+// Administration : liste de tous les comptes et foyers (sans mot de passe ni donnees de budget)
+app.get('/api/admin/users', requireAuth, (req, res) => {
+  const me = db.prepare('SELECT * FROM users WHERE id = ?').get(req.uid);
+  if (!isAdmin(me)) return res.status(403).json({ error: 'Réservé à l’administrateur' });
+  const users = db.prepare(`SELECT u.id, u.name, u.email, u.login, u.household_id, u.created_at,
+      (SELECT MAX(expires_at) FROM sessions s WHERE s.user_id = u.id) AS last_exp
+    FROM users u ORDER BY u.household_id, u.id`).all();
+  users.forEach(u => {
+    // derniere activite deduite de la session la plus recente (prolongee a chaque visite)
+    u.last_seen = u.last_exp ? new Date(u.last_exp - SESSION_DAYS * DAY).toISOString() : null;
+    delete u.last_exp;
+    u.admin = isAdmin(u);
+  });
+  const households = db.prepare('SELECT id, created_at FROM households ORDER BY id').all();
+  res.json({ users, households });
 });
 
 app.post('/api/auth/password', requireAuth, (req, res) => {
