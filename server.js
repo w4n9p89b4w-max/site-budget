@@ -291,11 +291,18 @@ app.get('/api/admin/users', requireAuth, (req, res) => {
 
 // Avatar : initiales, emoji ou photo sur un fond de couleur
 app.post('/api/auth/avatar', requireAuth, (req, res) => {
-  const a = req.body.avatar || {}, type = ['initials', 'emoji', 'photo'].indexOf(a.type) >= 0 ? a.type : null;
+  const a = req.body.avatar || {}, type = ['initials', 'emoji', 'photo', 'memoji'].indexOf(a.type) >= 0 ? a.type : null;
   if (!type) return res.status(400).json({ error: 'Avatar invalide' });
   const av = { type, bg: /^[#a-z0-9(),.% -]{3,80}$/i.test(a.bg || '') ? a.bg : '#e6b98a' };
   if (type === 'initials') av.text = String(a.text || '').slice(0, 2);
   if (type === 'emoji') av.emoji = String(a.emoji || '').slice(0, 16);
+  if (type === 'memoji') {
+    // personnage : seulement des choix connus (mots simples ou couleurs)
+    av.mj = {};
+    ['skin', 'face', 'hair', 'hairc', 'eyes', 'eyec', 'brows', 'nose', 'mouth', 'beard', 'glasses', 'hat', 'extra', 'shirt'].forEach(k => {
+      const v = String((a.mj || {})[k] || ''); if (/^#?[a-z0-9]{1,16}$/i.test(v)) av.mj[k] = v;
+    });
+  }
   if (type === 'photo') {
     if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(a.img || '') || a.img.length > 300000) return res.status(400).json({ error: 'Photo trop lourde' });
     av.img = a.img;
