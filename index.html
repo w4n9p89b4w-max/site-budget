@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Budget">
 <meta name="theme-color" content="#f6e3e1">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Nunito:wght@500;600;700;800;900&display=swap');
 :root{
@@ -753,6 +754,32 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
   #page-budget .bg-body:not(:has(>:nth-child(2))){max-width:980px;}
   #page-budget .bg-head,#page-dashboard .st-head{padding-bottom:70px;}
 }
+.bud-alerts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:-6px 0 18px;}
+.bud-alerts:empty{display:none;}
+.ba{display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 6px;border-radius:99px;border:1.5px solid #f0c48f;background:#fff6ea;font-family:inherit;font-size:13.5px;font-weight:700;color:#8a5a1c;cursor:pointer;}
+.ba b{font-weight:900;color:#d9822b;}
+.ba.over{border-color:#efb1a8;background:#fdeceb;color:#9b2a1f;}
+.ba.over b{color:#c0392b;}
+.ba-ic{width:24px;height:24px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;}
+.ba-ic .ico{width:14px;height:14px;}
+.bg-row.warn .bg-mid>span{color:#d9822b;font-weight:800;}
+.bg-row.over .bg-mid>span{color:#c0392b;font-weight:800;}
+.pop-row .pop-sub{display:block;font-size:13px;font-weight:600;color:#a99e90;margin-top:2px;}
+.nt-main{display:flex;align-items:center;gap:12px;background:#fff;border-radius:20px;padding:14px;margin-bottom:12px;}
+.nt-main.on{background:#e3efe6;}
+.nt-main>span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:3px;}
+.nt-main b{font-size:16px;font-weight:900;}
+.nt-main small,.nt-row small{font-size:13px;color:#8a7f72;line-height:1.35;}
+.nt-bell{width:44px;height:44px;border-radius:14px;background:#0f6650;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.nt-bell .ico{width:22px;height:22px;}
+.nt-row{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1.5px solid #f1dedb;}
+.nt-row>span{flex:1;display:flex;flex-direction:column;gap:3px;}
+.nt-row b{font-size:15.5px;font-weight:800;}
+.nt-row.off{opacity:.5;}
+.nt-hour{margin-top:6px;align-self:flex-start;font-family:inherit;font-size:14px;font-weight:700;padding:6px 10px;border-radius:10px;border:1.5px solid #e2d9cb;background:#fff;}
+.nt-steps{display:flex;flex-direction:column;gap:10px;margin:6px 0 4px;}
+.nt-steps div{display:flex;align-items:flex-start;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;font-size:15px;line-height:1.4;}
+.nt-steps div>b:first-child{width:26px;height:26px;border-radius:50%;background:#0f6650;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
 .rate-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15.5px;font-weight:700;color:#5c4630;}
 .rate-row input{width:110px;padding:11px 10px;border:1.5px solid #e2d3b4;border-radius:12px;background:#fcf3f2;font-family:inherit;font-size:16px;font-weight:800;text-align:center;outline:none;}
 .rate-row.small{margin-top:8px;}
@@ -1369,6 +1396,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
       <span class="patri-pill" id="patriCur">&euro;</span>
     </div>
     <div class="patri-next" id="patriNext"></div>
+    <div class="bud-alerts" id="budAlerts"></div>
     <div class="acc-grid" id="accGrid"></div>
     <div class="quick-actions">
       <button class="qa" onclick="openExpenseWizard()"><span class="qa-ic dep"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>D&eacute;pense</button>
@@ -1930,6 +1958,7 @@ function refreshHome(){
 }
 // Apres toute modification : on redessine la page affichee (Accueil et Budget partagent les memes donnees)
 function refreshViews(){
+  setTimeout(checkBudgetPush,500);
   if(currentPage==='budget'){ if(BG.detail) renderGroupDetail(); renderBudget(); }
   else if(currentPage==='journal'){ renderJournal(); }
   else renderHome();
@@ -2003,6 +2032,9 @@ function renderHome(){
   var anyPay=accs.some(function(x){ return !x.hidden&&x.cycle; });
   if(pn) pn.innerHTML=Math.abs(proj-total)>=0.005?'<span>'+(anyPay?'Avant les prochaines paies :':'Fin '+MONTHS_FR[new Date().getMonth()]+' :')+'</span><b class="'+(proj<0?'down':'gold')+'">'+moneyHtml(proj,true)+' €</b>':'';
   var pcu=document.getElementById('patriCur'); if(pcu) pcu.textContent=curSym();
+  var ba=document.getElementById('budAlerts');
+  if(ba){ var al=[]; try{ al=budgetAlerts(); }catch(e){}
+    ba.innerHTML=al.map(function(x){ return '<button class="ba'+(x.pct>100?' over':'')+'" onclick="openBudgetReel()"><span class="ba-ic" style="background:'+x.g.color+'">'+svgIcon(x.g.ic)+'</span>'+esc(x.g.label)+' <b>'+x.pct+' %</b></button>'; }).join(''); }
   var pv=document.getElementById('patriVal');
   pv.innerHTML=moneyHtml(Math.round(total*100)/100,true);
   pv.className='patri-val'+(total<0?' neg':'');
@@ -3589,6 +3621,17 @@ function selectedIds(){
 function isPending(t){ return t.date>todayStr()||Number(t.later_pay); }
 
 // Chiffres d un mois
+// Alertes de budget : groupes du mois en cours a 80 % ou plus de leur budget
+function budgetAlerts(){
+  var d=new Date(), st=monthStats(d.getFullYear(),d.getMonth()), out=[];
+  getGroups().forEach(function(g){
+    if(g.special) return;
+    var b=groupBudget(g), sp=st.byGroup[g.key]||0;
+    if(b>0&&sp/b>=.8) out.push({g:g,pct:Math.round(sp/b*100),sp:sp,b:b});
+  });
+  return out.sort(function(a,b){ return b.pct-a.pct; });
+}
+function openBudgetReel(){ switchPage('budget'); BG.tab='budget'; BG.mode='reel'; renderBudget(); }
 function monthStats(y,m){
   var rg=bgRange(y,m), tx=rangeTxns(rg), occ=rangeOccs(rg), groups=getGroups();
   var st={spent:0,upDep:0,incReal:0,incUp:0,epReal:0,byGroup:{},upByGroup:{},other:0,otherUp:0};
@@ -4036,7 +4079,10 @@ function renderBgBudgetInner(){
     }
     var b=groupBudget(gr), sp=st.byGroup[gr.key]||0;
     if(!reel) html+=bgRow(icon,gr.label,'','<b>'+fmtE(b)+'</b>','bgOpenGroup(\''+gr.key+'\')',st.incPlanned?b/st.incPlanned:0,gr.color);
-    else html+=bgRow(icon,gr.label,'','<b'+(b&&sp>b?' class="red"':'')+'>'+fmtE(sp)+'</b><small>/ '+fmtE(b)+'</small>','bgOpenGroup(\''+gr.key+'\')',b?sp/b:(sp?1:0),sp>b&&b?'#d64545':gr.color);
+    else {
+      var pr=b?sp/b:0, warn=b&&pr>=.8?(pr>1?'Dépassé de '+fmtE(Math.round(sp-b)):'Attention : '+Math.round(pr*100)+' % du budget'):'';
+      html+=bgRow(icon,gr.label,warn,'<b'+(b&&sp>b?' class="red"':'')+'>'+fmtE(sp)+'</b><small>/ '+fmtE(b)+'</small>','bgOpenGroup(\''+gr.key+'\')',b?sp/b:(sp?1:0),sp>b&&b?'#d64545':(pr>=.8?'#e0892e':gr.color),warn?(pr>1?'over':'warn'):'');
+    }
   }
   var oth=st.byGroup._autres||0;
   if(oth>0) html+=bgRow('<span class="bg-ic" style="background:#8a8178;color:#fff">'+svgIcon('box')+'</span>','Autres dépenses','Hors groupes','<b>'+fmtE(oth)+'</b>','bgManageGroups()');
@@ -4988,7 +5034,7 @@ function renderSettingsPage(){
       (right?'<span class="set-val">'+right+'</span>':'<span class="set-chev">'+svgIcon('chev')+'</span>')+'</button>';
   }
   var nb=getTxns().length, na=getAccounts().length, nr=getRecurring().filter(function(r){ return r.kind; }).length;
-  root.innerHTML='<div class="set-top"><span class="set-bubble">'+bubble+'</span><span class="set-av">'+who.charAt(0)+'</span></div>'+
+  root.innerHTML='<div class="set-top"><span class="set-bubble">'+bubble+'</span><span class="set-av">'+who.charAt(0).toUpperCase()+'</span></div>'+
     '<div class="set-title"><h1>Mon budget</h1><span>Budget Mensuel</span></div>'+
     '<div class="set-user"><b>'+esc(who)+'</b><span>'+(others.length?'Foyer partagé avec '+esc(other):'Seul dans ton foyer')+'</span></div>'+
     '<div class="set-card"><b>'+svgIcon('cloud')+' Tes données sont sauvegardées</b>'+
@@ -5001,8 +5047,9 @@ function renderSettingsPage(){
       row('<span class="set-eu">'+esc(curSym())+'</span>','Devise',esc(curSym())+' '+mainCur(),'setCurrency()')+
       row(svgIcon('db'),'Mes données','','setData()')+
       (AUTH.user&&AUTH.user.admin?row(svgIcon('lock'),'Administration','','setAdmin()'):'')+
+      row(svgIcon('sun'),'Apparence',{auto:'Automatique',light:'Clair',dark:'Sombre'}[themePref()],'setAppearance()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
-      row(svgIcon('bell'),'Notifications','','setSoon(\'Notifications\',\'Un rappel « T’as bien noté tes dépenses ? » pourra s’afficher chaque soir.\')')+
+      row(svgIcon('bell'),'Notifications','','setNotif()')+
       row(svgIcon('bolt'),'Ajout éclair','','setSoon(\'Ajout éclair\',\'Ajouter une dépense en un seul geste depuis l’écran d’accueil du téléphone.\')')+
       row(svgIcon('lock'),'Confidentialité','','setPrivacy()')+
       row('<span class="set-eu">?</span>','Visite guidée','','setTour()','set-tour')+
@@ -5325,6 +5372,160 @@ function setPasswordGo(){
   });
 }
 
+// ---------- Apparence : clair, sombre ou automatique (comme le telephone) ----------
+// Le theme sombre est calcule a partir des couleurs du site : fonds clairs -> fonces, textes fonces -> clairs.
+// Les logos, cartes de banque et images gardent leurs couleurs.
+var DARK_SKIP=/cv-logo|bank-logo|chip-logo|\.img\b|gw-logo|am-head|login-logo|gw-col|swatch|\.cv-|st-block|\.gc|cv-wm|cur-ok|pw-eye|\.ba-ic|gw-pickimg/;
+var DARK_PROPS=['background-color','background-image','color','border-top-color','border-right-color','border-bottom-color','border-left-color','outline-color','fill','stroke'];
+function rgbHsl(r,g,b){ r/=255; g/=255; b/=255; var mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, h=0, s=0, d=mx-mn;
+  if(d){ s=l>.5?d/(2-mx-mn):d/(mx+mn); h=mx===r?(g-b)/d+(g<b?6:0):(mx===g?(b-r)/d+2:(r-g)/d+4); h/=6; } return [h,s,l]; }
+function hslRgb(h,s,l){ if(!s) return [l*255,l*255,l*255].map(Math.round);
+  function f(p,q,t){ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6) return p+(q-p)*6*t; if(t<1/2) return q; if(t<2/3) return p+(q-p)*(2/3-t)*6; return p; }
+  var q=l<.5?l*(1+s):l+s-l*s, p=2*l-q; return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)].map(function(v){ return Math.round(v*255); }); }
+function darkColor(r,g,b,a,isText){
+  var hsl=rgbHsl(r,g,b), h=hsl[0], s=hsl[1], l=hsl[2], nl=l, ns=s;
+  if(isText){
+    if(l<.45){ nl=s<.25?.92-l*.55:.58+(.45-l)*.6; ns=s*.9; } else return null;
+  } else {
+    if(a<.5) return null;
+    if(l>.8){ nl=.11+(l-.8)*.6; ns=s*.35; }
+    else if(l>.62&&s<.75){ nl=.24+(l-.62)*.45; ns=s*.5; }
+    else return null;
+  }
+  var c=hslRgb(h,ns,nl); return a<1?'rgba('+c[0]+', '+c[1]+', '+c[2]+', '+a+')':'rgb('+c[0]+', '+c[1]+', '+c[2]+')';
+}
+function darkValue(v,isText){
+  var changed=false;
+  var out=v.replace(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s\/]+([\d.]+))?\s*\)/g,function(m,r,g,b,a){
+    var c=darkColor(+r,+g,+b,a==null?1:+a,isText); if(c){ changed=true; return c; } return m;
+  });
+  return changed?out:null;
+}
+function darkSelector(sel){
+  return sel.split(',').map(function(p){
+    p=p.trim();
+    if(p.indexOf(':root')===0) return 'body.dark'+p.slice(5);
+    if(p.indexOf('body')===0) return 'body.dark'+p.slice(4);
+    if(p.indexOf('html')===0) return null;
+    return 'body.dark '+p;
+  }).filter(Boolean).join(',');
+}
+function darkRules(rules){
+  var css='';
+  for(var i=0;i<rules.length;i++){
+    var r=rules[i];
+    if(r.media&&r.cssRules){ var inner=darkRules(r.cssRules); if(inner) css+='@media '+r.media.mediaText+'{'+inner+'}'; continue; }
+    if(!r.selectorText||!r.style||DARK_SKIP.test(r.selectorText)) continue;
+    var decl='';
+    for(var k=0;k<DARK_PROPS.length;k++){
+      var v=r.style.getPropertyValue(DARK_PROPS[k]); if(!v) continue;
+      var nv=darkValue(v,DARK_PROPS[k]==='color'); if(nv) decl+=DARK_PROPS[k]+':'+nv+';';
+    }
+    for(var j=0;j<r.style.length;j++){ var pn=r.style[j]; if(pn.indexOf('--')===0){ var vv=r.style.getPropertyValue(pn), dv=darkValue(hexToRgbStr(vv),/text|muted/.test(pn)); if(dv) decl+=pn+':'+dv+';'; } }
+    if(decl){ var sl=darkSelector(r.selectorText); if(sl) css+=sl+'{'+decl+'}'; }
+  }
+  return css;
+}
+function hexToRgbStr(v){ return String(v).replace(/#([0-9a-f]{6}|[0-9a-f]{3})\b/gi,function(m,h){ if(h.length===3) h=h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2); var n=parseInt(h,16); return 'rgb('+(n>>16)+', '+((n>>8)&255)+', '+(n&255)+')'; }); }
+function buildDark(){
+  if(document.getElementById('darkCss')) return;
+  var css='body.dark{color-scheme:dark;}body.dark .donut circle[stroke="#e6dfd0"]{stroke:#3d3331;}body.dark #bgHatch rect:first-child{fill:#4a2f2c;}';
+  for(var i=0;i<document.styleSheets.length;i++){ try{ css+=darkRules(document.styleSheets[i].cssRules); }catch(e){} }
+  var st=document.createElement('style'); st.id='darkCss'; st.textContent=css; document.head.appendChild(st);
+}
+function themePref(){ try{ return localStorage.getItem('budget_theme')||'auto'; }catch(e){ return 'auto'; } }
+function applyTheme(){
+  var p=themePref(), dark=p==='dark'||(p==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  if(dark) buildDark();
+  document.body.classList.toggle('dark',dark);
+  var m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content',dark?'#241c1b':'#f6e3e1');
+}
+function setTheme(p){ try{ localStorage.setItem('budget_theme',p); }catch(e){} applyTheme(); setAppearance(); renderSettingsPage(); }
+function setAppearance(){
+  var p=themePref(), opts=[['auto','Automatique','Comme ton téléphone ou ton ordinateur'],['light','Clair','Fond rose blush'],['dark','Sombre','Plus doux le soir']], h='';
+  for(var i=0;i<opts.length;i++) h+='<button class="pop-row'+(p===opts[i][0]?' on':'')+'" onclick="setTheme(\''+opts[i][0]+'\')"><b>'+opts[i][1]+'</b><span class="pop-sub">'+opts[i][2]+'</span></button>';
+  openSheet(sheetHead('Apparence')+h);
+}
+if(window.matchMedia) try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){ if(themePref()==='auto') applyTheme(); }); }catch(e){}
+// ---------- Notifications : rappel du soir, echeances du jour, alertes de budget ----------
+var NP=null;
+function pushSupported(){ return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window; }
+function isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1); }
+function isStandalone(){ return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }
+function swReady(){ return navigator.serviceWorker.register('sw.js').then(function(){ return navigator.serviceWorker.ready; }); }
+function b64uToBytes(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; var r=atob(s), a=new Uint8Array(r.length); for(var i=0;i<r.length;i++) a[i]=r.charCodeAt(i); return a; }
+function pushSubscription(){ if(!pushSupported()) return Promise.resolve(null); return swReady().then(function(reg){ return reg.pushManager.getSubscription(); }); }
+function setNotif(){
+  if(DEMO){ openSheet(sheetHead('Notifications')+'<p class="sheet-note">Les notifications ne marchent pas en mode démo : il faut le vrai site, avec ton compte.</p>'); return; }
+  if(!pushSupported()){
+    openSheet(sheetHead('Notifications')+(isIOS()&&!isStandalone()?
+      '<p class="sheet-note">Sur iPhone, les notifications marchent quand le site est installé comme une appli :</p>'+
+      '<div class="nt-steps"><div><b>1</b>Dans Safari, touche le bouton <b>Partager</b> (carré avec une flèche).</div><div><b>2</b>Choisis <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b>.</div><div><b>3</b>Ouvre Budget Mensuel depuis sa nouvelle icône et reviens ici.</div></div>':
+      '<p class="sheet-note">Ce navigateur ne permet pas les notifications. Essaie avec Chrome, Edge, Firefox ou Safari récent.</p>'));
+    return;
+  }
+  openSheet(sheetHead('Notifications')+'<p class="sheet-note">Chargement…</p>');
+  Promise.all([pushSubscription(),new Promise(function(res){ apiGet('/api/push/prefs',function(e,d){ res(e?null:d); }); })]).then(function(r){
+    NP=r[1]||{daily:true,hour:'20:00',due:true,budget:true}; NP.on=!!r[0]&&Notification.permission==='granted';
+    renderNotif();
+  },function(){ openSheet(sheetHead('Notifications')+'<p class="sheet-note">Ce navigateur bloque les notifications pour ce site. Ouvre le site dans Chrome, Edge, Firefox ou Safari (ou depuis son icône sur l’iPhone), puis réessaie.</p>'); });
+}
+function renderNotif(){
+  var hours='', on=NP.on;
+  for(var h=17;h<=23;h++){ var v=pad(h)+':00'; hours+='<option value="'+v+'"'+(NP.hour===v?' selected':'')+'>'+h+' h</option>'; var v2=pad(h)+':30'; hours+='<option value="'+v2+'"'+(NP.hour===v2?' selected':'')+'>'+h+' h 30</option>'; }
+  function opt(k,title,sub,extra){ return '<div class="nt-row'+(on?'':' off')+'"><span><b>'+title+'</b><small>'+sub+'</small>'+(extra||'')+'</span><button class="sw'+(NP[k]?' on':'')+'" onclick="NP.'+k+'=!NP.'+k+';saveNotifPrefs()"'+(on?'':' disabled')+'></button></div>'; }
+  openSheet(sheetHead('Notifications')+
+    '<div class="nt-main'+(on?' on':'')+'"><span class="nt-bell">'+svgIcon('bell')+'</span><span><b>'+(on?'Activées sur cet appareil':'Désactivées sur cet appareil')+'</b>'+
+      '<small>'+(Notification.permission==='denied'?'Bloquées dans les réglages du navigateur : autorise-les pour ce site, puis réessaie.':'Chaque appareil s’active séparément (téléphone, ordinateur…).')+'</small></span>'+
+      '<button class="sw'+(on?' on':'')+'" onclick="toggleNotif()"></button></div>'+
+    opt('daily','Rappel du soir','« T’as bien noté tes dépenses aujourd’hui ? »','<select class="nt-hour" onchange="NP.hour=this.value;saveNotifPrefs()"'+(on&&NP.daily?'':' disabled')+'>'+hours+'</select>')+
+    opt('due','Échéances du jour','Loyer, salaire, abonnements… à confirmer (le matin)')+
+    opt('budget','Alertes de budget','Quand un groupe atteint 80 % puis 100 % de son budget')+
+    (on?'<button class="sheet-btn ghost" onclick="testNotif()">Envoyer une notification de test</button>':''));
+}
+function toggleNotif(){
+  if(NP.on){
+    pushSubscription().then(function(sub){
+      if(!sub){ NP.on=false; renderNotif(); return; }
+      apiPost('/api/push/unsubscribe',{endpoint:sub.endpoint},null);
+      sub.unsubscribe().then(function(){ NP.on=false; renderNotif(); showToast('Notifications désactivées'); });
+    });
+    return;
+  }
+  Notification.requestPermission().then(function(p){
+    if(p!=='granted'){ showToast('Notifications refusées'); renderNotif(); return; }
+    apiGet('/api/push/key',function(err,d){
+      if(err||!d||!d.key){ showToast('Le serveur ne répond pas'); return; }
+      swReady().then(function(reg){ return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToBytes(d.key)}); }).then(function(sub){
+        apiPost('/api/push/subscribe',{subscription:sub.toJSON()},function(e2){
+          if(e2){ showToast('Erreur : '+e2.message); return; }
+          NP.on=true; saveNotifPrefs(); renderNotif(); showToast('Notifications activées');
+        });
+      }).catch(function(e){ showToast('Impossible d’activer : '+(e&&e.message||'erreur')); });
+    });
+  });
+}
+function saveNotifPrefs(){ apiPost('/api/push/prefs',{daily:NP.daily,hour:NP.hour,due:NP.due,budget:NP.budget},null); renderNotif(); }
+function testNotif(){
+  apiPost('/api/push/test',{},function(err,d){
+    if(err){ showToast('Erreur : '+err.message); return; }
+    showToast(d&&d.sent?'Notification envoyée':'Aucun appareil n’a reçu la notification');
+  });
+}
+// Apres chaque changement : si un groupe passe 80 % ou 100 % de son budget, le serveur previent le foyer (une seule fois)
+function checkBudgetPush(){
+  if(DEMO||!AUTH.token) return;
+  var al=[]; try{ al=budgetAlerts(); }catch(e){ return; }
+  var d=new Date(), mk=d.getFullYear()+'-'+pad(d.getMonth()+1);
+  al.forEach(function(x){
+    var step=x.pct>=100?100:80;
+    apiPost('/api/push/budget',{key:mk+'|'+x.g.key+'|'+step,title:step===100?'Budget dépassé':'Budget presque atteint',
+      body:x.g.label+' : '+fmtE(Math.round(x.sp))+' sur '+fmtE(Math.round(x.b))+' ('+x.pct+' %)'},null);
+  });
+}
+// Le site s installe comme une appli (et garde le service des notifications a jour)
+if('serviceWorker' in navigator&&!DEMO&&location.protocol!=='file:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+applyTheme();
 authStart();
 </script>
 </body>

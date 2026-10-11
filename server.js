@@ -618,6 +618,165 @@ app.delete('/api/accounts/:id', requireAuth, (req, res) => {
 });
 
 // ── Servir les fichiers statiques du site ──
+// ============================================================
+// Notifications (Web Push) : envoi chiffre selon les normes des navigateurs (RFC 8291 + VAPID RFC 8292),
+// sans module en plus. Les cles du site sont creees au premier lancement dans vapid.json (jamais sur GitHub).
+// ============================================================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, user_id INTEGER NOT NULL, household_id INTEGER NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')));
+  CREATE TABLE IF NOT EXISTS push_prefs (user_id INTEGER PRIMARY KEY, daily INTEGER DEFAULT 1, hour TEXT DEFAULT '20:00', due INTEGER DEFAULT 1, budget INTEGER DEFAULT 1, last_daily TEXT, last_due TEXT);
+  CREATE TABLE IF NOT EXISTS push_log (key TEXT PRIMARY KEY, sent_at TEXT DEFAULT (datetime('now')));
+`);
+const b64u = buf => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => Buffer.from(String(s).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+const VAPID_FILE = process.env.VAPID_FILE || path.join(__dirname, 'vapid.json');
+let VAPID = null;
+function vapidKeys() {
+  if (VAPID) return VAPID;
+  if (fs.existsSync(VAPID_FILE)) { try { VAPID = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8')); } catch (e) { VAPID = null; } }
+  if (!VAPID) {
+    const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    VAPID = { jwk: privateKey.export({ format: 'jwk' }), subject: 'mailto:' + (ADMIN_EMAILS[0] || 'contact@example.com') };
+    fs.writeFileSync(VAPID_FILE, JSON.stringify(VAPID, null, 2));
+    console.log('Cles de notification creees dans vapid.json');
+  }
+  VAPID.publicRaw = Buffer.concat([Buffer.from([4]), unb64u(VAPID.jwk.x), unb64u(VAPID.jwk.y)]);
+  VAPID.key = crypto.createPrivateKey({ key: VAPID.jwk, format: 'jwk' });
+  return VAPID;
+}
+function hmac(key, data) { return crypto.createHmac('sha256', key).update(data).digest(); }
+// Chiffrement du message pour un appareil (aes128gcm)
+function encryptPush(sub, payload) {
+  const uaPublic = unb64u(sub.p256dh), authSecret = unb64u(sub.auth);
+  const ecdh = crypto.createECDH('prime256v1'); ecdh.generateKeys();
+  const asPublic = ecdh.getPublicKey(), secret = ecdh.computeSecret(uaPublic), salt = crypto.randomBytes(16);
+  const prkKey = hmac(authSecret, secret);
+  const ikm = hmac(prkKey, Buffer.concat([Buffer.from('WebPush: info\0'), uaPublic, asPublic, Buffer.from([1])]));
+  const prk = hmac(salt, ikm);
+  const cek = hmac(prk, Buffer.concat([Buffer.from('Content-Encoding: aes128gcm\0'), Buffer.from([1])])).slice(0, 16);
+  const nonce = hmac(prk, Buffer.concat([Buffer.from('Content-Encoding: nonce\0'), Buffer.from([1])])).slice(0, 12);
+  const cipher = crypto.createCipheriv('aes-128-gcm', cek, nonce);
+  const body = Buffer.concat([cipher.update(Buffer.concat([Buffer.from(payload), Buffer.from([2])])), cipher.final(), cipher.getAuthTag()]);
+  const rs = Buffer.alloc(4); rs.writeUInt32BE(4096);
+  return Buffer.concat([salt, rs, Buffer.from([asPublic.length]), asPublic, body]);
+}
+function vapidHeader(endpoint) {
+  const v = vapidKeys(), aud = new URL(endpoint).origin;
+  const head = b64u(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
+  const claims = b64u(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: v.subject }));
+  const sig = crypto.sign('sha256', Buffer.from(head + '.' + claims), { key: v.key, dsaEncoding: 'ieee-p1363' });
+  return 'vapid t=' + head + '.' + claims + '.' + b64u(sig) + ', k=' + b64u(v.publicRaw);
+}
+async function sendPush(sub, msg) {
+  try {
+    const res = await fetch(sub.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'normal', Authorization: vapidHeader(sub.endpoint) },
+      body: encryptPush(sub, JSON.stringify(msg))
+    });
+    // appareil desinscrit : on l oublie
+    if (res.status === 404 || res.status === 410) db.prepare('DELETE FROM push_subs WHERE endpoint = ?').run(sub.endpoint);
+    return res.status;
+  } catch (e) { console.log('Notification non envoyee : ' + e.message); return 0; }
+}
+function pushToUser(uid, msg) { return Promise.all(db.prepare('SELECT * FROM push_subs WHERE user_id = ?').all(uid).map(s => sendPush(s, msg))); }
+function pushToHousehold(hid, msg) { return Promise.all(db.prepare('SELECT * FROM push_subs WHERE household_id = ?').all(hid).map(s => sendPush(s, msg))); }
+function prefsOf(uid) {
+  let p = db.prepare('SELECT * FROM push_prefs WHERE user_id = ?').get(uid);
+  if (!p) { db.prepare('INSERT INTO push_prefs (user_id) VALUES (?)').run(uid); p = db.prepare('SELECT * FROM push_prefs WHERE user_id = ?').get(uid); }
+  return p;
+}
+
+app.get('/api/push/key', requireAuth, (req, res) => { res.json({ key: b64u(vapidKeys().publicRaw) }); });
+app.post('/api/push/subscribe', requireAuth, (req, res) => {
+  const s = req.body.subscription || {};
+  if (!s.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys || !s.keys.p256dh || !s.keys.auth) return res.status(400).json({ error: 'Abonnement invalide' });
+  db.prepare(`INSERT INTO push_subs (endpoint, user_id, household_id, p256dh, auth) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, household_id = excluded.household_id, p256dh = excluded.p256dh, auth = excluded.auth`)
+    .run(s.endpoint, req.uid, req.hid, s.keys.p256dh, s.keys.auth);
+  prefsOf(req.uid);
+  res.json({ ok: true });
+});
+app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM push_subs WHERE endpoint = ? AND user_id = ?').run(String(req.body.endpoint || ''), req.uid);
+  res.json({ ok: true });
+});
+app.get('/api/push/prefs', requireAuth, (req, res) => {
+  const p = prefsOf(req.uid);
+  res.json({ daily: !!p.daily, hour: p.hour, due: !!p.due, budget: !!p.budget, devices: db.prepare('SELECT COUNT(*) n FROM push_subs WHERE user_id = ?').get(req.uid).n });
+});
+app.post('/api/push/prefs', requireAuth, (req, res) => {
+  const b = req.body, p = prefsOf(req.uid), hour = /^\d{2}:\d{2}$/.test(b.hour || '') ? b.hour : p.hour;
+  db.prepare('UPDATE push_prefs SET daily = ?, hour = ?, due = ?, budget = ? WHERE user_id = ?')
+    .run(b.daily ? 1 : 0, hour, b.due ? 1 : 0, b.budget ? 1 : 0, req.uid);
+  res.json({ ok: true });
+});
+app.post('/api/push/test', requireAuth, async (req, res) => {
+  const st = await pushToUser(req.uid, { title: 'Budget Mensuel', body: 'Les notifications fonctionnent sur cet appareil 🎉', url: '/' });
+  res.json({ ok: true, sent: st.filter(x => x >= 200 && x < 300).length, devices: st.length });
+});
+// Alerte de budget envoyee par le site (une seule fois par groupe, par mois et par palier)
+app.post('/api/push/budget', requireAuth, async (req, res) => {
+  const key = 'b|' + req.hid + '|' + String(req.body.key || '').slice(0, 80);
+  if (!req.body.key || db.prepare('SELECT 1 FROM push_log WHERE key = ?').get(key)) return res.json({ ok: true, skipped: true });
+  db.prepare('INSERT INTO push_log (key) VALUES (?)').run(key);
+  const msg = { title: String(req.body.title || 'Budget').slice(0, 80), body: String(req.body.body || '').slice(0, 200), url: '/' };
+  const users = db.prepare('SELECT user_id FROM push_prefs WHERE budget = 1').all().map(r => r.user_id);
+  await Promise.all(db.prepare('SELECT * FROM push_subs WHERE household_id = ?').all(req.hid).filter(s => users.indexOf(s.user_id) >= 0).map(s => sendPush(s, msg)));
+  res.json({ ok: true });
+});
+
+// ── Programmateur : rappel du soir et echeances du jour (heure de Paris) ──
+function parisNow() {
+  const parts = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  const g = t => parts.find(p => p.type === t).value;
+  return { date: g('year') + '-' + g('month') + '-' + g('day'), time: g('hour') + ':' + g('minute') };
+}
+// Meme regle que le site : jours ou tombe une operation reguliere dans le mois (m de 0 a 11)
+function recDaysSrv(r, y, m) {
+  const dim = new Date(y, m + 1, 0).getDate(), f = r.freq || 'month', ev = Math.max(1, parseInt(r.every, 10) || 1);
+  const an = r.anchor ? new Date(r.anchor + 'T00:00:00') : null; let out = [];
+  if (f === 'month') { const md = an ? (y - an.getFullYear()) * 12 + (m - an.getMonth()) : 0; if (md >= 0 && md % ev === 0) out.push(Math.min(parseInt(r.day, 10) || (an ? an.getDate() : 1), dim)); }
+  else if (f === 'year') { if (an && an.getMonth() === m && y >= an.getFullYear() && (y - an.getFullYear()) % ev === 0) out.push(Math.min(an.getDate(), dim)); }
+  else if (f === 'week') { const wd = an ? an.getDay() : 1; for (let d = 1; d <= dim; d++) { const dt = new Date(y, m, d); if (dt.getDay() !== wd) continue; const w = an ? Math.round((dt - an) / 86400000) / 7 : 0; if (w >= 0 && w % ev === 0) out.push(d); } }
+  else if (f === 'day') { for (let d = 1; d <= dim; d++) { const diff = an ? Math.round((new Date(y, m, d) - an) / 86400000) : d - 1; if (diff >= 0 && diff % ev === 0) out.push(d); } }
+  if (an) out = out.filter(d => new Date(y, m, d) >= an);
+  if (r.end_date) { const en = new Date(r.end_date + 'T00:00:00'); out = out.filter(d => new Date(y, m, d) <= en); }
+  return out;
+}
+function dueToday(hid, today) {
+  const y = +today.slice(0, 4), m = +today.slice(5, 7) - 1, d = +today.slice(8, 10);
+  const sk = db.prepare('SELECT value FROM settings WHERE key = ?').get('h' + hid + '|skipped');
+  const skipped = sk ? (JSON.parse(sk.value) || []) : [];
+  const list = [];
+  db.prepare('SELECT * FROM recurring WHERE household_id = ? AND kind IS NOT NULL').all(hid).forEach(r => {
+    if (recDaysSrv(r, y, m).indexOf(d) < 0) return;
+    const key = (r.freq || 'month') === 'month' ? r.id + '@' + y + '-' + String(m).padStart(2, '0') : r.id + '@' + today;
+    if (skipped.indexOf(key) >= 0) return;
+    if (db.prepare('SELECT 1 FROM transactions WHERE household_id = ? AND rec_key = ?').get(hid, key)) return;
+    list.push(r);
+  });
+  return list;
+}
+const euro = v => (Math.round(v * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+function pushTick() {
+  const now = parisNow();
+  db.prepare('SELECT p.*, u.household_id hid FROM push_prefs p JOIN users u ON u.id = p.user_id').all().forEach(p => {
+    if (!db.prepare('SELECT 1 FROM push_subs WHERE user_id = ?').get(p.user_id)) return;
+    if (p.daily && p.hour === now.time && p.last_daily !== now.date) {
+      db.prepare('UPDATE push_prefs SET last_daily = ? WHERE user_id = ?').run(now.date, p.user_id);
+      pushToUser(p.user_id, { title: 'Budget Mensuel', body: 'T’as bien noté tes dépenses aujourd’hui ?', url: '/' });
+    }
+    if (p.due && now.time >= '09:00' && p.last_due !== now.date) {
+      db.prepare('UPDATE push_prefs SET last_due = ? WHERE user_id = ?').run(now.date, p.user_id);
+      const due = dueToday(p.hid, now.date);
+      if (due.length) pushToUser(p.user_id, { title: due.length > 1 ? due.length + ' échéances aujourd’hui' : 'Échéance aujourd’hui',
+        body: due.slice(0, 4).map(r => r.label + ' ' + euro(r.amount)).join(' · ') + ' — à confirmer dans le Budget', url: '/' });
+    }
+  });
+}
+setInterval(pushTick, 60000);
+
 const PUBLIC = path.join(__dirname, 'public');
 if (fs.existsSync(PUBLIC)) {
   app.use(express.static(PUBLIC));
@@ -628,6 +787,9 @@ if (fs.existsSync(PUBLIC)) {
   // En local (pas de dossier public) : on sert seulement index.html a cote du serveur
   app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+  });
+  ['sw.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'].forEach(f => {
+    app.get('/' + f, (req, res) => res.sendFile(path.join(__dirname, f)));
   });
 }
 

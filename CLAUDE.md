@@ -21,7 +21,11 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
   Un « foyer » regroupe jusqu'à 3 comptes liés par un code d'invitation ; chaque foyer ne voit que ses données (colonne household_id, ou clé préfixée « h<id>| »).
   Les données d'avant les comptes sont mises de côté dans la base (sans foyer), invisibles.
 - Mot de passe oublié : lien par mail via nodemailer, réglé dans `mail.config.json` (jamais sur GitHub, voir .gitignore). Sans ce fichier, le lien s'affiche dans la fenêtre du serveur.
-- En ligne, le serveur sert la page depuis un dossier `public/`. Mise en ligne = copier `index.html` dans `public/` ET remplacer `server.js` (sinon les comptes ne s'enregistrent pas).
+- En ligne, le serveur sert la page depuis un dossier `public/`. Mise en ligne = copier dans `public/` : `index.html`, `sw.js`, `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` ; ET remplacer `server.js` (sinon les comptes et les notifications ne marchent pas).
+- Mail : modele `mail.config.exemple.json` a copier en `mail.config.json` (rempli par l'utilisateur, jamais sur GitHub).
+- Notifications (depuis le 11/10/2026) : Web Push fait main dans server.js (chiffrement aes128gcm + VAPID, sans module). Cles creees au 1er lancement dans `vapid.json` (jamais sur GitHub ; a garder sur le serveur, sinon les appareils doivent se reabonner).
+  Rappel du soir (heure choisie), echeances du jour (9 h, heure de Paris), alertes de budget 80 % / 100 % (envoyees par le site, une fois par groupe et par mois). Sur iPhone : seulement une fois le site ajoute a l'ecran d'accueil (iOS 16.4+). Necessite HTTPS en ligne.
+- Apparence : clair / sombre / automatique (Reglages). Le theme sombre est calcule a partir des couleurs du CSS (buildDark), rien a maintenir a la main ; exceptions dans DARK_SKIP.
 - Mode démo : sur github.io (GitHub Pages) ou avec `?demo=1`, la page n'appelle pas le serveur et garde les données dans le navigateur (clé `budget_demo`). Sans effet sur le vrai site.
 - Ne jamais lire `J:\budget mensuel\cles api.txt` (clés API).
 

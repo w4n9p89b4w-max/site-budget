@@ -1,0 +1,10 @@
+{
+  "_mode_d_emploi": "Copie ce fichier en mail.config.json (meme dossier que server.js), remplace les valeurs, puis relance le site. mail.config.json n'est jamais envoye sur GitHub.",
+  "_gmail": "Avec Gmail : host smtp.gmail.com, port 465, user = ton adresse Gmail, pass = un « mot de passe d'application » (Compte Google > Securite > Validation en deux etapes > Mots de passe des applications), pas ton mot de passe habituel.",
+  "_outlook": "Avec Outlook / Hotmail : host smtp-mail.outlook.com, port 587.",
+  "host": "smtp.gmail.com",
+  "port": 465,
+  "user": "ton.adresse@gmail.com",
+  "pass": "mot-de-passe-d-application",
+  "from": "Budget Mensuel <ton.adresse@gmail.com>"
+}

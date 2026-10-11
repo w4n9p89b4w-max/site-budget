@@ -7,3 +7,6 @@ budget.db-*
 # Identifiants du service de mail (ne jamais envoyer sur GitHub)
 mail.config.json
 sauvegardes/
+
+# Cles des notifications du site (ne jamais envoyer sur GitHub)
+vapid.json

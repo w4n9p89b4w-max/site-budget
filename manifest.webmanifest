@@ -1,0 +1,15 @@
+{
+  "name": "Budget Mensuel",
+  "short_name": "Budget",
+  "description": "Le budget d'Etienne et Noa",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6e3e1",
+  "theme_color": "#f6e3e1",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
