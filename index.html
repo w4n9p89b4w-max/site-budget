@@ -802,7 +802,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .nt-bc{margin-top:10px;}
 .nt-bc textarea{width:100%;font-family:inherit;font-size:15px;padding:10px 12px;border:1.5px solid #e2d9cb;border-radius:14px;resize:vertical;}
 .avatar svg.mj,.set-av svg.mj,.ave-big svg.mj,.mj-th svg.mj{width:100%;height:100%;display:block;}
-.ave-big:has(svg.mj){align-items:flex-end;overflow:hidden;}
+.ave-big:has(svg.mj){overflow:hidden;}
 .mj-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px 12px;padding:0 20px 2px;}
 .mj-tabs::-webkit-scrollbar{display:none;}
 .mj-tabs button{flex-shrink:0;padding:8px 14px;border-radius:99px;border:1.5px solid #e2d9cb;background:#fff;font-family:inherit;font-size:14px;font-weight:800;color:#8a7f72;cursor:pointer;}
@@ -5602,7 +5602,7 @@ var MJ_OPTS={
   hat:[['aucun','Aucun'],['bonnet','Bonnet'],['casquette','Casquette']],
   extra:[['aucun','Aucun'],['rousseur','Taches de rousseur'],['joues','Joues roses'],['boucles','Boucles d’oreilles']]
 };
-var MJ_TABS=[['skin','Peau'],['face','Visage'],['hair','Coiffure'],['hairc','Cheveux'],['eyes','Yeux'],['eyec','Couleur des yeux'],['brows','Sourcils'],['nose','Nez'],['mouth','Bouche'],['beard','Barbe'],['glasses','Lunettes'],['hat','Chapeau'],['extra','Détails'],['shirt','Haut'],['bg','Fond']];
+var MJ_TABS=[['skin','Peau'],['face','Visage'],['hair','Coiffure'],['hairc','Cheveux'],['eyes','Yeux'],['eyec','Couleur des yeux'],['brows','Sourcils'],['nose','Nez'],['mouth','Bouche'],['beard','Barbe'],['glasses','Lunettes'],['hat','Chapeau'],['extra','Détails'],['bg','Fond']];
 function mjDefault(){ return {skin:'#f3cfb3',face:'round',hair:'court',hairc:'#3b2a20',eyes:'rond',eyec:'#6b4423',brows:'normal',nose:'fin',mouth:'sourire',beard:'aucune',glasses:'aucune',hat:'aucun',extra:'aucun',shirt:'#2e9a78'}; }
 function mjShade(c,a){ return shadeHex(c,a); }
 function memojiSvg(c){
@@ -5626,10 +5626,6 @@ function memojiSvg(c){
     case 'queue': back='<path d="M136 70 Q176 80 168 140 Q160 120 146 104Z" fill="'+hc+'"/>'; front='<path d="M56 96 Q54 50 100 48 Q146 50 144 96 Q138 66 100 62 Q62 66 56 96Z" fill="'+hc+'"/>'; break;
   }
   s+=back;
-  // cou et haut
-  s+='<rect x="87" y="132" width="26" height="30" rx="8" fill="'+skD+'"/>';
-  s+='<path d="M36 200 C40 166 66 152 100 152 C134 152 160 166 164 200Z" fill="'+c.shirt+'"/>';
-  s+='<path d="M84 152 Q100 166 116 152" stroke="'+mjShade(c.shirt,-.2)+'" stroke-width="3" fill="none"/>';
   // oreilles et tete
   s+='<circle cx="56" cy="106" r="9" fill="'+sk+'"/><circle cx="144" cy="106" r="9" fill="'+sk+'"/>';
   var head={round:'<ellipse cx="100" cy="102" rx="45" ry="50" fill="'+sk+'"/>',oval:'<ellipse cx="100" cy="102" rx="41" ry="54" fill="'+sk+'"/>',
@@ -5681,7 +5677,7 @@ function memojiSvg(c){
   if(c.glasses==='fines') s+='<g fill="none" stroke="#c79a3b" stroke-width="2"><circle cx="82" cy="105" r="11"/><circle cx="118" cy="105" r="11"/><path d="M93 104 Q100 101 107 104"/></g>';
   if(c.glasses==='soleil') s+='<g stroke="#1a1210" stroke-width="2.5"><path d="M68 98 H96 V108 Q96 118 82 118 Q68 118 68 108Z" fill="#1a1210" fill-opacity=".85"/><path d="M104 98 H132 V108 Q132 118 118 118 Q104 118 104 108Z" fill="#1a1210" fill-opacity=".85"/><path d="M96 101 L104 101"/></g>';
   if(c.extra==='boucles') s+='<circle cx="55" cy="118" r="3.6" fill="#d9b26a"/><circle cx="145" cy="118" r="3.6" fill="#d9b26a"/>';
-  return '<svg class="mj" viewBox="18 22 164 178" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>';
+  return '<svg class="mj" viewBox="28 24 144 144" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>';
 }
 // ---------- Avatar : initiales, emoji ou photo sur un fond de couleur (comme sur iPhone) ----------
 var AV_BGS=['linear-gradient(160deg,#f3d9b8,#e0a96d)','linear-gradient(160deg,#a8b5c8,#6b7c96)','linear-gradient(160deg,#f6b4b0,#e07a76)','linear-gradient(160deg,#ffd27a,#f2a23a)',
