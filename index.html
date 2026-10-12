@@ -1410,6 +1410,20 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .cat-tile.on{font-weight:800;}
 .tx-icon .ico{width:24px;height:24px;stroke-width:2;}
 .detail-top .tx-icon .ico{width:32px;height:32px;}
+/* Suggestions de noms (depense / revenu) */
+.sugg{display:none;position:absolute;left:0;right:0;top:100%;margin-top:6px;z-index:30;background:#fff;border-radius:18px;box-shadow:0 14px 34px rgba(60,40,20,.2);max-height:330px;overflow-y:auto;padding:4px 0 6px;}
+.sugg.open{display:block;}
+.sugg-h{font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#a99e90;padding:10px 16px 4px;}
+.sugg-row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 14px;border:none;background:none;font-family:inherit;text-align:left;cursor:pointer;color:var(--text);}
+.sugg-row:hover,.sugg-row:active{background:#f7f1e8;}
+.sugg-ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:18px;background:#f3ece1;}
+.sugg-ic.img{background:#fff;box-shadow:0 0 0 1px #efe6d8;}
+.sugg-ic img{width:100%;height:100%;object-fit:cover;}
+.sugg-ic.txt{font-size:12.5px;font-weight:900;letter-spacing:-.3px;}
+.sugg-ic .ico{width:20px;height:20px;}
+.sugg-txt{display:flex;flex-direction:column;min-width:0;}
+.sugg-name{font-size:16.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sugg-sub{font-size:13px;color:#a3978a;font-weight:600;}
 </style>
 </head>
 <body>
@@ -3055,7 +3069,122 @@ function merchantLogo(m){
   if(LOGOS['m:'+m[0]]) return '<span class="m-logo img"><img src="'+LOGOS['m:'+m[0]]+'" alt=""></span>';
   return '<span class="m-logo" style="background:'+m[2]+';color:'+(m[4]||'#fff')+'">'+esc(m[3])+'</span>';
 }
-function findMerchant(name){ var n=normTxt(name); for(var i=0;i<MERCHANTS.length;i++){ if(normTxt(MERCHANTS[i][0])===n) return MERCHANTS[i]; } return null; }
+// Autres facons d ecrire une enseigne (abreviations, noms vus sur les releves bancaires)
+var MERCHANT_ALIASES={
+  'Carrefour':['crf'],'E.Leclerc':['leclerc','centre leclerc'],'Intermarché':['itm'],'Super U':['hyper u','u express','systeme u','magasins u'],
+  'Monoprix':['monop'],'McDonald\'s':['mcdonalds','mc donalds','mc donald s','mcdo','mc do','macdo'],'Burger King':['burgerking'],
+  'TotalEnergies':['total','total energies','total access'],'Amazon':['amzn','amazon fr','amazon marketplace','amazon eu'],'Uber Eats':['ubereats'],
+  'H&M':['hm','h et m'],'Bouygues Telecom':['bouygtel'],'Free':['free telecom','freebox'],'Apple':['apple com','apple store'],
+  'Booking.com':['booking'],'SNCF':['sncf connect','ouigo'],'Basic-Fit':['basicfit'],'Fitness Park':['fitnesspark'],
+  'Disney+':['disney plus','disneyplus'],'Canal+':['canal plus','mycanal'],'YouTube Premium':['youtube'],'iCloud+':['icloud','apple icloud'],
+  'ChatGPT Plus':['chatgpt','openai'],'Microsoft 365':['microsoft','office 365'],'PlayStation Plus':['playstation','psn','ps plus'],
+  'Xbox Game Pass':['xbox','game pass'],'Google One':['google storage'],'RED by SFR':['red sfr'],'Prime Video':['amazon prime video'],
+  'Deliveroo':['roo'],'Uber':['uber trip','uber bv']
+};
+// Mots ajoutes par les banques devant le nom du commercant (CB CARREFOUR, PRLV SEPA NETFLIX...)
+var STMT_PREFIX=['cb','carte','paiement','paiement par carte','achat','prlv','prlv sepa','prelevement','sepa','vir','virement','facture carte','retrait','x'];
+function normKey(v){ return normTxt(v).replace(/[^a-z0-9]+/g,' ').trim(); }
+var _brands=null;
+// Toutes les enseignes connues : magasins + abonnements, avec leurs autres noms
+function brandList(){
+  if(_brands) return _brands;
+  var out=[], seen={};
+  function add(m){
+    var k=normKey(m[0]); if(seen[k]) return; seen[k]=1;
+    var keys=[k].concat((MERCHANT_ALIASES[m[0]]||[]).map(normKey));
+    out.push({name:m[0],cat:m[1],m:m,keys:keys});
+  }
+  MERCHANTS.forEach(add);
+  (typeof SUB_BRANDS!=='undefined'?SUB_BRANDS:[]).forEach(function(b){
+    add([b[0],b[1],'#efe6d8',b[0].replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase(),'#6b5a3c']);
+  });
+  return (_brands=out);
+}
+// Enseigne d un libelle : le libelle commence par le nom (ou un autre nom) de l enseigne, le plus long gagne
+function findMerchant(name){
+  var n=normKey(name); if(!n) return null;
+  for(var again=true;again;){
+    again=false;
+    for(var p=0;p<STMT_PREFIX.length;p++){ var px=STMT_PREFIX[p]+' '; if(n.indexOf(px)===0&&n.length>px.length){ n=n.slice(px.length); again=true; } }
+    n=n.replace(/^\d+ /,'');
+  }
+  var best=null, bestLen=0, bs=brandList();
+  for(var i=0;i<bs.length;i++){
+    for(var j=0;j<bs[i].keys.length;j++){
+      var k=bs[i].keys[j];
+      if(!k||k.length<=bestLen) continue;
+      if(n===k||(k.length>=3&&n.indexOf(k+' ')===0)){ best=bs[i].m; bestLen=k.length; }
+    }
+  }
+  return best;
+}
+
+// ---------- Suggestions de noms pendant la saisie ----------
+// Les noms deja utilises (les plus frequents d abord), puis les enseignes connues (depenses seulement)
+var SUGG=[];
+function suggMatch(k,n){ return !n||k.indexOf(n)===0||k.indexOf(' '+n)>=0; }
+function nameSuggestions(q,kind){
+  var n=normKey(q), out=[], seen={}, txns=getTxns(), freq={}, last={};
+  function add(name,cat,m,hist){ var k=normKey(name); if(!k||seen[k]||k===n) return; seen[k]=1; out.push({name:name,cat:cat,m:m,hist:hist}); }
+  for(var i=0;i<txns.length;i++){
+    var t=txns[i], ok=kind==='rev'?t.type==='rev':(t.type==='dep'||t.type==='dep_var'||t.type==='epargne');
+    if(!ok) continue;
+    var k=normKey(t.label); if(!k) continue;
+    freq[k]=(freq[k]||0)+1;
+    if(!last[k]||t.date>last[k].date) last[k]=t;
+  }
+  Object.keys(freq).filter(function(k){ return suggMatch(k,n); }).sort(function(a,b){ return freq[b]-freq[a]; })
+    .slice(0,n?4:5).forEach(function(k){ add(last[k].label,last[k].cat,findMerchant(last[k].label),true); });
+  if(kind!=='rev'&&n){
+    var bs=brandList().filter(function(b){ return b.keys.some(function(k){ return suggMatch(k,n); }); });
+    bs.sort(function(a,b){ return (b.keys[0].indexOf(n)===0)-(a.keys[0].indexOf(n)===0)||a.name.localeCompare(b.name); });
+    bs.forEach(function(b){ add(b.name,b.cat,b.m,false); });
+  }
+  return out.slice(0,7);
+}
+function suggIcon(s){
+  if(s.m&&LOGOS['m:'+s.m[0]]) return '<span class="sugg-ic img"><img src="'+LOGOS['m:'+s.m[0]]+'" alt=""></span>';
+  if(s.m) return '<span class="sugg-ic txt" style="background:'+s.m[2]+';color:'+(s.m[4]||'#fff')+'">'+esc(s.m[3])+'</span>';
+  return catIconHtml(getCatObj(s.cat),'sugg-ic');
+}
+function showSugg(input,kind){
+  var box=document.getElementById('expSugg'); if(!box) return;
+  SUGG=nameSuggestions(input.value,kind);
+  if(!SUGG.length){ box.classList.remove('open'); box.innerHTML=''; return; }
+  var html='', part='';
+  for(var i=0;i<SUGG.length;i++){
+    var s=SUGG[i], h=s.hist?'Déjà utilisés':'Enseignes';
+    if(h!==part){ html+='<div class="sugg-h">'+h+'</div>'; part=h; }
+    var cat=s.cat?getCatObj(s.cat):null;
+    html+='<button type="button" class="sugg-row" onmousedown="event.preventDefault()" onclick="pickSugg('+i+',\''+kind+'\')">'+suggIcon(s)+
+      '<span class="sugg-txt"><span class="sugg-name">'+esc(s.name)+'</span>'+(cat&&s.cat?'<span class="sugg-sub">'+esc(cat.label)+'</span>':'')+'</span></button>';
+  }
+  box.innerHTML=html; box.classList.add('open');
+}
+function hideSugg(){ var box=document.getElementById('expSugg'); if(box) box.classList.remove('open'); }
+function catUsable(key,kind){
+  if(!key) return false;
+  if(kind==='rev') return !!(findIncCat(key)||getCats().some(function(c){ return c.key===key&&c.group==='rev'; }));
+  return !!(findExpCat(key)||customExpCats().some(function(c){ return c.key===key; }));
+}
+function pickSugg(i,kind){
+  var s=SUGG[i]; if(!s||!E) return;
+  E.label=s.name;
+  var li=document.getElementById('expLabel'); if(li){ li.value=s.name; li.blur(); }
+  hideSugg();
+  if(catUsable(s.cat,kind)){ E.cat=s.cat; E.catManual=true; if(kind==='rev') renderIncTiles(); else markExpCat(true); }
+}
+// Enseigne reconnue pendant la saisie : on choisit sa categorie si l utilisateur n en a pas choisi
+function autoCatFromName(){
+  if(!E||E.catManual) return;
+  var m=findMerchant(E.label);
+  if(m&&catUsable(m[1],'dep')&&E.cat!==m[1]){ E.cat=m[1]; markExpCat(false); }
+}
+function bindNameInput(li,kind){
+  li.oninput=function(){ E.label=li.value; if(kind!=='rev') autoCatFromName(); showSugg(li,kind); };
+  li.onfocus=function(){ showSugg(li,kind); };
+  li.onblur=function(){ setTimeout(hideSugg,120); };
+}
 
 // ---------- Ajout d une depense ou d un transfert : parcours en 4 etapes ----------
 // Depense : compte, montant, nom + categorie, recapitulatif.
@@ -3123,11 +3252,11 @@ function renderExp(){
       return '<button class="cat-tile'+(E.cat===c.key?' on':'')+'" data-k="'+esc(c.key)+'" onclick="expPickCat(this)">'+catIconHtml(c,'cat-ic')+esc(c.label)+'</button>';
     },'<button class="cat-tile add" onclick="expNewCat()"><span class="cat-ic">'+svgIcon('plus')+'</span>Ajouter</button>');
     body.innerHTML='<div class="wiz-title">Détails de la dépense</div>'+
-      '<div class="exp-name"><label for="expLabel">Nom</label><input type="text" id="expLabel" maxlength="40" placeholder="ex. Courses" autocomplete="off"></div>'+
+      '<div class="exp-name"><label for="expLabel">Nom</label><input type="text" id="expLabel" maxlength="40" placeholder="ex. Courses" autocomplete="off"><div class="sugg" id="expSugg"></div></div>'+
       '<div class="cat-panel">'+tiles+'</div>';
     var li=document.getElementById('expLabel');
     li.value=E.label;
-    li.oninput=function(){ E.label=li.value; };
+    bindNameInput(li,'dep');
     li.onkeydown=function(e){ if(e.key==='Enter') li.blur(); };
     updateExpBtn();
   } else if(E.step===5){
@@ -3391,6 +3520,7 @@ function updateExpAmt(){
 function expPickCat(btn){
   var k=btn.getAttribute('data-k');
   E.cat=(E.cat===k)?'':k;
+  E.catManual=!!E.cat;
   markExpCat(false);
 }
 function markExpCat(scroll){
@@ -3888,11 +4018,11 @@ function flowSteps(){ return E.kind==='rev'&&E.regular?5:4; }
 function renderIncDetails(){
   var body=document.getElementById('wizBody');
   body.innerHTML='<div class="wiz-title">'+(E.regular?'Revenu régulier':'Détails du revenu')+'</div>'+
-    '<div class="exp-name"><label for="expLabel">Nom</label><input type="text" id="expLabel" maxlength="40" placeholder="ex. Salaire" autocomplete="off"></div>'+
+    '<div class="exp-name"><label for="expLabel">Nom</label><input type="text" id="expLabel" maxlength="40" placeholder="ex. Salaire" autocomplete="off"><div class="sugg" id="expSugg"></div></div>'+
     '<div class="exp-name"><label for="incQ">Catégorie</label><input type="text" id="incQ" maxlength="30" placeholder="ex. Salaire, Prime…" autocomplete="off"></div>'+
     '<div class="cat-panel" id="incTiles"></div>';
   var li=document.getElementById('expLabel'), q=document.getElementById('incQ');
-  li.value=E.label; li.oninput=function(){ E.label=li.value; };
+  li.value=E.label; bindNameInput(li,'rev');
   q.value=E.incQ||''; q.oninput=function(){ E.incQ=q.value; renderIncTiles(); };
   renderIncTiles();
 }
