@@ -5,22 +5,38 @@
 //   node remplir-demo.js                       -> remplit etienne@ecotole.re
 //   node remplir-demo.js autre@mail.fr         -> remplit un autre compte
 //   node remplir-demo.js --effacer             -> retire tout ce que le script a ajoute
+//   node remplir-demo.js --compte-test         -> cree (si besoin) puis remplit le compte de test ci-dessous
 //
-// Le compte doit deja exister (le creer d'abord sur http://localhost:3003).
+// Le compte doit deja exister (le creer d'abord sur http://localhost:3003), sauf le compte de test.
 // Ne touche qu'a la base locale budget.db, jamais au site en ligne.
 // ============================================================
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
+
+// Compte de test, seulement pour le site en local (identifiants pour se connecter sur http://localhost:3003)
+const TEST_ACCOUNT = { name: 'Compte test', email: 'test@budget.local', login: 'test', password: 'BudgetTest-2026' };
 
 const args = process.argv.slice(2);
 const erase = args.includes('--effacer');
-const email = (args.find(a => !a.startsWith('--')) || 'etienne@ecotole.re').toLowerCase();
+const testMode = args.includes('--compte-test');
+const email = testMode ? TEST_ACCOUNT.email : (args.find(a => !a.startsWith('--')) || 'etienne@ecotole.re').toLowerCase();
 const db = new Database(process.env.DB_PATH || path.join(__dirname, 'budget.db'));
 
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
 if (!tables.includes('users')) {
   console.log('La base ne contient pas encore de comptes : lance le site une fois (lancer.bat / lancer.command), puis recommence.');
   process.exit(1);
+}
+
+// Cree le compte de test comme le fait le site a l'inscription (foyer + empreinte scrypt du mot de passe)
+if (testMode && !erase && !db.prepare('SELECT 1 FROM users WHERE lower(email) = ?').get(email)) {
+  const salt = crypto.randomBytes(16);
+  const hash = 'scrypt$' + salt.toString('hex') + '$' + crypto.scryptSync(TEST_ACCOUNT.password, salt, 64).toString('hex');
+  const login = db.prepare('SELECT 1 FROM users WHERE login = ? OR email = ?').get(TEST_ACCOUNT.login, TEST_ACCOUNT.login) ? null : TEST_ACCOUNT.login;
+  const hid = db.prepare('INSERT INTO households DEFAULT VALUES').run().lastInsertRowid;
+  db.prepare('INSERT INTO users (name, email, login, pass_hash, household_id) VALUES (?, ?, ?, ?, ?)').run(TEST_ACCOUNT.name, email, login, hash, hid);
+  console.log('Compte de test cree : ' + email + (login ? ' (identifiant « ' + login + ' »)' : '') + '.');
 }
 const user = db.prepare('SELECT id, name, household_id FROM users WHERE lower(email) = ?').get(email);
 if (!user) {
