@@ -14,6 +14,7 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 - `envoyer.bat` : enregistre et envoie les modifications sur GitHub.
 - `lancer.command` / `envoyer.command` : les mêmes pour le Mac (garder fins de ligne LF et le droit d'exécution, voir `.gitattributes`).
 - Installer les modules avec `npm install --ignore-scripts` (better-sqlite3 contient déjà les versions compilées Windows et Mac).
+- `remplir-demo.js` : remplit un compte de la base locale avec des données d'exemple (comptes, opérations, régulières, objectifs). `node remplir-demo.js [email]`, `--effacer` pour tout retirer. Le compte doit exister sur l'ordinateur.
 - `IMG_*.PNG` : captures/maquettes envoyées par l'utilisateur comme modèles de design.
 
 ## Points importants
