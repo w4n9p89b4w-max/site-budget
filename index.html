@@ -1192,6 +1192,8 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .bg-tabs button .ico{width:19px;height:19px;}
 .bg-tabs button.on{background:#fff;color:#0f6650;box-shadow:0 2px 8px rgba(0,0,0,.15);}
 .bg-range{width:max-content;margin:12px auto 0;padding:7px 16px;border-radius:99px;background:rgba(255,255,255,.14);font-size:14.5px;font-weight:800;border:none;color:inherit;font-family:inherit;cursor:pointer;display:block;}
+.bc-day{position:relative;}
+.bc-mon{position:absolute;top:-7px;left:50%;transform:translateX(-50%);z-index:1;font-style:normal;font-size:9px;font-weight:800;color:#fff;background:var(--accent);border-radius:6px;padding:2px 5px;text-transform:uppercase;letter-spacing:.03em;line-height:1;white-space:nowrap;}
 .bg-range-ed{opacity:.65;font-size:12px;margin-left:4px;}
 .cy-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
 .cy-opt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;width:100%;padding:12px 40px 12px 14px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-family:inherit;cursor:pointer;color:var(--text);}
@@ -2768,6 +2770,7 @@ function closeWiz(){
   if(E){ E=null; document.getElementById('wiz').classList.remove('open'); return; }
   document.getElementById('wiz').classList.remove('open'); W=null;
   if(expResume){ var r=expResume; expResume=null; reopenExpenseWizard(r); }
+  if(QK.wizFor!=null) qkWizardBack();
 }
 function wizBack(){
   if(G){ goalBack(); return; }
@@ -2925,6 +2928,7 @@ function createWizAccount(){
     if(err){ showToast('Erreur : '+err.message); return; }
     var list=getAccounts().slice(); list.push(acc); _cache.accounts=list;
     if(expResume) expResume[expResume.pick||'acc']=acc.id;
+    if(QK.wizFor!=null) QK.newAcc=acc.id;
     closeWiz(); refreshViews(); showToast('Compte créé');
     if(acc.currency&&!hasRate(acc.currency)) askRate(acc.currency);
   });
@@ -4129,7 +4133,7 @@ function renderBudget(){
   for(var i=0;i<tabs.length;i++) th+='<button class="'+(BG.tab===tabs[i][0]?'on':'')+'" onclick="bgTab(\''+tabs[i][0]+'\')">'+svgIcon(tabs[i][1])+tabs[i][2]+'</button>';
   var html='<div class="bg-head"><div class="bg-months"><button onclick="bgMove(-1)">'+prevL+'</button><b>'+curL+'</b><button onclick="bgMove(1)">'+nextL+'</button></div>'+
     '<div class="bg-tabs">'+th+'</div>';
-  if(BG.tab==='budget'){ var rgl=withAccFilter(function(){ return bgRange(y,m); }); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
+  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=BG.tab==='budget'?withAccFilter(function(){ return bgRange(y,m); }):bgRange(y,m); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
   if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="'+(BG.onlyReg?'Afficher aussi les dépenses non régulières':'Masquer les dépenses non régulières')+'">'+svgIcon('repeat')+'<button class="sw'+(BG.onlyReg?' on':'')+'" onclick="BG.onlyReg=!BG.onlyReg;renderBudget()"></button></span>'+
     '<div class="bg-seg"><button class="'+(BG.calView==='mois'?'on':'')+'" onclick="BG.calView=\'mois\';renderBudget()">Mois</button><button class="'+(BG.calView==='annee'?'on':'')+'" onclick="BG.calView=\'annee\';renderBudget()">Année</button></div></div>';
   html+='</div><div class="bg-body">';
@@ -4883,19 +4887,30 @@ function dayItems(y,m){
   return out;
 }
 function visibleBalance(){ var s=0, a=getAccounts(); for(var i=0;i<a.length;i++){ if(!a[i].hidden) s+=toMain(accountBalance(a[i]),a[i].id); } return Math.round(s*100)/100; }
+// Operations jour par jour sur toute la periode du budget (ex. du 28 sept au 27 oct), par date "aaaa-mm-jj"
+function rangeDayItems(r){
+  var out={}, a=parseDs(r.start), b=parseDs(r.end);
+  for(var d=new Date(a.getFullYear(),a.getMonth(),1);d<=b;d=new Date(d.getFullYear(),d.getMonth()+1,1)){
+    var yy=d.getFullYear(), mm=d.getMonth(), it=dayItems(yy,mm);
+    for(var k in it){ var ds=mPrefix(yy,mm)+'-'+pad(+k); if(ds>=r.start&&ds<=r.end) out[ds]=it[k]; }
+  }
+  return out;
+}
 function renderBgCal(){
-  var y=BG.y, m=BG.m, st=monthStats(y,m), items=dayItems(y,m), today=todayStr(), cur=visibleBalance(), html='';
+  var y=BG.y, m=BG.m, st=monthStats(y,m), rg=bgRange(y,m), items=rangeDayItems(rg), today=todayStr(), cur=visibleBalance(), html='';
   var tot=Math.max(cur,0)+st.incUp||1;
   html+='<div class="bg-card"><div class="cal-tot"><div><span>Total courant</span><b class="dgreen">'+fmtE(Math.round(cur))+'</b></div>'+
     '<div><span class="red">À venir</span><b class="red">'+fmtE(Math.round(st.upDep))+'</b></div>'+
     '<div><span class="green">Revenu à venir</span><b class="lgreen">'+fmtE(Math.round(st.incUp))+'</b></div></div>'+
     '<div class="bg-bar tall"><span class="dgreen" style="width:'+Math.max(0,(cur-st.upDep)/tot*100)+'%"></span><span class="hatch" style="width:'+Math.min(st.upDep,Math.max(cur,0))/tot*100+'%"></span><span class="lgreen" style="flex:1"></span></div>';
-  var first=(new Date(y,m,1).getDay()+6)%7, dim=daysIn(y,m), g='';
+  var first=(parseDs(rg.start).getDay()+6)%7, g='';
   var dows=['L','M','M','J','V','S','D'];
   for(var w=0;w<7;w++) g+='<span class="bc-dow">'+dows[w]+'</span>';
   for(var s=0;s<first;s++) g+='<span></span>';
-  for(var d=1;d<=dim;d++){
-    var ds=mPrefix(y,m)+'-'+pad(d), its=items[d]||[], cls='bc-day', inner='';
+  for(var ds=rg.start;ds<=rg.end;ds=addDays(ds,1)){
+    var d=parseInt(ds.slice(8),10), its=items[ds]||[], cls='bc-day', inner='';
+    // nom du mois sur le premier jour affiche et au changement de mois
+    var mlab=(ds===rg.start&&d!==1)||d===1?'<i class="bc-mon">'+MONTHS_SHORT[+ds.slice(5,7)-1].toLowerCase()+'</i>':'';
     if(its.length){
       var net=0, big=its[0];
       for(var k=0;k<its.length;k++){ net+=its[k].amount; if(Math.abs(its[k].amount)>Math.abs(big.amount)) big=its[k]; }
@@ -4904,14 +4919,15 @@ function renderBgCal(){
       inner=itemIcon(big.label,big.cat,big.kind,'bc-ic')+'<small>'+(net>0?'+':'')+fmtE(Math.round(net))+'</small>';
     }
     if(ds===today) cls+=' today';
-    if(BG.sel===d) cls+=' sel';
-    g+='<button class="'+cls+'" onclick="bgSelDay('+d+')"><b>'+d+'</b>'+inner+'</button>';
+    if(BG.sel===ds) cls+=' sel';
+    g+='<button class="'+cls+'" onclick="bgSelDay(\''+ds+'\')">'+mlab+'<b>'+d+'</b>'+inner+'</button>';
   }
   html+='<div class="bc-grid">'+g+'</div>';
+  if(BG.sel&&(BG.sel<rg.start||BG.sel>rg.end)) BG.sel=null;
   if(BG.sel){
-    var sd=mPrefix(y,m)+'-'+pad(BG.sel), list=items[BG.sel]||[];
+    var sp=BG.sel.split('-'), list=items[BG.sel]||[];
     html+='<button class="bc-addday" onclick="bgAddOnDay()"><span>'+svgIcon('plus')+'</span>Ajouter une dépense ou un revenu</button>';
-    if(!list.length) html+='<div class="bg-empty">Rien le '+BG.sel+' '+MONTHS_FR[m]+' '+y+'</div>';
+    if(!list.length) html+='<div class="bg-empty">Rien le '+parseInt(sp[2],10)+' '+MONTHS_FR[+sp[1]-1]+' '+sp[0]+'</div>';
     else { html+='<div class="bg-list flat">'; for(var l=0;l<list.length;l++) html+=bcItemRow(list[l]); html+='</div>'; }
   }
   // Raccourcis : depenses regulieres, revenus reguliers, transfert
@@ -4948,7 +4964,7 @@ function bcItemRow(it){
 }
 function bgSelDay(d){ BG.sel=BG.sel===d?null:d; renderBudget(); }
 function bgAddOnDay(){
-  var ds=mPrefix(BG.y,BG.m)+'-'+pad(BG.sel), p=ds.split('-'), m=document.getElementById('accModal');
+  var ds=BG.sel, p=ds.split('-'), m=document.getElementById('accModal');
   m.innerHTML='<div class="am addday"><div class="rl-top"><b>Ajouter le '+parseInt(p[2],10)+' '+MONTHS_FR[+p[1]-1]+' '+p[0]+'</b><button class="sheet-close" onclick="closeAccModal()">✕</button></div>'+
     '<div class="qa-row"><button class="qa" onclick="openExpenseWizard(\''+ds+'\')"><span class="qa-ic dep"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>Dépense</button>'+
     '<button class="qa" onclick="openIncomeWizard(\''+ds+'\')"><span class="qa-ic rev"><svg class="ico" viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></span>Revenu</button>'+
@@ -5582,7 +5598,7 @@ function setPrivacy(){
     '<p class="sheet-note">Les logos des banques et des enseignes sont enregistrés dans le site : aucune information n’est envoyée à un service extérieur pour les afficher.</p>');
 }
 // ---------- Ajout eclair : photo de ticket, releve PDF ou CSV lu par Claude (cle sur le serveur) ----------
-var QK={ops:[]};
+var QK={ops:[],wizFor:null};
 function setQuick(){
   document.querySelector('#sheet .sheet').classList.remove('qk-wide');
   if(DEMO){ openSheet(sheetHead('Ajout éclair')+'<p class="sheet-note">L’ajout éclair lit tes tickets et relevés avec l’intelligence artificielle. Il ne marche que sur le vrai site, pas en mode démo.</p>'); return; }
@@ -5802,11 +5818,32 @@ function qkScan(){
 // Associations choisies a la main, retenues sur cet appareil pour le prochain releve
 function qkMemo(){ try{ return JSON.parse(localStorage.getItem('budget_qk_map')||'{}')||{}; }catch(e){ return {}; } }
 function qkMemoSet(nom,v){ if(!nom) return; try{ var m=qkMemo(); if(v==='new') delete m[normTxt(nom)]; else m[normTxt(nom)]=v; localStorage.setItem('budget_qk_map',JSON.stringify(m)); }catch(e){} }
-function qkMapSet(i,v){ QK.map[QK.accs[i].nom]=v; qkMemoSet(QK.accs[i].nom,v); qkScan(); qkDraw(); }
+function qkMapSet(i,v){
+  if(v==='wiz') return qkWizard(i);
+  QK.map[QK.accs[i].nom]=v; qkMemoSet(QK.accs[i].nom,v); qkScan(); qkDraw();
+}
+// Creer un compte avec ses infos (fenetre « Ajouter un compte »), puis revenir a l import avec ce compte choisi
+function qkWizard(i){
+  var c=QK.accs[i];
+  QK.wizFor=i; QK.newAcc=null;
+  openAccountWizard();
+  if(c.banque||c.nom) W.q=c.banque||'';
+  W.desc=c.nom||''; renderWiz();
+}
+function qkWizardBack(){
+  var i=QK.wizFor; QK.wizFor=null;
+  if(QK.newAcc){
+    var c=QK.accs[i]; QK.map[c.nom]=String(QK.newAcc); qkMemoSet(c.nom,String(QK.newAcc));
+    (QK.wizAccs=QK.wizAccs||{})[QK.newAcc]=1; QK.newAcc=null;
+  }
+  openSheet(''); document.querySelector('#sheet .sheet').classList.add('qk-wide');
+  qkScan(); qkDraw();
+}
 function qkAccOptions(c){
   var v=QK.map[c.nom], h='';
   getAccounts().forEach(function(a){ h+='<option value="'+esc(a.id)+'"'+(String(a.id)===v?' selected':'')+'>'+esc(accLabel(a))+'</option>'; });
-  h+='<option value="new"'+(v==='new'?' selected':'')+'>➕ Créer « '+esc(qkNewName(c))+' »</option>';
+  h+='<option value="wiz">✏️ Nouveau compte… (nom, banque, solde, couleur)</option>';
+  h+='<option value="new"'+(v==='new'?' selected':'')+'>➕ Créer « '+esc(qkNewName(c))+' » tel quel</option>';
   h+='<option value="none"'+(v==='none'?' selected':'')+'>Sans compte</option>';
   if(QK.accs.length>1) h+='<option value="skip"'+(v==='skip'?' selected':'')+'>Ne pas importer</option>';
   return h;
@@ -6002,6 +6039,15 @@ function qkSaveTxns(todo,nAcc){
   apiPost('/api/transactions/bulk',{transactions:out},function(err){
     if(err){ document.getElementById('qkGo').disabled=false; showToast('Erreur : '+err.message); return; }
     var txns=getTxns(); out.slice().reverse().forEach(function(t){ txns.unshift(t); }); setTxns(txns);
+    // Comptes crees avec leur solde d aujourd hui : on retire l effet des operations importees pour garder ce solde
+    Object.keys(QK.wizAccs||{}).forEach(function(id){
+      var a=findAccount(id); if(!a) return;
+      var d=0; out.forEach(function(t){ if(String(t.bank)===String(id)&&t.date<=todayStr()) d+=txnSign(t)*t.amount; });
+      if(Math.abs(d)<0.005) return;
+      a.solde=Math.round(((parseFloat(a.solde)||0)-d)*100)/100;
+      apiPost('/api/accounts',a,null);
+    });
+    QK.wizAccs={};
     closeSheet(); refreshViews();
     showToast(todo.length+' opération'+(todo.length>1?'s':'')+' ajoutée'+(todo.length>1?'s':'')+(nAcc?' · '+nAcc+' compte'+(nAcc>1?'s':'')+' créé'+(nAcc>1?'s':''):''),2600);
   });
