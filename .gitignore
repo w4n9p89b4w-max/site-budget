@@ -17,3 +17,9 @@ anthropic.config.json
 # Releve d essai fabrique par releve-test.js
 releve-test.csv
 releve-test.pdf
+
+# Captures de test (les images du site et les maquettes IMG_* restent suivies)
+/*.png
+!/icon-*.png
+!/apple-touch-icon.png
+!/IMG_*
