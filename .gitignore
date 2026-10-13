@@ -23,3 +23,6 @@ releve-test.pdf
 !/icon-*.png
 !/apple-touch-icon.png
 !/IMG_*
+
+# Fichiers du Mac (Finder)
+.DS_Store
