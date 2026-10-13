@@ -15,6 +15,7 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 - `lancer.command` / `envoyer.command` : les mêmes pour le Mac (garder fins de ligne LF et le droit d'exécution, voir `.gitattributes`).
 - Installer les modules avec `npm install --ignore-scripts` (better-sqlite3 contient déjà les versions compilées Windows et Mac).
 - `remplir-demo.js` : remplit un compte de la base locale avec des données d'exemple (comptes, opérations, régulières, objectifs). `node remplir-demo.js [email]`, `--effacer` pour tout retirer. Le compte doit exister sur l'ordinateur. `--compte-test` crée en plus un compte de test local (identifiants en haut du script) et le remplit.
+- `releve-test.js` : fabrique un faux relevé (`releve-test.csv` + `releve-test.pdf`, non envoyés sur GitHub) à partir des opérations de la base locale, pour essayer l'ajout éclair : copies exactes, décalées d'un ou deux jours, un piège (même jour et même montant, autre dépense) et des nouvelles. `node releve-test.js [email]` (compte de test par défaut) ; affiche ce qui est attendu.
 - `IMG_*.PNG` : captures/maquettes envoyées par l'utilisateur comme modèles de design.
 
 ## Points importants
