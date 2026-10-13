@@ -1191,7 +1191,17 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .bg-tabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 4px;border:none;border-radius:99px;background:none;color:#e7f1ea;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;}
 .bg-tabs button .ico{width:19px;height:19px;}
 .bg-tabs button.on{background:#fff;color:#0f6650;box-shadow:0 2px 8px rgba(0,0,0,.15);}
-.bg-range{width:max-content;margin:12px auto 0;padding:7px 16px;border-radius:99px;background:rgba(255,255,255,.14);font-size:14.5px;font-weight:800;}
+.bg-range{width:max-content;margin:12px auto 0;padding:7px 16px;border-radius:99px;background:rgba(255,255,255,.14);font-size:14.5px;font-weight:800;border:none;color:inherit;font-family:inherit;cursor:pointer;display:block;}
+.bg-range-ed{opacity:.65;font-size:12px;margin-left:4px;}
+.cy-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.cy-opt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;width:100%;padding:12px 40px 12px 14px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-family:inherit;cursor:pointer;color:var(--text);}
+.cy-opt b{font-size:15px;font-weight:800;}
+.cy-opt span{font-size:13px;color:var(--muted);font-weight:600;}
+.cy-opt.on{border-color:var(--accent);background:var(--accent-light);}
+.cy-opt i{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-style:normal;font-weight:900;color:var(--accent);}
+.cy-fix{cursor:default;padding-right:14px;}
+.cy-fix select{font-family:inherit;font-size:14px;font-weight:800;padding:4px 6px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);margin:0 4px;}
+.cy-ok{align-self:flex-end;margin-top:4px;font-family:inherit;font-size:14px;font-weight:800;border:none;border-radius:10px;background:var(--accent);color:#fff;padding:7px 16px;cursor:pointer;}
 .bg-calctl{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:12px;max-width:460px;margin-left:auto;margin-right:auto;}
 .bg-tra{display:flex;align-items:center;gap:6px;color:#e7f1ea;}
 .bg-tra .ico{width:20px;height:20px;}
@@ -3005,6 +3015,12 @@ function amCycleCal(){
     if(ds===today) cls+=' today';
     h+='<button class="'+cls+'" onclick="amCycPick(\''+ds+'\')">'+d+'</button>';
   }
+  // ou suivre une paie (operation reguliere de revenu)
+  var pays=getRecurring().filter(function(r){ return r.kind==='rev'; });
+  if(pays.length){
+    h+='</div><p class="am-note cyc-help">Ou suivre une paie : le mois commence le jour où elle est confirmée.</p><div class="cy-list">';
+    pays.forEach(function(r){ h+='<button class="cy-opt'+(String(AM.cycle)===String(r.id)?' on':'')+'" onclick="amSetCycle(\''+r.id+'\')"><b>Selon la paie : '+esc(r.label)+'</b>'+(String(AM.cycle)===String(r.id)?'<i>✓</i>':'')+'</button>'; });
+  }
   // un seul lien discret pour revenir au mois normal (du 1er au 31)
   return h+'</div>'+(AM.cycle||AM.rs?'<button class="cyc-reset" onclick="amSetCycle(\'\')">Réinitialiser</button>':'')+'</div>';
 }
@@ -3981,11 +3997,55 @@ function cycleLabel(c){
   var r=getRecurring().filter(function(x){ return String(x.id)===String(c); })[0];
   return r?'Selon la paie : '+r.label:'Calendaire (du 1er au 31)';
 }
+// Cycle valable ? (une paie qui existe encore, ou des jours fixes)
+function cycleOk(c){ return !!c&&(String(c).indexOf('r:')===0||getRecurring().some(function(x){ return String(x.id)===String(c); })); }
+// Mois du budget du foyer (Reglage « Mois du budget » en haut de l onglet Budget) : '' = du 1er au 31.
+// Pas encore choisi : le mois le plus utilise par les comptes.
+function householdCycle(){
+  var s=(_cache.settings||{}).budgetCycle;
+  if(s==='cal') return '';
+  if(s&&cycleOk(s)) return String(s);
+  var n={}, best='', bn=0;
+  getAccounts().forEach(function(a){ if(!a.hidden&&cycleOk(a.cycle)){ var k=String(a.cycle); n[k]=(n[k]||0)+1; if(n[k]>bn){ bn=n[k]; best=k; } } });
+  return best;
+}
+// Un compte sans mois propre suit le mois du budget ; comptes filtres avec des mois differents : mois du budget
+function accCycle(a){ return a&&cycleOk(a.cycle)?String(a.cycle):householdCycle(); }
 function filterCycle(){
-  if(!BG.f||!BG.f.length) return '';
+  if(!BG.f||!BG.f.length) return householdCycle();
   var c=null;
-  for(var i=0;i<BG.f.length;i++){ var a=findAccount(BG.f[i]), ac=a&&a.cycle?String(a.cycle):''; if(c===null) c=ac; else if(c!==ac) return ''; }
+  for(var i=0;i<BG.f.length;i++){ var ac=accCycle(findAccount(BG.f[i])); if(c===null) c=ac; else if(c!==ac) return householdCycle(); }
   return c||'';
+}
+// Choix du mois du budget : on touche la periode en haut de l onglet Budget
+function bgCycleSheet(){
+  var cur=(_cache.settings||{}).budgetCycle, eff=householdCycle(), pays=getRecurring().filter(function(r){ return r.kind==='rev'; });
+  function opt(val,title,sub){ var on=val===(eff||'cal'); return '<button class="cy-opt'+(on?' on':'')+'" onclick="bgSetCycle(\''+val+'\')"><b>'+esc(title)+'</b><span>'+esc(sub)+'</span>'+(on?'<i>✓</i>':'')+'</button>'; }
+  var h=sheetHead('Mois du budget')+
+    '<p class="sheet-note">Période comptée comme « un mois » dans le Budget. Avec ta paie : quand tu confirmes ton salaire avec le jour où tu l’as reçu, ton mois commence ce jour-là et va jusqu’à la veille de la paie suivante.</p><div class="cy-list">';
+  pays.forEach(function(r){
+    var pr=payRangeAt(r.id,todayStr());
+    h+=opt(String(r.id),'Selon ma paie : '+r.label,pr?'En ce moment : '+rangeLabel(pr):'Le '+(parseInt(r.day,10)||'?')+' de chaque mois (date réelle une fois confirmée)');
+  });
+  if(!pays.length) h+='<p class="sheet-note"><i>Ajoute ton salaire en opération régulière (Budget → Opérations régulières) pour pouvoir suivre ta paie.</i></p>';
+  var f=String(eff).indexOf('r:')===0?fixedParts(eff):{s:28,e:27};
+  var days=''; for(var d=1;d<=31;d++) days+='<option value="'+d+'">'+d+'</option>';
+  h+=opt('cal','Du 1er au 31','Le mois du calendrier')+
+    '<div class="cy-opt cy-fix'+(String(eff).indexOf('r:')===0?' on':'')+'"><b>Jours fixes</b><span>Du <select id="cyS">'+days+'</select> au <select id="cyE">'+days+'</select> du mois suivant</span>'+
+    '<button class="cy-ok" onclick="bgSetCycle(\'r:\'+document.getElementById(\'cyS\').value+\':\'+document.getElementById(\'cyE\').value)">OK</button></div>'+
+    '</div><p class="sheet-note">Un compte qui a son propre mois (petite roue de sa carte → Mois du compte) garde le sien quand tu le choisis dans le Budget.</p>';
+  openSheet(h);
+  document.getElementById('cyS').value=f.s; document.getElementById('cyE').value=f.e;
+}
+function bgSetCycle(v){
+  if(/^r:/.test(v)){ var f=fixedParts(v); if(f.s===1&&f.e>=28) v='cal'; }
+  if(!_cache.settings) _cache.settings={};
+  _cache.settings.budgetCycle=v;
+  apiPost('/api/settings/budgetCycle',{value:v},null);
+  closeSheet();
+  BG.y=new Date().getFullYear(); BG.m=new Date().getMonth();
+  withAccFilter(function(){ var c=filterCycle(); var d=c&&cycleMonthNow(c); if(d){ BG.y=d.getFullYear(); BG.m=d.getMonth(); } });
+  renderBudget(); showToast('Mois du budget enregistré');
 }
 // Periode affichee dans l onglet Budget pour le mois (y,m)
 function bgRange(y,m){ var c=filterCycle(); return (c&&cycleRangeOfMonth(c,y,m))||calRange(y,m); }
@@ -4069,7 +4129,7 @@ function renderBudget(){
   for(var i=0;i<tabs.length;i++) th+='<button class="'+(BG.tab===tabs[i][0]?'on':'')+'" onclick="bgTab(\''+tabs[i][0]+'\')">'+svgIcon(tabs[i][1])+tabs[i][2]+'</button>';
   var html='<div class="bg-head"><div class="bg-months"><button onclick="bgMove(-1)">'+prevL+'</button><b>'+curL+'</b><button onclick="bgMove(1)">'+nextL+'</button></div>'+
     '<div class="bg-tabs">'+th+'</div>';
-  if(BG.tab==='budget'){ var rgl=withAccFilter(function(){ return bgRange(y,m); }); html+='<div class="bg-range">'+(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))+rangeLabel(rgl)+'</div>'; }
+  if(BG.tab==='budget'){ var rgl=withAccFilter(function(){ return bgRange(y,m); }); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
   if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="'+(BG.onlyReg?'Afficher aussi les dépenses non régulières':'Masquer les dépenses non régulières')+'">'+svgIcon('repeat')+'<button class="sw'+(BG.onlyReg?' on':'')+'" onclick="BG.onlyReg=!BG.onlyReg;renderBudget()"></button></span>'+
     '<div class="bg-seg"><button class="'+(BG.calView==='mois'?'on':'')+'" onclick="BG.calView=\'mois\';renderBudget()">Mois</button><button class="'+(BG.calView==='annee'?'on':'')+'" onclick="BG.calView=\'annee\';renderBudget()">Année</button></div></div>';
   html+='</div><div class="bg-body">';

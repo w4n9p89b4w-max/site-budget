@@ -39,6 +39,7 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 - Style "appli mobile" crème / doré (police Nunito) d'après les captures de l'utilisateur.
 - Accueil : Total Patrimoine, cartes de comptes (solde saisi puis mis à jour par les transactions), boutons Dépense / Revenu / Transfert, liste des transactions (À venir + récentes).
 - Ordre des comptes : lien « ⇅ Modifier l’ordre des comptes » sous les cartes (ou appui long sur une carte) → on fait glisser les cartes, « Terminé » enregistre (`/api/accounts/order`, colonne sort_order).
+- Mois du budget (onglet Budget, toucher la période en haut) : « Selon ma paie » (opération régulière de revenu : le mois va du jour où la paie est confirmée à la veille de la suivante), « Du 1er au 31 » ou jours fixes. Réglage du foyer `budgetCycle` ('cal', id de la régulière ou 'r:debut:fin') ; non choisi = le mois le plus utilisé par les comptes. Un compte avec son propre mois (roue de la carte → Mois du compte, aussi « Selon la paie ») garde le sien ; les autres suivent le mois du budget.
 - Barre du bas : Accueil, Budget, Stats, Réglages. Le journal complet s'ouvre depuis l'accueil.
 - Les anciennes banques codées en dur (cepac, revolut, ca) sont abandonnées : l'utilisateur crée ses comptes.
 - Prévu plus tard : création de compte utilisateur à l'arrivée sur le site, page Objectifs, refonte des pages Budget / Stats / Réglages.
