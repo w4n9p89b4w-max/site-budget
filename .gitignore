@@ -10,3 +10,6 @@ sauvegardes/
 
 # Cles des notifications du site (ne jamais envoyer sur GitHub)
 vapid.json
+
+# Cle API Anthropic de l ajout eclair (ne jamais envoyer sur GitHub)
+anthropic.config.json

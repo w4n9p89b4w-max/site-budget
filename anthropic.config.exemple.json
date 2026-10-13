@@ -1,0 +1,6 @@
+{
+  "_mode_d_emploi": "Copie ce fichier en anthropic.config.json (meme dossier que server.js), colle ta cle API Anthropic a la place de sk-ant-..., puis relance le site. anthropic.config.json n'est jamais envoye sur GitHub.",
+  "_modele": "Modele utilise pour lire les tickets et releves. claude-opus-5-5 est le plus precis ; claude-haiku-5-5 coute environ 40 fois moins cher.",
+  "apiKey": "sk-ant-...",
+  "model": "claude-opus-5-5"
+}
