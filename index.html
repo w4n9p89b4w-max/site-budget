@@ -4125,7 +4125,28 @@ function fixedRangeFrom(c,y,m){
   var ey=y, em=f.e<f.s?m+1:m, en=new Date(ey,em,1); en=new Date(en.getFullYear(),en.getMonth(),Math.min(f.e,daysIn(en.getFullYear(),en.getMonth())));
   return {start:dsOf(st),end:dsOf(en),fixed:true};
 }
+// Melange de deux paies, cycle "mix:A:B" : le mois va de la paie A (ex. Etienne le 28 sept) a la veille de la paie B
+// qui suit celle comprise dans le mois (ex. Noa le 5 oct, puis le 5 nov) : du 28 sept au 4 nov. Les mois se chevauchent.
+function isMix(c){ return String(c).indexOf('mix:')===0; }
+function mixParts(c){ var p=String(c).split(':'); return {a:p[1],b:p[2]}; }
+function mixRanges(c,y,m){
+  var p=mixParts(c), pa=payDates(p.a,y,m), pb=payDates(p.b,y,m), out=[], today=todayStr();
+  for(var i=0;i<pb.length;i++){
+    var B=pb[i], A=null;
+    for(var j=0;j<pa.length;j++){ if(pa[j]<=B&&(i===0||pa[j]>pb[i-1])) A=pa[j]; }
+    if(!A) continue;
+    var r={start:A,end:pb[i+1]?addDays(pb[i+1],-1):addDays(B,30),pay:true,mix:true,anchor:B};
+    if(r.end===today&&payWaiting(p.b)) r.waiting=true;
+    out.push(r);
+  }
+  return out;
+}
+function mixRangeAt(c,ds){
+  var d=parseDs(ds), rs=mixRanges(c,d.getFullYear(),d.getMonth()).filter(function(r){ return r.start<=ds; });
+  return rs.length?rs[rs.length-1]:null;
+}
 function cycleRangeAt(c,ds){
+  if(isMix(c)) return mixRangeAt(c,ds);
   if(String(c).indexOf('r:')!==0) return payRangeAt(c,ds);
   var d=parseDs(ds), r=fixedRangeFrom(c,d.getFullYear(),d.getMonth());
   if(r.start>ds){ var p=new Date(d.getFullYear(),d.getMonth()-1,1); r=fixedRangeFrom(c,p.getFullYear(),p.getMonth()); }
@@ -4136,6 +4157,7 @@ function cycleRangeAt(c,ds){
 // ou du 28 sept a aujourd hui tant que la paie suivante n est pas confirmee)
 function cycleRangeOfMonth(c,y,m){
   if(String(c).indexOf('r:')===0) return cycleRangeAt(c,mPrefix(y,m)+'-15');
+  if(isMix(c)){ var pre0=mPrefix(y,m); return mixRanges(c,y,m).filter(function(r){ return r.anchor.indexOf(pre0)===0; })[0]||mixRangeAt(c,pre0+'-15'); }
   var pd=payDates(c,y,m), pre=mPrefix(y,m), today=todayStr();
   for(var i=0;i<pd.length;i++){
     var end=pd[i+1]?addDays(pd[i+1],-1):addDays(pd[i],30);
@@ -4144,15 +4166,21 @@ function cycleRangeOfMonth(c,y,m){
   return payRangeAt(c,pre+'-15');
 }
 // Mois (y,m) a afficher pour la periode en cours d un cycle
-function cycleMonthNow(c){ var r=cycleRangeAt(c,todayStr()); if(!r) return null; return r.pay?parseDs(r.end):parseDs(addDays(r.start,14)); }
+function cycleMonthNow(c){ var r=cycleRangeAt(c,todayStr()); if(!r) return null; return r.mix?parseDs(r.anchor):r.pay?parseDs(r.end):parseDs(addDays(r.start,14)); }
 function cycleLabel(c){
   if(!c) return 'Calendaire (du 1er au 31)';
   if(String(c).indexOf('r:')===0){ var f=fixedParts(c); return f.s===1&&f.e>=28?'Calendaire (du 1er au 31)':'Du '+f.s+' au '+f.e+(f.e<f.s?' du mois suivant':''); }
+  if(isMix(c)){ var mp=mixParts(c), ra=payById(mp.a), rb=payById(mp.b); return ra&&rb?'Les deux paies : '+ra.label+' → veille de '+rb.label:'Calendaire (du 1er au 31)'; }
   var r=getRecurring().filter(function(x){ return String(x.id)===String(c); })[0];
   return r?'Selon la paie : '+r.label:'Calendaire (du 1er au 31)';
 }
 // Cycle valable ? (une paie qui existe encore, ou des jours fixes)
-function cycleOk(c){ return !!c&&(String(c).indexOf('r:')===0||getRecurring().some(function(x){ return String(x.id)===String(c); })); }
+function payById(id){ return getRecurring().filter(function(x){ return String(x.id)===String(id); })[0]||null; }
+function cycleOk(c){
+  if(!c) return false;
+  if(isMix(c)){ var p=mixParts(c); return !!(payById(p.a)&&payById(p.b)); }
+  return String(c).indexOf('r:')===0||!!payById(c);
+}
 // Mois du budget du foyer (Reglage « Mois du budget » en haut de l onglet Budget) : '' = du 1er au 31.
 // Pas encore choisi : le mois le plus utilise par les comptes.
 function householdCycle(){
@@ -4172,6 +4200,22 @@ function filterCycle(){
   return c||'';
 }
 // Choix du mois du budget : on touche la periode en haut de l onglet Budget
+// Choix du mois du budget : standard, chaque paie, et le melange de deux paies mensuelles proches (ex. le 28 et le 5)
+function cycleChoices(){
+  var today=todayStr(), pays=payList(), out=[{val:'cal',title:'Mois standard',sub:'Du 1er au 31 · '+rangeLabel(calRange(new Date().getFullYear(),new Date().getMonth()))}];
+  function who(r){ var o=payOwner(r); return o?' ('+o.name+')':''; }
+  pays.forEach(function(r){ var pr=payRangeAt(r.id,today);
+    out.push({val:String(r.id),title:'Selon la paie : '+r.label+who(r),sub:pr?'En ce moment : '+rangeLabel(pr):'Le '+(parseInt(r.day,10)||'?')+' de chaque mois'}); });
+  var monthly=pays.filter(function(r){ return (r.freq||'month')==='month'; });
+  monthly.forEach(function(a){ monthly.forEach(function(b){
+    if(a===b) return;
+    var da=parseInt(a.day,10)||1, db=parseInt(b.day,10)||1, gap=(db-da+31)%31;
+    if(gap<1||gap>15) return;                                  // B arrive peu apres A (ex. 28 puis 5)
+    var c='mix:'+a.id+':'+b.id, r=mixRangeAt(c,today);
+    out.push({val:c,title:'Les deux paies : du '+da+' au '+(db-1||31),sub:'De '+a.label+who(a)+' à la veille de '+b.label+who(b)+' du mois suivant'+(r?' · en ce moment '+rangeLabel(r):''),mix:true});
+  }); });
+  return out;
+}
 function bgCycleSheet(){
   var cur=(_cache.settings||{}).budgetCycle, eff=householdCycle(), pays=getRecurring().filter(function(r){ return r.kind==='rev'; });
   function opt(val,title,sub){ var on=val===(eff||'cal'); return '<button class="cy-opt'+(on?' on':'')+'" onclick="bgSetCycle(\''+val+'\')"><b>'+esc(title)+'</b><span>'+esc(sub)+'</span>'+(on?'<i>✓</i>':'')+'</button>'; }
@@ -4182,6 +4226,7 @@ function bgCycleSheet(){
     h+=opt(String(r.id),'Selon ma paie : '+r.label,pr?'En ce moment : '+rangeLabel(pr):'Le '+(parseInt(r.day,10)||'?')+' de chaque mois (date réelle une fois confirmée)');
   });
   if(!pays.length) h+='<p class="sheet-note"><i>Ajoute ton salaire en opération régulière (Budget → Opérations régulières) pour pouvoir suivre ta paie.</i></p>';
+  cycleChoices().filter(function(x){ return x.mix; }).forEach(function(x){ h+=opt(x.val,x.title,x.sub); });
   var f=String(eff).indexOf('r:')===0?fixedParts(eff):{s:28,e:27};
   var days=''; for(var d=1;d<=31;d++) days+='<option value="'+d+'">'+d+'</option>';
   h+=opt('cal','Du 1er au 31','Le mois du calendrier')+
@@ -4283,7 +4328,7 @@ function renderBudget(){
   for(var i=0;i<tabs.length;i++) th+='<button class="'+(BG.tab===tabs[i][0]?'on':'')+'" onclick="bgTab(\''+tabs[i][0]+'\')">'+svgIcon(tabs[i][1])+tabs[i][2]+'</button>';
   var html='<div class="bg-head"><div class="bg-months"><button onclick="bgMove(-1)">'+prevL+'</button><b>'+curL+'</b><button onclick="bgMove(1)">'+nextL+'</button></div>'+
     '<div class="bg-tabs">'+th+'</div>';
-  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=BG.tab==='budget'?withAccFilter(function(){ return bgRange(y,m); }):bgRange(y,m); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.waiting?'⏳ Paie à confirmer · ':(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':'')))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
+  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=BG.tab==='budget'?withAccFilter(function(){ return bgRange(y,m); }):bgRange(y,m); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.waiting?'⏳ Paie à confirmer · ':(rgl.mix?'Les deux paies · ':(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
   if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="'+(BG.onlyReg?'Afficher aussi les dépenses non régulières':'Masquer les dépenses non régulières')+'">'+svgIcon('repeat')+'<button class="sw'+(BG.onlyReg?' on':'')+'" onclick="BG.onlyReg=!BG.onlyReg;renderBudget()"></button></span>'+
     '<div class="bg-seg"><button class="'+(BG.calView==='mois'?'on':'')+'" onclick="BG.calView=\'mois\';renderBudget()">Mois</button><button class="'+(BG.calView==='annee'?'on':'')+'" onclick="BG.calView=\'annee\';renderBudget()">Année</button></div></div>';
   html+='</div><div class="bg-body">';
@@ -6730,7 +6775,7 @@ function paySuggestions(){
   if(!pays.length) return out;
   // 1. le mois du budget ne suit aucune paie
   var mine=null;
-  if(!pays.some(function(r){ return String(r.id)===String(hc); })){
+  if(false){
     mine=pays.filter(function(r){ var o=payOwner(r); return o&&String(o.id)===String(currentUser); })[0]||pays.slice().sort(function(a,b){ return b.amount-a.amount; })[0];
     out.push({t:'Le mois du budget est '+(hc?'à jours fixes ('+cycleLabel(hc).toLowerCase()+')':'du 1er au 31')+'. Le faire démarrer le jour où « '+mine.label+' » est confirmée : le mois attend la paie si elle a du retard.',
       b:'Suivre « '+mine.label+' »', go:function(){ payUseCycle(mine.id); }});
@@ -6760,7 +6805,8 @@ function paySuggestions(){
     if(!r.bank) out.push({t:'« '+r.label+' » n’a pas de compte : elle ne compte pas dans les soldes.',b:'Choisir',go:function(){ closeSheet(); openRegularList('rev'); }});
     // 6. comptes d une autre personne qui a sa propre paie
     var o=payOwner(r);
-    if(o&&String(r.id)!==String(hc)&&!(mine&&String(mine.id)===String(r.id))){
+    var inHc=String(r.id)===String(hc)||(isMix(hc)&&(mixParts(hc).a===String(r.id)||mixParts(hc).b===String(r.id)));
+    if(o&&!inHc&&!(mine&&String(mine.id)===String(r.id))){
       var accs=getAccounts().filter(function(a){ return String(a.owner)===String(o.id)&&!a.hidden&&String(a.cycle)!==String(r.id); });
       if(accs.length) out.push({t:'Les comptes de '+o.name+' ('+accs.map(function(a){ return a.name; }).join(', ')+') suivent le mois du foyer. Les faire démarrer avec sa paie « '+r.label+' » ?',
         b:'Régler '+(accs.length>1?'ses comptes':'son compte'), go:function(){ payAccountsCycle(accs,r.id); }});
@@ -6775,26 +6821,32 @@ function setPays(){
   pays.forEach(function(r){
     var h=payHistory(r), o=payOwner(r), a=findAccount(r.bank), nx=null, d=new Date();
     for(var dm=0;dm<=2&&!nx;dm++){ var x=new Date(d.getFullYear(),d.getMonth()+dm,1); nx=occurrences(x.getFullYear(),x.getMonth()).filter(function(oc){ return String(oc.r.id)===String(r.id)&&!oc.done; })[0]||null; }
-    html+='<div class="pay-card'+(String(r.id)===String(hc)?' main':'')+'"><div class="pay-top">'+itemIcon(r.label,r.cat,'rev','bg-ic')+
+    var inMain=String(r.id)===String(hc)||(isMix(hc)&&(mixParts(hc).a===String(r.id)||mixParts(hc).b===String(r.id)));
+    html+='<div class="pay-card'+(inMain?' main':'')+'"><div class="pay-top">'+itemIcon(r.label,r.cat,'rev','bg-ic')+
       '<div><b>'+esc(r.label)+'</b><span>'+esc(freqLabel(r))+' · '+esc(a?a.name:'sans compte')+(o?' · '+esc(o.name):'')+'</span></div><em>'+fmtE(+r.amount,true)+'</em></div>'+
-      (String(r.id)===String(hc)?'<div class="pay-main">📅 Le mois du budget démarre avec cette paie</div>':'')+
+      (inMain?'<div class="pay-main">📅 '+(isMix(hc)?(mixParts(hc).a===String(r.id)?'Le mois du budget démarre avec cette paie':'Le mois du budget va jusqu’à la veille de cette paie'):'Le mois du budget démarre avec cette paie')+'</div>':'')+
       '<div class="pay-hist">'+(h.length?h.slice(0,4).map(function(x){ return '<span title="prévue le '+shortDay(x.plan||x.date)+'">'+shortDay(x.date)+(x.late>0?' <i>+'+x.late+' j</i>':x.late<0?' <i>'+x.late+' j</i>':'')+'</span>'; }).join(''):'<span class="none">Pas encore reçue</span>')+
       (nx?'<span class="next" onclick="closeSheet();bgOpenOcc(\''+nx.key+'\')">'+(nx.date<=todayStr()?'À confirmer : ':'Prochaine : ')+shortDay(nx.date)+' ›</span>':'')+'</div></div>';
   });
   var sg=paySuggestions(); window._paySg=sg;
-  html+='<div class="adm-h"><span>Mois du budget</span><button onclick="bgCycleSheet()">Changer</button></div>'+
-    '<p class="sheet-note">'+esc(cycleLabel(hc).replace('Calendaire (du 1er au 31)','Du 1er au 31'))+'</p>';
   html+='<div class="adm-h"><span>Ajustements proposés</span></div>';
+  html+='<p class="sheet-note"><b>Mois du budget</b> : choisis la période comptée comme « un mois ».</p><div class="cy-list">';
+  cycleChoices().forEach(function(x){
+    var on=x.val===(hc||'cal');
+    html+='<button class="cy-opt'+(on?' on':'')+'" onclick="payUseCycle(\''+x.val+'\')"><b>'+esc(x.title)+'</b><span>'+esc(x.sub)+'</span>'+(on?'<i>✓</i>':'')+'</button>';
+  });
+  if(String(hc).indexOf('r:')===0) html+='<button class="cy-opt on"><b>'+esc(cycleLabel(hc))+'</b><span>Jours fixes (réglés dans le Budget)</span><i>✓</i></button>';
+  html+='</div>';
   if(!sg.length) html+='<p class="sheet-note">✓ Rien à ajuster, tout est cohérent.</p>';
   sg.forEach(function(x,i){ html+='<div class="pay-sg"><p>'+esc(x.t)+'</p><button onclick="paySgGo('+i+')">'+esc(x.b)+'</button></div>'; });
   html+='<button class="sheet-btn ghost" onclick="closeSheet();openRegularWizard({kind:\'rev\'})">+ Ajouter une paie</button>';
   openSheet(sheetHead('Paies du foyer')+html);
 }
 function paySgGo(i){ var x=(window._paySg||[])[i]; if(x) x.go(); }
-function payUseCycle(rid){
+function payUseCycle(v){
   if(!_cache.settings) _cache.settings={};
-  _cache.settings.budgetCycle=String(rid); apiPost('/api/settings/budgetCycle',{value:String(rid)},null);
-  bgDefaultSelection(); showToast('Le mois du budget suit maintenant cette paie'); setPays();
+  _cache.settings.budgetCycle=String(v); apiPost('/api/settings/budgetCycle',{value:String(v)},null);
+  bgDefaultSelection(); showToast('Mois du budget : '+cycleLabel(v==='cal'?'':v).replace('Calendaire (du 1er au 31)','du 1er au 31')); setPays();
 }
 function payUpdate(r,ch){
   var u={}; for(var k in r) u[k]=r[k]; for(var c in ch) u[c]=ch[c];
