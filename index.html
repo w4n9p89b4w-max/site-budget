@@ -1090,6 +1090,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .hh-rule button.on{border-color:#c9a14a;background:#fbf5e8;}
 .hh-rule.ro button{cursor:default;color:inherit;}
 .hh-rule.ro button:not(.on){opacity:.5;}
+.am-del-all{display:block;width:100%;margin-top:8px;border:1px dashed #d9a3a3;background:#fff6f6;color:#b33a3a;border-radius:12px;padding:9px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
@@ -3240,8 +3241,11 @@ function amAskDelete(){
   var el=document.getElementById('amBtns'); if(!el) return;
   el.innerHTML='<div class="am-confirm"><b>Supprimer « '+esc(AM.name)+' » ?</b><span>Les opérations déjà saisies sont gardées.</span>'+
     '<div><button class="am-cancel" onclick="document.getElementById(\'amBtns\').innerHTML=amBtnsHtml()">Non, garder</button>'+
-    '<button class="am-del-go" onclick="deleteAccount(\''+Number(AM.id)+'\',true)">Oui, supprimer</button></div></div>';
+    '<button class="am-del-go" onclick="deleteAccount(\''+Number(AM.id)+'\',true)">Oui, supprimer</button></div>'+
+    // Compte de test : on peut tout retirer d un coup (le compte, ses operations et ses regulieres)
+    (AUTH.user&&AUTH.user.test?'<button class="am-del-all" onclick="deleteAccount(\''+Number(AM.id)+'\',true,true)">🧪 Supprimer avec ses '+accOpsCount(AM.id)+' opérations</button>':'')+'</div>';
 }
+function accOpsCount(id){ return getTxns().filter(function(t){ return String(t.bank)===String(id); }).length; }
 function amToggleHidden(){
   AM.hidden=!AM.hidden;
   saveAccount(AM.hidden?'Compte masqué':'Compte affiché');
@@ -3269,14 +3273,18 @@ function saveAccount(msg){
     closeAccModal(); refreshViews(); showToast(typeof msg==='string'?msg:'Compte mis à jour');
   });
 }
-function deleteAccount(id,ok){
+function deleteAccount(id,ok,withOps){
   if(!ok&&!confirm('Supprimer ce compte ? Les transactions déjà saisies sont conservées.')) return;
-  apiDelete('/api/accounts/'+id,function(err){
+  apiDelete('/api/accounts/'+id+(withOps?'?ops=1':''),function(err){
     if(err){ showToast('Erreur suppression'); return; }
     var list=getAccounts(), out=[];
     for(var i=0;i<list.length;i++){ if(String(list[i].id)!==String(id)) out.push(list[i]); }
     _cache.accounts=out;
-    closeAccModal(); refreshViews(); showToast('Compte supprimé');
+    if(withOps){
+      setTxns(getTxns().filter(function(t){ return String(t.bank)!==String(id); }));
+      setRecurring(getRecurring().filter(function(r){ return String(r.bank)!==String(id); }));
+    }
+    closeAccModal(); refreshViews(); showToast(withOps?'Compte et opérations supprimés':'Compte supprimé');
   });
 }
 
