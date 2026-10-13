@@ -1076,6 +1076,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .am-own{display:flex;gap:6px;}
 .am-own button.on{background:#2f5e3c;border-color:#2f5e3c;color:#fff;}
 .chip-av{width:24px;height:24px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;overflow:hidden;}
+.chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
 .pv-chip.mine.on{border-style:solid;border-color:#e8893a;}
 .rc-head.rev{background:#dcebdf;}
@@ -4193,7 +4194,20 @@ function householdCycle(){
 }
 // Un compte sans mois propre suit le mois du budget ; comptes filtres avec des mois differents : mois du budget
 function accCycle(a){ return a&&cycleOk(a.cycle)?String(a.cycle):householdCycle(); }
+// Mois d un bouton du filtre : une personne suit sa propre paie, « Commun » suit les deux paies (28 -> 4)
+function chipCycle(){
+  var v=BG.prevAcc;
+  if(v==='common'){ var mx=cycleChoices().filter(function(x){ return x.mix; })[0]; return mx?mx.val:householdCycle(); }
+  if(/^u:/.test(v||'')){
+    var uid=v.slice(2), hc=householdCycle(), pays=payList().filter(function(r){ var o=payOwner(r); return o&&String(o.id)===uid; });
+    if(!pays.length) return null;
+    if(pays.some(function(r){ return String(r.id)===String(hc); })) return hc;
+    return String(pays[0].id);
+  }
+  return null;
+}
 function filterCycle(){
+  var cc=chipCycle(); if(cc!=null) return cc;
   if(!BG.f||!BG.f.length) return householdCycle();
   var c=null;
   for(var i=0;i<BG.f.length;i++){ var ac=accCycle(findAccount(BG.f[i])); if(c===null) c=ac; else if(c!==ac) return householdCycle(); }
@@ -4266,6 +4280,7 @@ function selectedIds(){
   var accs=getAccounts().filter(function(a){ return !a.hidden; });
   if(BG.prevAcc==='all'||!BG.prevAcc) return null;
   if(/^u:/.test(BG.prevAcc)){ var uid=BG.prevAcc.slice(2); return accs.filter(function(a){ return String(a.owner)===uid; }).map(function(a){ return String(a.id); }); }
+  if(BG.prevAcc==='common'){ var ms=hhMembers().map(function(m){ return String(m.id); }); return accs.filter(function(a){ return ms.indexOf(String(a.owner||''))<0; }).map(function(a){ return String(a.id); }); }
   return [String(BG.prevAcc)];
 }
 function isPending(t){ return t.date>todayStr()||Number(t.later_pay); }
@@ -4328,14 +4343,16 @@ function renderBudget(){
   for(var i=0;i<tabs.length;i++) th+='<button class="'+(BG.tab===tabs[i][0]?'on':'')+'" onclick="bgTab(\''+tabs[i][0]+'\')">'+svgIcon(tabs[i][1])+tabs[i][2]+'</button>';
   var html='<div class="bg-head"><div class="bg-months"><button onclick="bgMove(-1)">'+prevL+'</button><b>'+curL+'</b><button onclick="bgMove(1)">'+nextL+'</button></div>'+
     '<div class="bg-tabs">'+th+'</div>';
-  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=BG.tab==='budget'?withAccFilter(function(){ return bgRange(y,m); }):bgRange(y,m); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.waiting?'⏳ Paie à confirmer · ':(rgl.mix?'Les deux paies · ':(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
+  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=withAccFilter(function(){ return bgRange(y,m); }); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.waiting?'⏳ Paie à confirmer · ':(rgl.mix?'Les deux paies · ':(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
   if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="'+(BG.onlyReg?'Afficher aussi les dépenses non régulières':'Masquer les dépenses non régulières')+'">'+svgIcon('repeat')+'<button class="sw'+(BG.onlyReg?' on':'')+'" onclick="BG.onlyReg=!BG.onlyReg;renderBudget()"></button></span>'+
     '<div class="bg-seg"><button class="'+(BG.calView==='mois'?'on':'')+'" onclick="BG.calView=\'mois\';renderBudget()">Mois</button><button class="'+(BG.calView==='annee'?'on':'')+'" onclick="BG.calView=\'annee\';renderBudget()">Année</button></div></div>';
   html+='</div><div class="bg-body">';
   if(BG.tab==='budget') html+=renderBgBudget();
-  else if(BG.tab==='calendrier') html+=(BG.calView==='annee'?renderBgYear():renderBgCal());
+  else if(BG.tab==='calendrier') html+=(BG.calView==='annee'?renderBgYear():withAccFilter(renderBgCal));
   else html+=renderBgPrev();
   root.innerHTML=html+'</div>';
+  // Le bouton choisi du filtre reste visible (la rangée défile)
+  root.querySelectorAll('.acc-chips').forEach(function(r){ var on=r.querySelector('.pv-chip.on'); if(on&&on.offsetLeft+on.offsetWidth>r.clientWidth) r.scrollLeft=on.offsetLeft-16; });
 }
 function bgTab(t){ BG.tab=t; BG.sel=null; renderBudget(); }
 function bgMove(n){
@@ -4676,7 +4693,7 @@ function dnPick(el,k){
 function renderBgBudget(){ return withAccFilter(renderBgBudgetInner); }
 function renderBgBudgetInner(){
   var y=BG.y, m=BG.m, st=monthStats(y,m), groups=getGroups(), reel=BG.mode==='reel', html='';
-  html+='<div class="bg-card">'+accChipsHtml()+(BG.f&&!reel?'<p class="bg-fnote">Budgets calculés avec les opérations régulières de '+(/^u:/.test(BG.prevAcc)?'ses comptes':'ce compte')+'.</p>':'')+'<div class="bg-pv"><button class="'+(!reel?'on':'')+'" onclick="BG.mode=\'prevu\';renderBudget()">'+svgIcon('pie')+'Prévu</button>'+
+  html+='<div class="bg-card">'+accChipsHtml()+(BG.f&&!reel?'<p class="bg-fnote">Budgets calculés avec les opérations régulières de '+(/^u:/.test(BG.prevAcc)?'ses comptes':BG.prevAcc==='common'?'vos comptes communs':'ce compte')+'.</p>':'')+'<div class="bg-pv"><button class="'+(!reel?'on':'')+'" onclick="BG.mode=\'prevu\';renderBudget()">'+svgIcon('pie')+'Prévu</button>'+
     '<button class="'+(reel?'on':'')+'" onclick="BG.mode=\'reel\';renderBudget()">'+svgIcon('bars')+'Réel</button></div>';
   var segs=[];
   if(!reel){
@@ -5102,11 +5119,12 @@ function dayItems(y,m){
   }
   for(var o=0;o<occ.length;o++){
     var oc=occ[o]; if(oc.done) continue;
+    if(BG.f&&BG.f.indexOf(String(oc.bank))<0&&!(oc.kind==='tra'&&BG.f.indexOf(String(oc.r.to_bank))>=0)) continue;
     add(oc.day,{label:oc.label,cat:oc.cat,kind:oc.kind,amount:(oc.kind==='rev'?1:-1)*toMain(oc.amount,oc.bank),occ:oc,pending:true});
   }
   return out;
 }
-function visibleBalance(){ var s=0, a=getAccounts(); for(var i=0;i<a.length;i++){ if(!a[i].hidden) s+=toMain(accountBalance(a[i]),a[i].id); } return Math.round(s*100)/100; }
+function visibleBalance(){ var s=0, a=getAccounts(); for(var i=0;i<a.length;i++){ if(!a[i].hidden&&(!BG.f||BG.f.indexOf(String(a[i].id))>=0)) s+=toMain(accountBalance(a[i]),a[i].id); } return Math.round(s*100)/100; }
 // Operations jour par jour sur toute la periode du budget (ex. du 28 sept au 27 oct), par date "aaaa-mm-jj"
 function rangeDayItems(r){
   var out={}, a=parseDs(r.start), b=parseDs(r.end);
@@ -5119,7 +5137,7 @@ function rangeDayItems(r){
 function renderBgCal(){
   var y=BG.y, m=BG.m, st=monthStats(y,m), rg=bgRange(y,m), items=rangeDayItems(rg), today=todayStr(), cur=visibleBalance(), html='';
   var tot=Math.max(cur,0)+st.incUp||1;
-  html+='<div class="bg-card"><div class="cal-tot"><div><span>Total courant</span><b class="dgreen">'+fmtE(Math.round(cur))+'</b></div>'+
+  html+='<div class="bg-card">'+accChipsHtml()+'<div class="cal-tot"><div><span>Total courant</span><b class="dgreen">'+fmtE(Math.round(cur))+'</b></div>'+
     '<div><span class="red">À venir</span><b class="red">'+fmtE(Math.round(st.upDep))+'</b></div>'+
     '<div><span class="green">Revenu à venir</span><b class="lgreen">'+fmtE(Math.round(st.incUp))+'</b></div></div>'+
     '<div class="bg-bar tall"><span class="dgreen" style="width:'+Math.max(0,(cur-st.upDep)/tot*100)+'%"></span><span class="hatch" style="width:'+Math.min(st.upDep,Math.max(cur,0))/tot*100+'%"></span><span class="lgreen" style="flex:1"></span></div>';
@@ -5234,13 +5252,14 @@ function renderBgYear(){
 function hhMembers(){ return (AUTH&&AUTH.household&&AUTH.household.members)||[]; }
 function accChipsHtml(){
   var ms=hhMembers();
-  if(BG.prevAcc!=='all'&&!(/^u:/.test(BG.prevAcc)&&ms.some(function(m){ return 'u:'+m.id===BG.prevAcc; }))) BG.prevAcc='all';
+  if(BG.prevAcc!=='all'&&BG.prevAcc!=='common'&&!(/^u:/.test(BG.prevAcc)&&ms.some(function(m){ return 'u:'+m.id===BG.prevAcc; }))) BG.prevAcc='all';
   if(ms.length<2) return '';
   var sel=BG.prevAcc, chips='<button class="pv-chip'+(sel==='all'?' on':'')+'" onclick="bgPickAcc(\'all\')">Tous</button>';
   ms.forEach(function(m){
     var v='u:'+m.id;
     chips+='<button class="pv-chip'+(sel===v?' on':'')+'" onclick="bgPickAcc(\''+v+'\')"><span class="chip-av" data-uid="'+esc(m.id)+'"></span>'+esc(m.name)+'</button>';
   });
+  chips+='<button class="pv-chip'+(sel==='common'?' on':'')+'" onclick="bgPickAcc(\'common\')"><span class="chip-av chip-com">👥</span>Commun</button>';
   setTimeout(function(){ document.querySelectorAll('.chip-av[data-uid]').forEach(function(el){ var m=hhMembers().filter(function(x){ return String(x.id)===el.getAttribute('data-uid'); })[0]; if(m) paintAvatar(el,m); }); },0);
   return '<div class="pv-chips acc-chips">'+chips+'</div>';
 }
@@ -5310,7 +5329,7 @@ function renderBgPrev(){
   var mx=-Infinity, mn=Infinity; for(var bi=0;bi<bars.length;bi++){ mx=Math.max(mx,bars[bi].b); mn=Math.min(mn,bars[bi].b); }
   function barH(v){ return mx-mn<0.01?80:45+55*(v-mn)/(mx-mn); }
   var who=/^u:/.test(sel)?hhMembers().filter(function(m){ return 'u:'+m.id===sel; })[0]:null, fa=findAccount(sel);
-  var label=sel==='all'?'Total courant':(who?'Comptes de '+esc(who.name):(fa?esc(fa.name):'Total courant'));
+  var label=sel==='all'?'Total courant':(sel==='common'?'Comptes communs':(who?'Comptes de '+esc(who.name):(fa?esc(fa.name):'Total courant')));
   html+='<div class="pv-tot"><div><span>'+label+'</span><b>'+fmtE(Math.round(cur))+'</b></div><div><span>Dans 14 jours</span><b class="muted">'+fmtE(Math.round(run))+'</b></div></div>';
   var bh='';
   for(var c=0;c<bars.length;c++){
