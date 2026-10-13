@@ -1203,6 +1203,22 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .oc-rep button{flex:1 1 auto;padding:9px 8px;font-size:13.5px;}
 .oc-lbl .ico{width:14px;height:14px;vertical-align:-2px;}
 .oc-rep-note{margin:4px 0 6px;}
+.pay-card{background:#fff;border:1.5px solid var(--border);border-radius:18px;padding:12px 14px;margin-bottom:10px;}
+.pay-card.main{border-color:var(--accent);}
+.pay-top{display:flex;align-items:center;gap:10px;}
+.pay-top>div{flex:1;min-width:0;display:flex;flex-direction:column;}
+.pay-top b{font-size:15.5px;font-weight:800;}
+.pay-top span{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pay-top em{font-style:normal;font-weight:900;color:var(--green);}
+.pay-main{margin-top:8px;font-size:12.5px;font-weight:800;color:#8a6a24;}
+.pay-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.pay-hist span{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--green-light);color:var(--green);}
+.pay-hist span i{font-style:normal;color:var(--orange);}
+.pay-hist span.none{background:#f3eee4;color:var(--muted);}
+.pay-hist span.next{background:#fdf1e4;color:#9a4a0b;cursor:pointer;}
+.pay-sg{display:flex;align-items:center;gap:10px;background:#fffaf0;border:1.5px solid #f0e2c0;border-radius:16px;padding:10px 12px;margin-bottom:8px;}
+.pay-sg p{flex:1;font-size:13px;line-height:1.4;color:var(--text);margin:0;}
+.pay-sg button{flex:none;font-family:inherit;font-size:13px;font-weight:800;border:none;border-radius:11px;background:var(--accent);color:#fff;padding:9px 12px;cursor:pointer;max-width:42%;}
 .cy-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
 .cy-opt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;width:100%;padding:12px 40px 12px 14px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-family:inherit;cursor:pointer;color:var(--text);}
 .cy-opt b{font-size:15px;font-weight:800;}
@@ -5694,6 +5710,7 @@ function renderSettingsPage(){
       (AUTH.user&&AUTH.user.admin?row(svgIcon('lock'),'Administration','','setAdmin()'):'')+
       row(svgIcon('sun'),'Apparence',{auto:'Automatique',light:'Clair',dark:'Sombre'}[themePref()],'setAppearance()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
+      row(svgIcon('cash'),'Paies du foyer',payList().length?String(payList().length):'','setPays()')+
       row(svgIcon('bell'),'Notifications','','setNotif()')+
       row(svgIcon('bolt'),'Ajout éclair','','setQuick()')+
       row(svgIcon('lock'),'Confidentialité','','setPrivacy()')+
@@ -6689,6 +6706,108 @@ function isStandalone(){ return (window.matchMedia&&matchMedia('(display-mode: s
 function swReady(){ return navigator.serviceWorker.register('sw.js').then(function(){ return navigator.serviceWorker.ready; }); }
 function b64uToBytes(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; var r=atob(s), a=new Uint8Array(r.length); for(var i=0;i<r.length;i++) a[i]=r.charCodeAt(i); return a; }
 function pushSubscription(){ if(!pushSupported()) return Promise.resolve(null); return swReady().then(function(reg){ return reg.pushManager.getSubscription(); }); }
+// ---------- Reglages : paies du foyer et ajustements proposes pour le mois du budget ----------
+function payList(){ return getRecurring().filter(function(r){ return r.kind==='rev'; }); }
+function payOwner(r){
+  var a=findAccount(r.bank); if(!a) return null;
+  return hhMembers().filter(function(m){ return String(m.id)===String(a.owner); })[0]||null;
+}
+// Paies recues (confirmees) d une regulière, de la plus recente a la plus ancienne, avec l ecart au jour prevu
+function payHistory(r){
+  return getTxns().filter(function(t){ return t.rec_key&&t.rec_key.indexOf(r.id+'@')===0&&!/#in$/.test(t.rec_key); })
+    .map(function(t){
+      var k=t.rec_key.split('@')[1], plan=null;
+      if(/^\d{4}-\d{2}$/.test(k)){ var y=+k.slice(0,4), m=+k.slice(5); plan=mPrefix(y,m)+'-'+pad(Math.min(parseInt(r.day,10)||1,daysIn(y,m))); }
+      else plan=k;
+      return {date:t.date,amount:+t.amount,plan:plan,late:plan?Math.round((parseDs(t.date)-parseDs(plan))/86400000):0};
+    }).sort(function(a,b){ return a.date<b.date?1:-1; });
+}
+function shortDay(ds){ var d=parseDs(ds); return d.getDate()+' '+MONTHS_ABBR[d.getMonth()].toLowerCase().replace('.',''); }
+function median(a){ var b=a.slice().sort(function(x,y){ return x-y; }), n=b.length; return n?(n%2?b[(n-1)/2]:Math.round((b[n/2-1]+b[n/2])/2)):0; }
+// Suggestions : [{t:texte, go:fonction}]
+function paySuggestions(){
+  var out=[], pays=payList(), hc=householdCycle(), today=todayStr();
+  if(!pays.length) return out;
+  // 1. le mois du budget ne suit aucune paie
+  var mine=null;
+  if(!pays.some(function(r){ return String(r.id)===String(hc); })){
+    mine=pays.filter(function(r){ var o=payOwner(r); return o&&String(o.id)===String(currentUser); })[0]||pays.slice().sort(function(a,b){ return b.amount-a.amount; })[0];
+    out.push({t:'Le mois du budget est '+(hc?'à jours fixes ('+cycleLabel(hc).toLowerCase()+')':'du 1er au 31')+'. Le faire démarrer le jour où « '+mine.label+' » est confirmée : le mois attend la paie si elle a du retard.',
+      b:'Suivre « '+mine.label+' »', go:function(){ payUseCycle(mine.id); }});
+  }
+  pays.forEach(function(r){
+    var h=payHistory(r), day=parseInt(r.day,10)||1;
+    // 2. paie qui arrive souvent un autre jour que prevu
+    if(h.length>=2&&(r.freq||'month')==='month'){
+      var days=h.slice(0,4).map(function(x){ return parseDs(x.date).getDate(); }), md=median(days);
+      if(md!==day&&Math.abs(md-day)<=7&&days.filter(function(d){ return d===md; }).length>=Math.min(2,days.length)) out.push({
+        t:'« '+r.label+' » est arrivée le '+days.join(', le ')+' ces derniers mois, alors qu’elle est prévue le '+day+'. Prévoir le '+md+' rendra le calendrier plus juste.',
+        b:'Prévoir le '+md, go:function(){ payUpdate(r,{day:md}); }});
+    }
+    // 3. montant recu different du montant prevu
+    if(h.length>=2&&Math.abs(h[0].amount-h[1].amount)<0.01&&Math.abs(h[0].amount-(+r.amount))>=1) out.push({
+      t:'« '+r.label+' » : tu as reçu '+fmtE(h[0].amount,true)+' les deux dernières fois, '+fmtE(+r.amount,true)+' est prévu.',
+      b:'Prévoir '+fmtE(h[0].amount,true), go:function(){ payUpdate(r,{amount:h[0].amount}); }});
+    // 4. paie passee, pas encore confirmee
+    var w=payWaiting(r.id);
+    if(!h.length){ // jamais confirmee : la derniere echeance passee (40 jours max)
+      var d0=parseDs(today), cand=[];
+      for(var dm=-1;dm<=0;dm++){ var x=new Date(d0.getFullYear(),d0.getMonth()+dm,1); cand=cand.concat(occurrences(x.getFullYear(),x.getMonth()).filter(function(oc){ return String(oc.r.id)===String(r.id)&&!oc.done&&oc.date<=today&&qkDays(oc.date,today)<=40; })); }
+      w=cand.sort(function(a,b){ return a.date<b.date?1:-1; })[0]||null;
+    }
+    if(w&&qkDays(w.date,today)>=1) out.push({t:'« '+r.label+' » était prévue le '+shortDay(w.date)+' et n’est pas encore confirmée.',b:'Confirmer',go:function(){ closeSheet(); bgOpenOcc(w.key); }});
+    // 5. paie sans compte
+    if(!r.bank) out.push({t:'« '+r.label+' » n’a pas de compte : elle ne compte pas dans les soldes.',b:'Choisir',go:function(){ closeSheet(); openRegularList('rev'); }});
+    // 6. comptes d une autre personne qui a sa propre paie
+    var o=payOwner(r);
+    if(o&&String(r.id)!==String(hc)&&!(mine&&String(mine.id)===String(r.id))){
+      var accs=getAccounts().filter(function(a){ return String(a.owner)===String(o.id)&&!a.hidden&&String(a.cycle)!==String(r.id); });
+      if(accs.length) out.push({t:'Les comptes de '+o.name+' ('+accs.map(function(a){ return a.name; }).join(', ')+') suivent le mois du foyer. Les faire démarrer avec sa paie « '+r.label+' » ?',
+        b:'Régler '+(accs.length>1?'ses comptes':'son compte'), go:function(){ payAccountsCycle(accs,r.id); }});
+    }
+  });
+  return out;
+}
+function setPays(){
+  var pays=payList(), hc=householdCycle(), html='';
+  html+='<p class="sheet-note">Revenus réguliers du foyer. Quand une paie est confirmée avec le jour où elle est arrivée, le mois du budget qui la suit démarre ce jour-là.</p>';
+  if(!pays.length) html+='<p class="sheet-note"><i>Aucune paie pour l’instant.</i></p>';
+  pays.forEach(function(r){
+    var h=payHistory(r), o=payOwner(r), a=findAccount(r.bank), nx=null, d=new Date();
+    for(var dm=0;dm<=2&&!nx;dm++){ var x=new Date(d.getFullYear(),d.getMonth()+dm,1); nx=occurrences(x.getFullYear(),x.getMonth()).filter(function(oc){ return String(oc.r.id)===String(r.id)&&!oc.done; })[0]||null; }
+    html+='<div class="pay-card'+(String(r.id)===String(hc)?' main':'')+'"><div class="pay-top">'+itemIcon(r.label,r.cat,'rev','bg-ic')+
+      '<div><b>'+esc(r.label)+'</b><span>'+esc(freqLabel(r))+' · '+esc(a?a.name:'sans compte')+(o?' · '+esc(o.name):'')+'</span></div><em>'+fmtE(+r.amount,true)+'</em></div>'+
+      (String(r.id)===String(hc)?'<div class="pay-main">📅 Le mois du budget démarre avec cette paie</div>':'')+
+      '<div class="pay-hist">'+(h.length?h.slice(0,4).map(function(x){ return '<span title="prévue le '+shortDay(x.plan||x.date)+'">'+shortDay(x.date)+(x.late>0?' <i>+'+x.late+' j</i>':x.late<0?' <i>'+x.late+' j</i>':'')+'</span>'; }).join(''):'<span class="none">Pas encore reçue</span>')+
+      (nx?'<span class="next" onclick="closeSheet();bgOpenOcc(\''+nx.key+'\')">'+(nx.date<=todayStr()?'À confirmer : ':'Prochaine : ')+shortDay(nx.date)+' ›</span>':'')+'</div></div>';
+  });
+  var sg=paySuggestions(); window._paySg=sg;
+  html+='<div class="adm-h"><span>Mois du budget</span><button onclick="bgCycleSheet()">Changer</button></div>'+
+    '<p class="sheet-note">'+esc(cycleLabel(hc).replace('Calendaire (du 1er au 31)','Du 1er au 31'))+'</p>';
+  html+='<div class="adm-h"><span>Ajustements proposés</span></div>';
+  if(!sg.length) html+='<p class="sheet-note">✓ Rien à ajuster, tout est cohérent.</p>';
+  sg.forEach(function(x,i){ html+='<div class="pay-sg"><p>'+esc(x.t)+'</p><button onclick="paySgGo('+i+')">'+esc(x.b)+'</button></div>'; });
+  html+='<button class="sheet-btn ghost" onclick="closeSheet();openRegularWizard({kind:\'rev\'})">+ Ajouter une paie</button>';
+  openSheet(sheetHead('Paies du foyer')+html);
+}
+function paySgGo(i){ var x=(window._paySg||[])[i]; if(x) x.go(); }
+function payUseCycle(rid){
+  if(!_cache.settings) _cache.settings={};
+  _cache.settings.budgetCycle=String(rid); apiPost('/api/settings/budgetCycle',{value:String(rid)},null);
+  bgDefaultSelection(); showToast('Le mois du budget suit maintenant cette paie'); setPays();
+}
+function payUpdate(r,ch){
+  var u={}; for(var k in r) u[k]=r[k]; for(var c in ch) u[c]=ch[c];
+  apiPost('/api/recurring',u,function(err){
+    if(err){ showToast('Erreur : '+err.message); return; }
+    for(var c2 in ch) r[c2]=ch[c2];
+    refreshViews(); showToast('Paie mise à jour'); setPays();
+  });
+}
+function payAccountsCycle(accs,rid){
+  accs.forEach(function(a){ a.cycle=String(rid); apiPost('/api/accounts',a,null); });
+  refreshViews(); showToast(accs.length>1?'Comptes réglés sur cette paie':'Compte réglé sur cette paie'); setPays();
+}
 function setNotif(){
   if(DEMO){ openSheet(sheetHead('Notifications')+'<p class="sheet-note">Les notifications ne marchent pas en mode démo : il faut le vrai site, avec ton compte.</p>'); return; }
   if(!pushSupported()){
