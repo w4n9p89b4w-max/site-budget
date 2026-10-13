@@ -1192,7 +1192,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .bg-tabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 4px;border:none;border-radius:99px;background:none;color:#e7f1ea;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;}
 .bg-tabs button .ico{width:19px;height:19px;}
 .bg-tabs button.on{background:#fff;color:#0f6650;box-shadow:0 2px 8px rgba(0,0,0,.15);}
-.bg-range{width:max-content;margin:12px auto 0;padding:7px 16px;border-radius:99px;background:rgba(255,255,255,.14);font-size:14.5px;font-weight:800;border:none;color:inherit;font-family:inherit;cursor:pointer;display:block;}
+.bg-range{width:max-content;max-width:calc(100% - 24px);text-align:center;margin:12px auto 0;padding:7px 16px;border-radius:99px;background:rgba(255,255,255,.14);font-size:14.5px;font-weight:800;border:none;color:inherit;font-family:inherit;cursor:pointer;display:block;}
 .bc-day{position:relative;}
 .bc-mon{position:absolute;top:-7px;left:50%;transform:translateX(-50%);z-index:1;font-style:normal;font-size:9px;font-weight:800;color:#fff;background:var(--accent);border-radius:6px;padding:2px 5px;text-transform:uppercase;letter-spacing:.03em;line-height:1;white-space:nowrap;}
 .bg-range-ed{opacity:.65;font-size:12px;margin-left:4px;}
@@ -3857,7 +3857,7 @@ function markTxnPaid(id){
 // ============================================================
 var MONTHS_ABBR=['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
 var MONTHS_SHORT=['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
-var BG={tab:'budget',mode:'prevu',y:new Date().getFullYear(),m:new Date().getMonth(),sel:null,calView:'mois',onlyReg:false,prevAcc:'all',detail:null};
+var BG={tab:'calendrier',mode:'prevu',y:new Date().getFullYear(),m:new Date().getMonth(),sel:null,calView:'mois',onlyReg:false,prevAcc:'all',detail:null};
 
 // Groupes du budget : chaque groupe rassemble des categories et a un budget mensuel
 // Groupes du budget : les memes que les sous-categories (couleurs et icones assorties)
@@ -3959,21 +3959,38 @@ function calRange(y,m){ return {start:mPrefix(y,m)+'-01',end:mPrefix(y,m)+'-'+pa
 // Dates de paie d un revenu regulier (date reelle si confirmee, sinon date prevue), de m-3 a m+3
 function payDates(rid,y,m){
   var r=getRecurring().filter(function(x){ return String(x.id)===String(rid); })[0]; if(!r) return [];
-  var done={}, txns=getTxns();
+  var done={}, txns=getTxns(), today=todayStr(), last=payLastDone(r.id);
   for(var i=0;i<txns.length;i++){ var k=txns[i].rec_key; if(k&&k.indexOf(r.id+'@')===0) done[k]=txns[i].date; }
   var out=[];
   for(var dm=-3;dm<=3;dm++){
     var d=new Date(y,m+dm,1), yy=d.getFullYear(), mm=d.getMonth(), days=recDays(r,yy,mm), monthly=(r.freq||'month')==='month';
-    for(var j=0;j<days.length;j++){ var ds=mPrefix(yy,mm)+'-'+pad(days[j]), key=r.id+'@'+(monthly?mKey(yy,mm):ds); out.push(done[key]||ds); }
+    for(var j=0;j<days.length;j++){
+      var ds=mPrefix(yy,mm)+'-'+pad(days[j]), key=r.id+'@'+(monthly?mKey(yy,mm):ds);
+      // paie prevue deja passee mais pas encore confirmee : elle n a pas encore eu lieu, au plus tot demain
+      // (seulement apres la derniere paie confirmee : l historique ancien reste tel quel)
+      out.push(done[key]||(last&&ds>last&&ds<=today?addDays(today,1):ds));
+    }
   }
-  return out.sort();
+  return out.sort().filter(function(x,i,a){ return i===0||x!==a[i-1]; });
+}
+// Date de la derniere paie confirmee d un revenu regulier
+function payLastDone(rid){ var l=''; getTxns().forEach(function(t){ if(t.rec_key&&t.rec_key.indexOf(rid+'@')===0&&t.date>l) l=t.date; }); return l; }
+// Une paie prevue est passee sans etre confirmee : le mois en cours attend sa confirmation
+function payWaiting(rid){
+  var last=payLastDone(rid); if(!last) return null;
+  var r=getRecurring().filter(function(x){ return String(x.id)===String(rid); })[0]; if(!r) return null;
+  var today=todayStr(), d=parseDs(today), occ=[];
+  for(var dm=-2;dm<=0;dm++){ var x=new Date(d.getFullYear(),d.getMonth()+dm,1); occ=occ.concat(occurrences(x.getFullYear(),x.getMonth())); }
+  return occ.filter(function(o){ return String(o.r.id)===String(rid)&&!o.done&&o.date>last&&o.date<=today; })[0]||null;
 }
 // Mois de paie qui contient une date : de la paie a la veille de la paie suivante
 function payRangeAt(rid,ds){
   var d=parseDs(ds), pd=payDates(rid,d.getFullYear(),d.getMonth()), st=null, nx=null;
   for(var i=0;i<pd.length;i++){ if(pd[i]<=ds) st=pd[i]; else { nx=pd[i]; break; } }
   if(!st) return null;
-  return {start:st,end:nx?addDays(nx,-1):addDays(st,30),pay:true};
+  var r={start:st,end:nx?addDays(nx,-1):addDays(st,30),pay:true};
+  if(r.end===todayStr()&&payWaiting(rid)) r.waiting=true;
+  return r;
 }
 // Mois de paie "du mois m" : celui qui commence par la paie tombee en mois m
 function payRangeOfMonth(rid,y,m){
@@ -3996,9 +4013,19 @@ function cycleRangeAt(c,ds){
   return r;
 }
 // Le mois personnalise "d octobre" est celui qui contient le 15 octobre (ex. du 28 sept au 27 oct)
-function cycleRangeOfMonth(c,y,m){ return cycleRangeAt(c,mPrefix(y,m)+'-15'); }
+// Mois de paie : la periode « d octobre » est celle qui se termine en octobre (ex. du 28 sept au 27 oct,
+// ou du 28 sept a aujourd hui tant que la paie suivante n est pas confirmee)
+function cycleRangeOfMonth(c,y,m){
+  if(String(c).indexOf('r:')===0) return cycleRangeAt(c,mPrefix(y,m)+'-15');
+  var pd=payDates(c,y,m), pre=mPrefix(y,m), today=todayStr();
+  for(var i=0;i<pd.length;i++){
+    var end=pd[i+1]?addDays(pd[i+1],-1):addDays(pd[i],30);
+    if(end.indexOf(pre)===0){ var r={start:pd[i],end:end,pay:true}; if(end===today&&payWaiting(c)) r.waiting=true; return r; }
+  }
+  return payRangeAt(c,pre+'-15');
+}
 // Mois (y,m) a afficher pour la periode en cours d un cycle
-function cycleMonthNow(c){ var r=cycleRangeAt(c,todayStr()); if(!r) return null; return parseDs(addDays(r.start,14)); }
+function cycleMonthNow(c){ var r=cycleRangeAt(c,todayStr()); if(!r) return null; return r.pay?parseDs(r.end):parseDs(addDays(r.start,14)); }
 function cycleLabel(c){
   if(!c) return 'Calendaire (du 1er au 31)';
   if(String(c).indexOf('r:')===0){ var f=fixedParts(c); return f.s===1&&f.e>=28?'Calendaire (du 1er au 31)':'Du '+f.s+' au '+f.e+(f.e<f.s?' du mois suivant':''); }
@@ -4068,7 +4095,7 @@ function rangeOccs(r){
 }
 function rangeLabel(r){
   var a=parseDs(r.start), b=parseDs(r.end), f=function(d){ return d.getDate()+' '+MONTHS_ABBR[d.getMonth()].toLowerCase().replace('.',''); };
-  return f(a)+' → '+f(b);
+  return f(a)+' → '+(r.waiting?'aujourd’hui':f(b));
 }
 // Comptes choisis par les boutons du haut (null = tous)
 function selectedIds(){
@@ -4137,7 +4164,7 @@ function renderBudget(){
   for(var i=0;i<tabs.length;i++) th+='<button class="'+(BG.tab===tabs[i][0]?'on':'')+'" onclick="bgTab(\''+tabs[i][0]+'\')">'+svgIcon(tabs[i][1])+tabs[i][2]+'</button>';
   var html='<div class="bg-head"><div class="bg-months"><button onclick="bgMove(-1)">'+prevL+'</button><b>'+curL+'</b><button onclick="bgMove(1)">'+nextL+'</button></div>'+
     '<div class="bg-tabs">'+th+'</div>';
-  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=BG.tab==='budget'?withAccFilter(function(){ return bgRange(y,m); }):bgRange(y,m); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':''))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
+  if(BG.tab==='budget'||BG.tab==='calendrier'&&BG.calView!=='annee'){ var rgl=BG.tab==='budget'?withAccFilter(function(){ return bgRange(y,m); }):bgRange(y,m); html+='<button class="bg-range" onclick="bgCycleSheet()" title="Changer le mois du budget">'+(rgl.waiting?'⏳ Paie à confirmer · ':(rgl.pay?'Mois de paie · ':(rgl.fixed?'Mon mois · ':'')))+rangeLabel(rgl)+' <span class="bg-range-ed">✎</span></button>'; }
   if(BG.tab==='calendrier') html+='<div class="bg-calctl"><span class="bg-tra" title="'+(BG.onlyReg?'Afficher aussi les dépenses non régulières':'Masquer les dépenses non régulières')+'">'+svgIcon('repeat')+'<button class="sw'+(BG.onlyReg?' on':'')+'" onclick="BG.onlyReg=!BG.onlyReg;renderBudget()"></button></span>'+
     '<div class="bg-seg"><button class="'+(BG.calView==='mois'?'on':'')+'" onclick="BG.calView=\'mois\';renderBudget()">Mois</button><button class="'+(BG.calView==='annee'?'on':'')+'" onclick="BG.calView=\'annee\';renderBudget()">Année</button></div></div>';
   html+='</div><div class="bg-body">';
@@ -4967,12 +4994,23 @@ function renderBgCal(){
   var prev=[];
   for(var dd in items){ for(var p=0;p<items[dd].length;p++){ if(items[dd][p].pending) prev.push(items[dd][p]); } }
   prev.sort(function(a,b){ return (a.occ?a.occ.date:a.txn.date).localeCompare(b.occ?b.occ.date:b.txn.date); });
+  // revenus reguliers attendus juste apres la fin de la periode (ex. la paie du 28) : on peut les confirmer d ici
+  var after=addDays(rg.end,1), lim=addDays(rg.end,7), seen={};
+  [parseDs(after),parseDs(lim)].forEach(function(d){
+    var k=d.getFullYear()+'-'+d.getMonth(); if(seen[k]) return; seen[k]=1;
+    occurrences(d.getFullYear(),d.getMonth()).forEach(function(oc){
+      if(oc.kind!=='rev'||oc.done||oc.date<after||oc.date>lim) return;
+      if(BG.f&&BG.f.indexOf(String(oc.bank))<0) return;
+      prev.push({label:oc.label,cat:oc.cat,kind:'rev',amount:toMain(oc.amount,oc.bank),occ:oc,pending:true,next:true});
+    });
+  });
+  prev.sort(function(a,b){ return (a.occ?a.occ.date:a.txn.date).localeCompare(b.occ?b.occ.date:b.txn.date); });
   html+='<div class="gd-sec up">Prévu ce mois-ci</div>';
   if(!prev.length) html+='<div class="bg-empty">Rien de prévu ce mois-ci.</div>';
   var lastD='';
   for(var q=0;q<prev.length;q++){
     var it=prev[q], date=it.occ?it.occ.date:it.txn.date;
-    if(date!==lastD){ lastD=date; var dt=new Date(+date.slice(0,4),+date.slice(5,7)-1,+date.slice(8)); html+='<div class="bc-dayhd'+(date===today?' today':'')+'">'+['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][dt.getDay()]+' '+dt.getDate()+'</div>'; }
+    if(date!==lastD){ lastD=date; var dt=new Date(+date.slice(0,4),+date.slice(5,7)-1,+date.slice(8)); html+='<div class="bc-dayhd'+(date===today?' today':'')+'">'+['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][dt.getDay()]+' '+dt.getDate()+(date>rg.end?' '+MONTHS_FR[dt.getMonth()].toLowerCase()+' · début du mois suivant':'')+'</div>'; }
     html+=bcItemRow(it);
   }
   return html+'</div>';
