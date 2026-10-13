@@ -642,6 +642,14 @@ app.post('/api/accounts', requireAuth, (req, res) => {
   res.json({ ok: true, id: id });
 });
 
+// Nouvel ordre des comptes (cartes de l accueil) : liste des ids dans l ordre voulu
+app.post('/api/accounts/order', requireAuth, (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
+  const upd = db.prepare('UPDATE accounts SET sort_order = ? WHERE id = ? AND household_id = ?');
+  db.transaction(() => ids.forEach((id, i) => upd.run(i, id, req.hid)))();
+  res.json({ ok: true });
+});
+
 app.delete('/api/accounts/:id', requireAuth, (req, res) => {
   db.prepare('DELETE FROM accounts WHERE id = ? AND household_id = ?').run(req.params.id, req.hid);
   res.json({ ok: true });

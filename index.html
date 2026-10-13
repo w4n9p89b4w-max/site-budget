@@ -1371,6 +1371,15 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .pv-tag{position:absolute;top:0;white-space:nowrap;padding:3px 9px;border-radius:99px;background:#c9a740;color:#fff;font-size:11.5px;font-weight:800;}
 .pv-d{height:22px;line-height:22px;font-size:12.5px;font-weight:700;color:#a99e90;}
 .pv-col.today .pv-d{color:var(--text);}
+#accGrid .acc-card{-webkit-touch-callout:none;}
+#accGrid.ord .acc-card{touch-action:none;cursor:grab;animation:ordWiggle .32s ease-in-out infinite alternate;user-select:none;-webkit-user-select:none;}
+#accGrid.ord .acc-card:nth-child(2n){animation-delay:.16s;}
+#accGrid.ord .acc-card .card-gear,#accGrid.ord .acc-card [class*=gear]{visibility:hidden;}
+#accGrid.ord .acc-card.ord-drag{animation:none;cursor:grabbing;z-index:20;position:relative;box-shadow:0 18px 40px rgba(40,28,15,.35);transition:none;}
+@keyframes ordWiggle{from{transform:rotate(-.8deg);}to{transform:rotate(.8deg);}}
+.ord-bar{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1.5px solid var(--accent);border-radius:16px;padding:10px 10px 10px 16px;}
+.ord-bar span{font-size:14px;font-weight:700;color:var(--muted);}
+.ord-bar button{flex:none;font-family:inherit;font-size:15px;font-weight:800;border:none;border-radius:12px;background:var(--accent);color:#fff;padding:10px 18px;cursor:pointer;}
 .hid-toggle{grid-column:1 / -1;background:none;border:none;font-family:inherit;font-size:14px;font-weight:700;color:#a3978a;cursor:pointer;padding:2px;}
 .acc-card.hid{opacity:.55;}
 /* Fenetre de modification d un compte */
@@ -1728,6 +1737,7 @@ function demoApi(method,path,data){
     if((m=path.match(/^\/api\/settings\/(.+)$/))){ d.settings[decodeURIComponent(m[1])]=data.value; demoSave(d); return {ok:true}; }
     if((m=path.match(/^\/api\/applied-months\/(.+)$/))){ d.applied[decodeURIComponent(m[1])]=true; demoSave(d); return {ok:true}; }
     if((m=path.match(/^\/api\/epargne\/(.+)$/))){ d.epargne[decodeURIComponent(m[1])]={verse:parseFloat(data.verse)||0,objectif:parseFloat(data.objectif)||0}; demoSave(d); return {ok:true}; }
+    if(path==='/api/accounts/order'){ (data.ids||[]).forEach(function(x,i){ d.accounts.forEach(function(a){ if(String(a.id)===String(x)) a.sortOrder=i; }); }); demoSave(d); return {ok:true}; }
     if(path==='/api/accounts'){
       id=data.id||Date.now();
       put(d.accounts,{id:id,name:data.name,color:data.color||'',solde:parseFloat(data.solde)||0,soldeDate:data.soldeDate||null,
@@ -2177,6 +2187,66 @@ function accountProjected(acc){
 }
 
 var showHiddenAccs=false;
+// ---------- Ordre des comptes : on fait glisser les cartes de l accueil ----------
+// Mode ouvert par le lien sous les cartes, ou par un appui long sur une carte (telephone).
+var ORD={on:false,drag:null,timer:null,justLong:false};
+function ordStart(){ ORD.on=true; renderHome(); setTimeout(function(){ ORD.justLong=false; },600); }
+function ordEnd(save){
+  var grid=document.getElementById('accGrid');
+  var ids=[].map.call(grid.querySelectorAll('.acc-card[data-id]'),function(c){ return c.getAttribute('data-id'); });
+  ORD.on=false;
+  if(save){
+    var accs=getAccounts(), shown=ids.map(function(id){ return findAccount(id); }).filter(Boolean);
+    var rest=accs.filter(function(a){ return ids.indexOf(String(a.id))<0; });
+    var list=shown.concat(rest); list.forEach(function(a,i){ a.sortOrder=i; });
+    _cache.accounts=list;
+    apiPost('/api/accounts/order',{ids:list.map(function(a){ return a.id; })},function(err){ if(err) showToast('Ordre non enregistré'); });
+  }
+  renderHome();
+  if(save) showToast('Ordre des comptes enregistré');
+}
+function ordDown(e,card){
+  if(e.button>0) return;
+  if(!ORD.on){
+    // appui long (0,5 s sans bouger) : passe en mode ordre
+    var x0=e.clientX, y0=e.clientY;
+    clearTimeout(ORD.timer);
+    ORD.timer=setTimeout(function(){ ORD.justLong=true; ordStart(); if(navigator.vibrate) navigator.vibrate(15); },500);
+    var cancel=function(ev){ if(ev.type!=='pointermove'||Math.abs(ev.clientX-x0)+Math.abs(ev.clientY-y0)>10){ clearTimeout(ORD.timer); off(); } };
+    var off=function(){ ['pointermove','pointerup','pointercancel'].forEach(function(t){ window.removeEventListener(t,cancel); }); };
+    ['pointermove','pointerup','pointercancel'].forEach(function(t){ window.addEventListener(t,cancel); });
+    return;
+  }
+  e.preventDefault();
+  var r=card.getBoundingClientRect();
+  ORD.drag={card:card,dx:e.clientX-r.left,dy:e.clientY-r.top};
+  card.classList.add('ord-drag');
+  card.setPointerCapture(e.pointerId);
+  card.onpointermove=function(ev){ ordMove(ev); };
+  card.onpointerup=card.onpointercancel=function(){ ordDrop(); };
+  ordMove(e);
+}
+function ordMove(e){
+  var d=ORD.drag; if(!d) return;
+  var c=d.card;
+  c.style.transform=''; var r=c.getBoundingClientRect();
+  // carte survolee : on y deplace la carte tenue
+  var under=document.elementsFromPoint(e.clientX,e.clientY).filter(function(el){ return el!==c&&!c.contains(el); })
+    .map(function(el){ return el.closest&&el.closest('#accGrid .acc-card[data-id]'); }).filter(Boolean)[0];
+  if(under&&under!==c){
+    var cards=[].slice.call(document.querySelectorAll('#accGrid .acc-card[data-id]'));
+    var from=cards.indexOf(c), to=cards.indexOf(under);
+    under.parentNode.insertBefore(c,from<to?under.nextSibling:under);
+    r=c.getBoundingClientRect();
+  }
+  c.style.transform='translate('+(e.clientX-d.dx-r.left)+'px,'+(e.clientY-d.dy-r.top)+'px) scale(1.04)';
+}
+function ordDrop(){
+  var d=ORD.drag; if(!d) return;
+  d.card.style.transform=''; d.card.classList.remove('ord-drag');
+  d.card.onpointermove=d.card.onpointerup=d.card.onpointercancel=null;
+  ORD.drag=null;
+}
 function renderHome(){
   var av=document.getElementById('homeAvatar');
   paintAvatar(av,AUTH.user||{name:currentName});
@@ -2190,16 +2260,32 @@ function renderHome(){
     var card=document.createElement('button');
     applyCardLook(card,a);
     card.innerHTML=accCardInner(a,bal,false)+cardGear(a.id);
-    (function(id){ card.onclick=function(){ openAccountView(id); }; })(a.id);
+    card.setAttribute('data-id',a.id);
+    (function(id,c){
+      c.onclick=function(){ if(ORD.on||ORD.justLong){ ORD.justLong=false; return; } openAccountView(id); };
+      c.addEventListener('pointerdown',function(e){ ordDown(e,c); });
+    })(a.id,card);
+    if(ORD.on) card.classList.add('ord-card');
     grid.appendChild(card);
+  }
+  grid.classList.toggle('ord',ORD.on);
+  if(ORD.on){
+    var done=document.createElement('div'); done.className='ord-bar';
+    done.innerHTML='<span>Fais glisser les cartes pour les ranger</span><button onclick="ordEnd(true)">Terminé</button>';
+    grid.appendChild(done);
   }
   var add=document.createElement('button');
   add.className='acc-add'+((accs.length-nHidden)%2===0?' solo':'');
   add.innerHTML='<span class="plus"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Ajouter un compte';
   add.onclick=function(){ openAccountWizard(); };
-  grid.appendChild(add);
+  if(!ORD.on) grid.appendChild(add);
+  if(!ORD.on&&accs.length-nHidden>1){
+    var ob=document.createElement('button'); ob.className='hid-toggle ord-link';
+    ob.innerHTML='⇅ Modifier l’ordre des comptes'; ob.onclick=function(){ ordStart(); };
+    grid.appendChild(ob);
+  }
   // Comptes masques : hors Total Patrimoine, affichables a la demande
-  if(nHidden){
+  if(nHidden&&!ORD.on){
     var tg=document.createElement('button'); tg.className='hid-toggle';
     tg.textContent=showHiddenAccs?'Cacher les comptes masqués':(nHidden>1?'Voir les '+nHidden+' comptes masqués':'Voir le compte masqué');
     tg.onclick=function(){ showHiddenAccs=!showHiddenAccs; renderHome(); };

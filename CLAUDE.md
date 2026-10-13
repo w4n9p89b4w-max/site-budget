@@ -38,6 +38,7 @@ Répondre en français, simplement (l'utilisateur n'est pas développeur).
 ## Refonte en cours (depuis le 08/10/2026)
 - Style "appli mobile" crème / doré (police Nunito) d'après les captures de l'utilisateur.
 - Accueil : Total Patrimoine, cartes de comptes (solde saisi puis mis à jour par les transactions), boutons Dépense / Revenu / Transfert, liste des transactions (À venir + récentes).
+- Ordre des comptes : lien « ⇅ Modifier l’ordre des comptes » sous les cartes (ou appui long sur une carte) → on fait glisser les cartes, « Terminé » enregistre (`/api/accounts/order`, colonne sort_order).
 - Barre du bas : Accueil, Budget, Stats, Réglages. Le journal complet s'ouvre depuis l'accueil.
 - Les anciennes banques codées en dur (cepac, revolut, ca) sont abandonnées : l'utilisateur crée ses comptes.
 - Prévu plus tard : création de compte utilisateur à l'arrivée sur le site, page Objectifs, refonte des pages Budget / Stats / Réglages.
