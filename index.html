@@ -5790,6 +5790,7 @@ function qkSameName(a,b){
   return x.indexOf(y)>=0||y.indexOf(x)>=0||wx.some(function(w){ return (' '+y+' ').indexOf(' '+w+' ')>=0; });
 }
 function qkMatches(o){
+  if(o.round) return [];                                      // arrondis : fusionnes avec la semaine deja importee
   var rank={sure:0,likely:1,maybe:2}, tra=o.kind==='tra';
   function real(n){ var b=n!=null?qkBankOf(n):null; return b&&b!=='new'?b:null; }
   var bank=tra?(real(o.from)||real(o.to)):qkBankOf(o.compte);
@@ -5854,11 +5855,46 @@ function qkPair(ops){
     var src=o.kind==='dep'?o:(j>=0?ops[j]:null), dst=o.kind==='rev'?o:(j>=0?ops[j]:null);
     used[i]=1; if(j>=0) used[j]=1;
     var ft=src?(src.compte||'ce compte'):o.lie, tt=dst?(dst.compte||'ce compte'):o.lie;
-    out.push({kind:'tra',date:(src||dst).date,amount:o.amount,cat:'',detail:(src||dst).detail||o.label,
+    out.push({kind:'tra',date:(src||dst).date,amount:o.amount,cat:'',detail:(src||dst).detail||o.label,round:!!(o.arrondi||(j>=0&&ops[j].arrondi)),
       from:src?src.compte:null, to:dst?dst.compte:null, fromTxt:ft||'?', toTxt:tt||'?', label:'Transfert '+(ft||'?')+' → '+(tt||'?')});
   });
   ops.forEach(function(o,i){ if(!used[i]&&!o.interne) out.push(o); });
-  return out.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
+  return qkGroupRounds(out).sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
+}
+// ---------- Petite monnaie (arrondis automatiques Revolut) ----------
+// Les arrondis d une semaine (lundi -> dimanche) vers une meme Pocket = un seul transfert, date du lundi suivant
+function qkMonday(ds){ var d=parseDs(ds), iso=(d.getDay()+6)%7+1; return addDays(ds,8-iso); }
+function qkPartsNote(parts){
+  return 'Arrondis automatiques de la semaine (versés le lundi à 8 h) : '+parts.map(function(p){ return qkFr(p.d)+' '+p.a.toFixed(2).replace('.',','); }).join(' · ');
+}
+function qkPartsOf(note){
+  var out=[], re=/(\d\d)\/(\d\d)\/(\d{4}) (\d+,\d\d)/g, m;
+  while((m=re.exec(String(note||'')))) out.push({d:m[3]+'-'+m[2]+'-'+m[1],a:parseFloat(m[4].replace(',','.'))});
+  return out;
+}
+// Fusion de deux listes d arrondis (meme jour + meme montant compte une fois de plus seulement s il apparait plus souvent)
+function qkMergeParts(a,b){
+  var n={}, out=[];
+  function cnt(list){ var c={}; list.forEach(function(p){ var k=p.d+'|'+p.a.toFixed(2); c[k]=(c[k]||0)+1; }); return c; }
+  var ca=cnt(a), cb=cnt(b);
+  Object.keys(ca).concat(Object.keys(cb)).forEach(function(k){ n[k]=Math.max(ca[k]||0,cb[k]||0); });
+  Object.keys(n).forEach(function(k){ var x=k.split('|'); for(var i=0;i<n[k];i++) out.push({d:x[0],a:parseFloat(x[1])}); });
+  return out.sort(function(x,y){ return x.d<y.d?-1:x.d>y.d?1:0; });
+}
+function qkSum(parts){ return Math.round(parts.reduce(function(s,p){ return s+p.a; },0)*100)/100; }
+function qkGroupRounds(list){
+  var out=[], groups={};
+  list.forEach(function(o){
+    if(o.kind!=='tra'||!o.round){ out.push(o); return; }
+    var mon=qkMonday(o.date), k=o.from+'|'+o.to+'|'+mon, g=groups[k];
+    if(!g){
+      g=groups[k]={kind:'tra',round:true,date:mon,amount:0,cat:'',parts:[],from:o.from,to:o.to,fromTxt:o.fromTxt,toTxt:o.toTxt,label:'🪙 Arrondis → '+o.toTxt};
+      out.push(g);
+    }
+    g.parts.push({d:o.date,a:o.amount});
+  });
+  Object.keys(groups).forEach(function(k){ var g=groups[k]; g.parts.sort(function(x,y){ return x.d<y.d?-1:1; }); g.amount=qkSum(g.parts); g.detail=qkPartsNote(g.parts); });
+  return out;
 }
 function qkReview(r){
   var mine=getAccounts().filter(function(a){ return !a.hidden&&a.owner===currentUser; });
@@ -5939,6 +5975,7 @@ function qkVisible(){ var r=[]; QK.ops.forEach(function(o,i){ if(qkActive(o)) r.
 function qkAccTag(o){ return QK.accs.length>1&&o.kind!=='tra'?'<span class="qk-tag">'+esc(o.compte)+'</span>':''; }
 function qkAmt(o){ return '<span class="qk-amt '+o.kind+'">'+(o.kind==='rev'?'+':o.kind==='dep'?'-':'')+fmtE(o.amount,true)+'</span>'; }
 function qkCatCell(o,i){
+  if(o.kind==='tra'&&o.round) return '<span class="qk-tra" title="'+esc(o.detail)+'">🪙 '+o.parts.length+' arrondi'+(o.parts.length>1?'s':'')+' du '+qkFr(o.parts[0].d).slice(0,5)+' au '+qkFr(o.parts[o.parts.length-1].d).slice(0,5)+'</span>';
   if(o.kind==='tra') return '<span class="qk-tra" title="'+(o.from!=null&&o.to!=null?'':'Seul ce côté figure dans le document')+'">⇄ '+esc(o.fromTxt)+' → '+esc(o.toTxt)+(o.from!=null&&o.to!=null?'':' <i>(un côté)</i>')+'</span>';
   return '<select onchange="QK.ops['+i+'].cat=this.value">'+qkCatOptions(o.kind,o.cat)+'</select>';
 }
@@ -6093,10 +6130,22 @@ function qkSave(){
     });
   })();
 }
+// Arrondis d une semaine deja importee (meme lundi, memes comptes) : on complete ce transfert au lieu d en ajouter un
+function qkMergeRound(o,label){
+  var from=o.from!=null?qkBankOf(o.from):null, to=o.to!=null?qkBankOf(o.to):null, txns=getTxns();
+  var ex=txns.filter(function(t){ return t.date===o.date&&/^🪙/.test(t.label||'')&&
+    (from?(t.type==='transfert'&&String(t.bank)===String(from)):(t.type==='transfert_in'&&String(t.bank)===String(to))); })[0];
+  if(!ex) return false;
+  var parts=qkMergeParts(qkPartsOf(ex.note),o.parts), amt=qkSum(parts), note=qkPartsNote(parts);
+  var pair=ex.transfer_pair?txns.filter(function(t){ return String(t.id)===String(ex.transfer_pair); })[0]:null;
+  [ex,pair].forEach(function(t){ if(!t) return; t.amount=amt; t.note=note; apiPost('/api/transactions',t,null); });
+  return true;
+}
 function qkSaveTxns(todo,nAcc){
   var now=Date.now()+1, out=[];
   todo.forEach(function(o){
     var label=String(o.label||'').trim()||'Opération';
+    if(o.kind==='tra'&&o.round&&qkMergeRound(o,label)) return;
     if(o.kind==='tra'){
       var from=o.from!=null?qkBankOf(o.from):null, to=o.to!=null?qkBankOf(o.to):null;
       var a={id:now+out.length,date:o.date,label:label,cat:'autres_dep',amount:o.amount,type:'transfert',bank:from,need:'',note:o.detail||null};
