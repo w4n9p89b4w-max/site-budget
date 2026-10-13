@@ -1075,6 +1075,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .am-note{font-size:12.5px;color:#a3978a;margin:6px 2px 0;line-height:1.35;}
 .am-own{display:flex;gap:6px;}
 .am-own button.on{background:#2f5e3c;border-color:#2f5e3c;color:#fff;}
+.chip-av{width:24px;height:24px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;overflow:hidden;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
 .pv-chip.mine.on{border-style:solid;border-color:#e8893a;}
 .rc-head.rev{background:#dcebdf;}
@@ -1846,8 +1847,7 @@ function initApp(){
 }
 // A l ouverture : Budget et Prevision presentent les comptes de la personne connectee (et son mois de paie)
 function bgDefaultSelection(){
-  var mine=getAccounts().filter(function(a){ return !a.hidden&&a.owner===currentUser; });
-  BG.prevAcc=mine.length?String(mine[0].id):'all';
+  BG.prevAcc='all';
   BG.y=new Date().getFullYear(); BG.m=new Date().getMonth();
   withAccFilter(function(){ var c=filterCycle(); var d=c&&cycleMonthNow(c); if(d){ BG.y=d.getFullYear(); BG.m=d.getMonth(); } });
 }
@@ -4073,8 +4073,8 @@ function rangeLabel(r){
 // Comptes choisis par les boutons du haut (null = tous)
 function selectedIds(){
   var accs=getAccounts().filter(function(a){ return !a.hidden; });
-  if(BG.prevAcc==='all') return null;
-  if(BG.prevAcc==='mine') return accs.filter(function(a){ return a.owner===currentUser; }).map(function(a){ return String(a.id); });
+  if(BG.prevAcc==='all'||!BG.prevAcc) return null;
+  if(/^u:/.test(BG.prevAcc)){ var uid=BG.prevAcc.slice(2); return accs.filter(function(a){ return String(a.owner)===uid; }).map(function(a){ return String(a.id); }); }
   return [String(BG.prevAcc)];
 }
 function isPending(t){ return t.date>todayStr()||Number(t.later_pay); }
@@ -4485,7 +4485,7 @@ function dnPick(el,k){
 function renderBgBudget(){ return withAccFilter(renderBgBudgetInner); }
 function renderBgBudgetInner(){
   var y=BG.y, m=BG.m, st=monthStats(y,m), groups=getGroups(), reel=BG.mode==='reel', html='';
-  html+='<div class="bg-card">'+accChipsHtml()+(BG.f&&!reel?'<p class="bg-fnote">Budgets calculés avec les opérations régulières de ce compte.</p>':'')+'<div class="bg-pv"><button class="'+(!reel?'on':'')+'" onclick="BG.mode=\'prevu\';renderBudget()">'+svgIcon('pie')+'Prévu</button>'+
+  html+='<div class="bg-card">'+accChipsHtml()+(BG.f&&!reel?'<p class="bg-fnote">Budgets calculés avec les opérations régulières de '+(/^u:/.test(BG.prevAcc)?'ses comptes':'ce compte')+'.</p>':'')+'<div class="bg-pv"><button class="'+(!reel?'on':'')+'" onclick="BG.mode=\'prevu\';renderBudget()">'+svgIcon('pie')+'Prévu</button>'+
     '<button class="'+(reel?'on':'')+'" onclick="BG.mode=\'reel\';renderBudget()">'+svgIcon('bars')+'Réel</button></div>';
   var segs=[];
   if(!reel){
@@ -5026,12 +5026,19 @@ function renderBgYear(){
 }
 
 // Boutons "Tous / compte" : le choix vaut pour les onglets Budget et Prevision
+// Filtre du Budget : « Tous » + un bouton par personne inscrite dans le foyer (ses comptes, ceux qui lui appartiennent).
+// Rien a choisir quand on est seul dans le foyer.
+function hhMembers(){ return (AUTH&&AUTH.household&&AUTH.household.members)||[]; }
 function accChipsHtml(){
-  var accs=getAccounts().filter(function(a){ return !a.hidden; }), mine=accs.filter(function(a){ return a.owner===currentUser; });
-  if(BG.prevAcc==='mine') BG.prevAcc='all';
-  if(BG.prevAcc!=='all'&&BG.prevAcc!=='mine'&&!findAccount(BG.prevAcc)) BG.prevAcc='all';
+  var ms=hhMembers();
+  if(BG.prevAcc!=='all'&&!(/^u:/.test(BG.prevAcc)&&ms.some(function(m){ return 'u:'+m.id===BG.prevAcc; }))) BG.prevAcc='all';
+  if(ms.length<2) return '';
   var sel=BG.prevAcc, chips='<button class="pv-chip'+(sel==='all'?' on':'')+'" onclick="bgPickAcc(\'all\')">Tous</button>';
-  for(var i=0;i<accs.length;i++) chips+='<button class="pv-chip'+(String(sel)===String(accs[i].id)?' on':'')+'" onclick="bgPickAcc(\''+accs[i].id+'\')">'+accChip(accs[i])+'</button>';
+  ms.forEach(function(m){
+    var v='u:'+m.id;
+    chips+='<button class="pv-chip'+(sel===v?' on':'')+'" onclick="bgPickAcc(\''+v+'\')"><span class="chip-av" data-uid="'+esc(m.id)+'"></span>'+esc(m.name)+'</button>';
+  });
+  setTimeout(function(){ document.querySelectorAll('.chip-av[data-uid]').forEach(function(el){ var m=hhMembers().filter(function(x){ return String(x.id)===el.getAttribute('data-uid'); })[0]; if(m) paintAvatar(el,m); }); },0);
   return '<div class="pv-chips acc-chips">'+chips+'</div>';
 }
 // Bouton d un compte dans les filtres : petit logo de la banque + nom
@@ -5099,7 +5106,8 @@ function renderBgPrev(){
   for(var f=1;f<=14;f++){ run+=(moves[dstr(f)]||0); bars.push({d:dstr(f),b:run}); }
   var mx=-Infinity, mn=Infinity; for(var bi=0;bi<bars.length;bi++){ mx=Math.max(mx,bars[bi].b); mn=Math.min(mn,bars[bi].b); }
   function barH(v){ return mx-mn<0.01?80:45+55*(v-mn)/(mx-mn); }
-  var label=sel==='all'?'Total courant':(sel==='mine'?'Mes comptes':esc(findAccount(sel).name));
+  var who=/^u:/.test(sel)?hhMembers().filter(function(m){ return 'u:'+m.id===sel; })[0]:null, fa=findAccount(sel);
+  var label=sel==='all'?'Total courant':(who?'Comptes de '+esc(who.name):(fa?esc(fa.name):'Total courant'));
   html+='<div class="pv-tot"><div><span>'+label+'</span><b>'+fmtE(Math.round(cur))+'</b></div><div><span>Dans 14 jours</span><b class="muted">'+fmtE(Math.round(run))+'</b></div></div>';
   var bh='';
   for(var c=0;c<bars.length;c++){
