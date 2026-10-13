@@ -178,9 +178,10 @@ function newSession(userId) {
   db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(sha256(token), userId, Date.now() + SESSION_DAYS * DAY);
   return token;
 }
+function isTestUser(u) { return !!u && (String(u.login || '').toLowerCase() === 'test' || String(u.email || '').toLowerCase() === 'test@budget.local'); }
 function isAdmin(u) { return !!u && ADMIN_EMAILS.indexOf(String(u.email || '').toLowerCase()) >= 0; }
 function parseAvatar(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '', admin: isAdmin(u), avatar: parseAvatar(u.avatar) }; }
+function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '', admin: isAdmin(u), test: isTestUser(u), avatar: parseAvatar(u.avatar) }; }
 function householdInfo(hid) {
   const members = db.prepare('SELECT id, name, avatar FROM users WHERE household_id = ? ORDER BY id').all(hid).map(m => ({ id: m.id, name: m.name, avatar: parseAvatar(m.avatar) }));
   const h = db.prepare('SELECT admin_id, members_edit FROM households WHERE id = ?').get(hid) || {};
@@ -710,6 +711,16 @@ app.post('/api/accounts/order', requireAuth, (req, res) => {
 
 app.delete('/api/accounts/:id', requireAuth, (req, res) => {
   if (accountLocked(req, req.params.id)) return lockedRes(res);
+  // Compte de test seulement : on retire aussi les operations et les regulieres de ce compte
+  if (req.query.ops === '1') {
+    const u = db.prepare('SELECT login, email FROM users WHERE id = ?').get(req.uid) || {};
+    if (!isTestUser(u)) return res.status(403).json({ error: 'Réservé au compte de test' });
+    const ids = [String(req.params.id), req.params.id + '.0'];
+    db.transaction(() => {
+      db.prepare('DELETE FROM transactions WHERE household_id = ? AND bank IN (?, ?)').run(req.hid, ...ids);
+      db.prepare('DELETE FROM recurring WHERE household_id = ? AND bank IN (?, ?)').run(req.hid, ...ids);
+    })();
+  }
   db.prepare('DELETE FROM accounts WHERE id = ? AND household_id = ?').run(req.params.id, req.hid);
   res.json({ ok: true });
 });
