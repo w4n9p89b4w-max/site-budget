@@ -1410,6 +1410,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .am-color{width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);}
 .am-hide{display:flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:12px;border:none;background:#f1dedb;font-family:inherit;font-size:15px;font-weight:700;color:#6f6455;cursor:pointer;}
 .am-hide .ico{width:19px;height:19px;}
+.am-x{width:40px;height:40px;flex:none;}
 .am-del{width:40px;height:40px;border-radius:12px;border:none;background:#d64545;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .am-del .ico{width:20px;height:20px;}
 .am-colors{display:none;margin:-4px 0 12px;}
@@ -2995,6 +2996,7 @@ function openAccountSheet(id){
   m.innerHTML='<div class="am am-acc">'+
     '<div class="am-top"><button class="am-color" id="amColorBtn" onclick="amToggleColors()" title="Couleur de la carte"></button><span style="flex:1"></span>'+
     '<button class="am-hide" onclick="amToggleHidden()"><svg class="ico" viewBox="0 0 24 24"><path d="'+(AM.hidden?'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6':'M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.8 8.4 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2')+'"/></svg>'+(AM.hidden?'Afficher':'Masquer')+'</button>'+
+    '<button class="sheet-close am-x" onclick="closeAccModal()" title="Fermer">✕</button>'+
     '</div>'+
     '<div class="am-colors" id="amColors"></div>'+
     '<div class="acc-card am-card" id="amCard">'+
