@@ -1195,6 +1195,10 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .bc-day{position:relative;}
 .bc-mon{position:absolute;top:-7px;left:50%;transform:translateX(-50%);z-index:1;font-style:normal;font-size:9px;font-weight:800;color:#fff;background:var(--accent);border-radius:6px;padding:2px 5px;text-transform:uppercase;letter-spacing:.03em;line-height:1;white-space:nowrap;}
 .bg-range-ed{opacity:.65;font-size:12px;margin-left:4px;}
+.oc-rep{flex-wrap:wrap;margin-bottom:4px;}
+.oc-rep button{flex:1 1 auto;padding:9px 8px;font-size:13.5px;}
+.oc-lbl .ico{width:14px;height:14px;vertical-align:-2px;}
+.oc-rep-note{margin:4px 0 6px;}
 .cy-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
 .cy-opt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;width:100%;padding:12px 40px 12px 14px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-family:inherit;cursor:pointer;color:var(--text);}
 .cy-opt b{font-size:15px;font-weight:800;}
@@ -4762,11 +4766,34 @@ function saveTxnEdit(){
   var upd={}; for(var k in t) upd[k]=t[k];
   upd.label=OC.label.trim()||t.label; upd.amount=amount; upd.cat=OC.cat; upd.bank=OC.bank||''; upd.date=OC.date||t.date; upd.note=OC.note.trim();
   if(OC.kind==='dep'){ var c=getCatObj(OC.cat); upd.type=c.group&&c.group!=='rev'?c.group:'dep_var'; }
-  apiPost('/api/transactions',upd,function(err){
-    if(err){ showToast('Erreur : '+err.message); return; }
-    for(var j=0;j<txns.length;j++){ if(txns[j]===t) txns[j]=upd; }
-    setTxns(txns); closeAccModal(); refreshViews(); showToast('Modifié');
+  function save(msg){
+    apiPost('/api/transactions',upd,function(err){
+      if(err){ showToast('Erreur : '+err.message); return; }
+      for(var j=0;j<txns.length;j++){ if(txns[j]===t) txns[j]=upd; }
+      setTxns(txns); closeAccModal(); refreshViews(); showToast(msg||'Modifié');
+    });
+  }
+  var f=OC.makeReg;
+  if(!f||OC.reg||(OC.kind!=='dep'&&OC.kind!=='rev')) return save();
+  var d=parseDs(upd.date), mk=mKey(d.getFullYear(),d.getMonth());
+  var r={kind:OC.kind,label:upd.label,cat:upd.cat,bank:upd.bank||'',amount:upd.amount,day:d.getDate(),next_month:0,
+    freq:f,every:1,anchor:upd.date,end_date:null,start_key:mk};
+  apiPost('/api/recurring',r,function(err,res){
+    if(err||!res||!res.id){ showToast('Erreur : '+((err&&err.message)||'opération régulière non créée')); return; }
+    r.id=res.id; var arr=getRecurring().slice(); arr.push(r); setRecurring(arr);
+    upd.rec_key=r.id+'@'+(f==='month'?mk:upd.date);     // cette operation = la premiere echeance, deja faite
+    save(OC.kind==='rev'?'Revenu devenu régulier':'Dépense devenue régulière');
   });
+}
+// Rendre reguliere une depense ou un revenu deja enregistre : elle revient ensuite toute seule (a confirmer)
+var OC_FREQS=[['','Une seule fois'],['month','Chaque mois'],['week','Chaque semaine'],['year','Chaque année']];
+function ocRegHtml(rev,od){
+  var f=OC.makeReg||'', seg='';
+  OC_FREQS.forEach(function(x){ seg+='<button class="'+(f===x[0]?'on':'')+'" onclick="OC.makeReg=\''+x[0]+'\';renderOccModal()">'+x[1]+'</button>'; });
+  var wd=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][od.getDay()];
+  var info=f==='month'?'Revient le '+od.getDate()+' de chaque mois':f==='week'?'Revient chaque '+wd:f==='year'?'Revient chaque année le '+od.getDate()+' '+MONTHS_FR[od.getMonth()]:'';
+  return '<label class="oc-lbl">'+svgIcon('repeat')+' Répéter</label><div class="seg oc-rep">'+seg+'</div>'+
+    (f?'<p class="am-note oc-rep-note">'+info+', à partir de celle-ci. Elle apparaîtra « à confirmer » dans le Budget à chaque échéance'+(rev?' (pratique pour ta paie)':'')+'.</p>':'');
 }
 function deleteTxnFromEdit(){ var id=OC.txnId; closeAccModal(); deleteHomeTxn(String(Number(id))); }
 function renderOccModal(){
@@ -4794,6 +4821,7 @@ function renderOccModal(){
     '<div class="oc-row"><div class="oc-date"><label class="oc-lbl">Date</label><button class="oc-in oc-dt" onclick="ocToggleCal()">'+svgIcon('calendar')+'<span>'+esc(niceDate(OC.date))+'</span></button></div>'+
     '<div><label class="oc-lbl">Note</label><input class="oc-in" id="ocNote" maxlength="80" placeholder="Note facultative…" value="'+esc(OC.note)+'"></div></div>'+
     (OC.calOpen?ocCalHtml():'')+
+    (edit&&!OC.reg?ocRegHtml(rev,od):'')+
     (edit&&OC.later?'<button class="cyc-reset" onclick="closeAccModal();markTxnPaid(\''+Number(OC.txnId)+'\')">Marquer comme payée</button>':'')+
     '<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save oc-go" onclick="'+(edit?'saveTxnEdit()':'bgConfirmOcc()')+'">'+btn+'</button></div></div>';
   var m=document.getElementById('accModal'), y=m.firstChild?m.firstChild.scrollTop:0;
