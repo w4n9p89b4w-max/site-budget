@@ -689,6 +689,21 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .tour-skip{background:none;color:#8a7f72;}
 .tour-next{background:#a8873f;color:#fff;}
 .adm-h{margin:18px 2px 8px;font-size:13px;font-weight:800;color:#a8873f;text-transform:uppercase;letter-spacing:.5px;}
+.adm-h{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.adm-h button{font-family:inherit;font-size:12.5px;font-weight:800;border:1.5px solid #e2d3b0;background:#fff;color:#8a6a24;border-radius:99px;padding:5px 12px;cursor:pointer;text-transform:none;letter-spacing:0;flex:none;}
+.adm-bk{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;}
+.adm-b{display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:11px 12px 11px 14px;}
+.adm-b div{flex:1;min-width:0;display:flex;flex-direction:column;}
+.adm-b b{font-size:14.5px;font-weight:800;}
+.adm-b span{font-size:12.5px;font-weight:700;color:#8a6a24;}
+.adm-b small{font-size:12px;color:#9a8f80;}
+.adm-b button{font-family:inherit;font-weight:800;cursor:pointer;border-radius:12px;flex:none;}
+.adm-get{width:36px;height:36px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:16px;}
+.adm-put{padding:9px 12px;border:1.5px solid var(--accent);background:var(--accent-light);color:#6b5115;font-size:13px;}
+.adm-danger{margin-top:22px;border:1.5px solid #ecd0ca;border-radius:18px;padding:14px 16px;background:#fff;}
+.adm-danger b{color:var(--red);font-size:15px;}
+.adm-danger p{font-size:13px;color:var(--muted);line-height:1.5;margin:6px 0 4px;}
+.sheet-btn.adm-red{background:var(--red);}
 .adm-list{display:flex;flex-direction:column;gap:8px;}
 .adm-u{display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 2px 8px rgba(80,55,20,.05);}
 .adm-av{width:42px;height:42px;border-radius:50%;background:#efe2c4;color:#7a5c2e;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;flex-shrink:0;}
@@ -5839,7 +5854,9 @@ function setAdmin(){
     var html='';
     for(var k=0;k<order.length;k++){
       var list=byH[order[k]];
-      html+='<div class="adm-h">Foyer n°'+order[k]+' · '+list.length+' membre'+(list.length>1?'s':'')+'</div><div class="adm-list">';
+      var hh=(d.households||[]).filter(function(x){ return x.id===order[k]; })[0], c=hh&&hh.counts;
+      html+='<div class="adm-h"><span>Foyer n°'+order[k]+' · '+list.length+' membre'+(list.length>1?'s':'')+(c?' · '+c.transactions+' opération'+(c.transactions>1?'s':''):'')+'</span>'+
+        '<button onclick="setAdminHh('+order[k]+')">Données ›</button></div><div class="adm-list">';
       for(var j=0;j<list.length;j++){
         var v=list[j];
         html+='<div class="adm-u"><span class="adm-av">'+esc((v.name||'?').charAt(0).toUpperCase())+'</span><div><b>'+esc(v.name)+(v.admin?' <i>admin</i>':'')+(String(v.id)===currentUser?' <i class="me">toi</i>':'')+'</b>'+
@@ -5851,6 +5868,85 @@ function setAdmin(){
       '<div class="detail-list"><div><span>Comptes</span><span>'+d.users.length+'</span></div><div><span>Foyers</span><span>'+order.length+'</span></div></div>'+
       (html||'<p class="sheet-note">Aucun compte.</p>'));
   });
+}
+// Administration d un foyer : sauvegardes du serveur, remise a une date, effacement des donnees
+function admDate(t){ var x=new Date(t); return isNaN(x)?'—':x.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})+' à '+x.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function admCounts(c){ return c.accounts+' compte'+(c.accounts>1?'s':'')+' · '+c.transactions+' opération'+(c.transactions>1?'s':'')+' · '+c.recurring+' régulière'+(c.recurring>1?'s':''); }
+function setAdminHh(hid){
+  openSheet(sheetHead('Foyer n°'+hid)+'<p class="sheet-note">Chargement…</p>');
+  apiGet('/api/admin/households/'+hid,function(err,d){
+    if(err||!d||d.error){ openSheet(sheetHead('Foyer n°'+hid)+'<p class="sheet-note">'+esc((d&&d.error)||'Erreur')+'</p>'); return; }
+    var mine=AUTH.household&&String(AUTH.household.id)===String(hid);
+    var h=sheetHead('Foyer n°'+hid)+
+      '<p class="sheet-note">'+esc(d.members.map(function(m){ return m.name; }).join(', ')||'Aucun membre')+(mine?' · <b>c’est ton foyer</b>':'')+'</p>'+
+      '<div class="detail-list"><div><span>Comptes bancaires</span><span>'+d.counts.accounts+'</span></div><div><span>Opérations</span><span>'+d.counts.transactions+'</span></div>'+
+      '<div><span>Opérations régulières</span><span>'+d.counts.recurring+'</span></div><div><span>Objectifs</span><span>'+d.counts.goals+'</span></div></div>'+
+      '<div class="adm-h"><span>Sauvegardes du serveur</span><button onclick="admBackup('+hid+')">+ Sauvegarder</button></div>'+
+      '<p class="sheet-note">Une copie est faite chaque nuit, et automatiquement avant chaque effacement ou remise. Les 40 dernières sont gardées.</p>';
+    if(!d.backups.length) h+='<p class="sheet-note"><i>Aucune sauvegarde pour l’instant.</i></p>';
+    else{
+      h+='<div class="adm-bk">';
+      d.backups.forEach(function(b){
+        h+='<div class="adm-b"><div><b>'+esc(admDate(b.at))+'</b><span>'+esc(b.label)+'</span><small>'+esc(admCounts(b.counts||{accounts:0,transactions:0,recurring:0}))+'</small></div>'+
+          '<button class="adm-get" title="Télécharger" onclick="admDownload('+hid+',\''+esc(b.file)+'\')">⤓</button>'+
+          '<button class="adm-put" onclick="admRestore('+hid+',\''+esc(b.file)+'\',\''+esc(admDate(b.at))+'\')">Remettre</button></div>';
+      });
+      h+='</div>';
+    }
+    h+='<div class="adm-danger"><b>Effacer les données du foyer</b><p>Comptes bancaires, opérations, régulières, budget, catégories et objectifs. Les membres gardent leur compte et repartent de zéro. Une sauvegarde est faite juste avant : tu pourras tout remettre.</p>'+
+      '<button class="sheet-btn ghost" onclick="admWipe('+hid+','+d.counts.transactions+')">Effacer les données…</button></div>';
+    openSheet(h);
+  });
+}
+function admBackup(hid){
+  apiPost('/api/admin/households/'+hid+'/backup',{},function(err,r){
+    if(err||!r||!r.ok){ showToast((r&&r.error)||'Sauvegarde impossible'); return; }
+    showToast('Sauvegarde faite'); setAdminHh(hid);
+  });
+}
+// Apres un changement sur son propre foyer, on recharge la page pour revoir les bonnes donnees
+function admAfter(hid,msg){
+  if(AUTH.household&&String(AUTH.household.id)===String(hid)){ showToast(msg); setTimeout(function(){ location.reload(); },900); return; }
+  showToast(msg); setAdminHh(hid);
+}
+function admRestore(hid,file,when){
+  openSheet(sheetHead('Remettre une sauvegarde')+
+    '<p class="sheet-note">Le foyer n°'+hid+' va retrouver ses données du <b>'+esc(when)+'</b>. Tout ce qui a été saisi depuis sera remplacé.</p>'+
+    '<p class="sheet-note">Une copie de l’état actuel est faite juste avant : tu pourras revenir en arrière.</p>'+
+    '<button class="sheet-btn" onclick="admRestoreGo('+hid+',\''+esc(file)+'\')">Remettre cette sauvegarde</button>'+
+    '<button class="sheet-btn ghost" onclick="setAdminHh('+hid+')">Annuler</button>');
+}
+function admRestoreGo(hid,file){
+  apiPost('/api/admin/households/'+hid+'/restore',{file:file},function(err,r){
+    if(err||!r||!r.ok){ showToast((r&&r.error)||'Remise impossible'); return; }
+    admAfter(hid,'Sauvegarde remise');
+  });
+}
+function admWipe(hid,n){
+  openSheet(sheetHead('Effacer les données')+
+    '<p class="sheet-note">Toutes les données du foyer n°'+hid+' vont être effacées ('+n+' opération'+(n>1?'s':'')+', comptes, budget, objectifs…). Les membres gardent leur compte.</p>'+
+    '<p class="sheet-note">Pour confirmer, écris <b>EFFACER</b> :</p>'+
+    '<div class="sf"><input type="text" id="admWipeTxt" autocomplete="off" placeholder="EFFACER" style="text-align:center;letter-spacing:3px;font-weight:800"></div>'+
+    '<button class="sheet-btn adm-red" onclick="admWipeGo('+hid+')">Effacer définitivement</button>'+
+    '<button class="sheet-btn ghost" onclick="setAdminHh('+hid+')">Annuler</button>');
+}
+function admWipeGo(hid){
+  var v=document.getElementById('admWipeTxt').value.trim().toUpperCase();
+  if(v!=='EFFACER'){ showToast('Écris EFFACER pour confirmer'); return; }
+  apiPost('/api/admin/households/'+hid+'/wipe',{confirm:'EFFACER'},function(err,r){
+    if(err||!r||!r.ok){ showToast((r&&r.error)||'Effacement impossible'); return; }
+    admAfter(hid,'Données effacées (sauvegarde gardée)');
+  });
+}
+function admDownload(hid,file){
+  var xhr=new XMLHttpRequest(); xhr.open('GET',API_BASE+'/api/admin/households/'+hid+'/backups/'+encodeURIComponent(file),true);
+  xhr.setRequestHeader('Authorization','Bearer '+AUTH.token); xhr.responseType='blob';
+  xhr.onload=function(){
+    if(xhr.status!==200){ showToast('Téléchargement impossible'); return; }
+    var a=document.createElement('a'); a.href=URL.createObjectURL(xhr.response); a.download='foyer-'+hid+'_'+file;
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+  };
+  xhr.send();
 }
 function setHousehold(){
   var ms=AUTH.household.members||[], rows='';
