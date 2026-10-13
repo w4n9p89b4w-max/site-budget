@@ -459,6 +459,26 @@ body.on-home header{display:none;}
 .sheet-btn{width:100%;padding:15px;border-radius:16px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:17px;font-weight:800;cursor:pointer;margin-top:6px;}
 .sheet-btn.ghost{background:#fff;color:var(--red);border:1.5px solid #ecd0ca;}
 .sheet-note{font-size:13.5px;color:var(--muted);line-height:1.5;margin-bottom:12px;}
+.qk-pick{display:flex;gap:10px;margin:4px 0 14px;}
+.qk-pick label{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 8px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-weight:800;font-size:15px;color:var(--text);cursor:pointer;text-align:center;}
+.qk-pick label span{font-size:26px;}
+.qk-pick label small{font-size:12px;font-weight:600;color:var(--muted);}
+.qk-pick input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+.qk-wait{text-align:center;padding:28px 0;color:var(--muted);font-weight:700;}
+.qk-wait i{display:block;width:34px;height:34px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--accent-light);border-top-color:var(--accent);animation:qkspin .9s linear infinite;}
+@keyframes qkspin{to{transform:rotate(360deg);}}
+.qk-list{max-height:46vh;overflow:auto;margin:0 -4px 10px;padding:0 4px;}
+.qk-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);}
+.qk-row input[type=checkbox]{width:20px;height:20px;margin-top:4px;accent-color:var(--accent);flex:none;}
+.qk-row .qk-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.qk-row .qk-top{display:flex;gap:8px;align-items:center;}
+.qk-row .qk-top input{flex:1;min-width:0;font-family:inherit;font-size:15px;font-weight:700;border:none;border-bottom:1px dashed var(--border);background:transparent;color:var(--text);padding:2px 0;}
+.qk-row .qk-amt{font-weight:800;white-space:nowrap;}
+.qk-row .qk-amt.dep{color:var(--red);} .qk-row .qk-amt.rev{color:var(--green);}
+.qk-row .qk-sub{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted);}
+.qk-row select{font-family:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);max-width:60%;}
+.qk-row .qk-dup{color:var(--orange);font-weight:700;}
+.qk-row.off .qk-main{opacity:.45;}
 .detail-top{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 18px;}
 .detail-top .tx-icon{width:60px;height:60px;font-size:30px;border-radius:16px;}
 .detail-amt{font-size:34px;font-weight:900;}
@@ -5217,7 +5237,7 @@ function renderSettingsPage(){
       row(svgIcon('sun'),'Apparence',{auto:'Automatique',light:'Clair',dark:'Sombre'}[themePref()],'setAppearance()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
       row(svgIcon('bell'),'Notifications','','setNotif()')+
-      row(svgIcon('bolt'),'Ajout éclair','','setSoon(\'Ajout éclair\',\'Ajouter une dépense en un seul geste depuis l’écran d’accueil du téléphone.\')')+
+      row(svgIcon('bolt'),'Ajout éclair','','setQuick()')+
       row(svgIcon('lock'),'Confidentialité','','setPrivacy()')+
       row('<span class="set-eu">?</span>','Visite guidée','','setTour()','set-tour')+
       row(svgIcon('flag'),'Signaler un problème','','setBug()','bug')+
@@ -5296,6 +5316,152 @@ function setPrivacy(){
     '<p class="sheet-note">Aucune connexion à ta banque : les montants, c’est toi qui les saisis.</p>'+
     '<p class="sheet-note">Tes données sont enregistrées sur le serveur du site et ne sont partagées qu’entre Etienne et Noa.</p>'+
     '<p class="sheet-note">Les logos des banques et des enseignes sont enregistrés dans le site : aucune information n’est envoyée à un service extérieur pour les afficher.</p>');
+}
+// ---------- Ajout eclair : photo de ticket, releve PDF ou CSV lu par Claude (cle sur le serveur) ----------
+var QK={ops:[]};
+function setQuick(){
+  if(DEMO){ openSheet(sheetHead('Ajout éclair')+'<p class="sheet-note">L’ajout éclair lit tes tickets et relevés avec l’intelligence artificielle. Il ne marche que sur le vrai site, pas en mode démo.</p>'); return; }
+  openSheet(sheetHead('Ajout éclair')+
+    '<p class="sheet-note">Prends en photo un ticket de caisse, ou choisis un relevé de compte (PDF, CSV ou capture d’écran) : les opérations sont lues pour toi, tu vérifies, puis tu ajoutes.</p>'+
+    '<div class="qk-pick">'+
+      '<label><span>📷</span>Photo<small>ticket de caisse</small><input type="file" accept="image/*" capture="environment" onchange="qkFiles(this)"></label>'+
+      '<label><span>📄</span>Fichier<small>PDF, CSV, image</small><input type="file" accept="image/*,application/pdf,.pdf,.csv,text/csv,.txt" multiple onchange="qkFiles(this)"></label>'+
+    '</div><p class="sheet-note" id="qkInfo"></p>');
+  apiGet('/api/import',function(err,r){
+    var el=document.getElementById('qkInfo'); if(!el||err||!r) return;
+    if(!r.ready) el.innerHTML='<b>Pas encore prêt :</b> la clé Anthropic n’est pas réglée sur le serveur (fichier anthropic.config.json).';
+  });
+}
+// Photo reduite (2000 px max, JPEG) : plus rapide a envoyer, et assez net pour lire un ticket
+function qkImage(file,cb){
+  var url=URL.createObjectURL(file), img=new Image();
+  img.onload=function(){
+    var k=Math.min(1,2000/Math.max(img.width,img.height)), c=document.createElement('canvas');
+    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    var g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url);
+    cb(null,{name:file.name,type:'image/jpeg',data:c.toDataURL('image/jpeg',0.85).split(',')[1]});
+  };
+  img.onerror=function(){ URL.revokeObjectURL(url); cb(new Error('Image illisible : '+file.name)); };
+  img.src=url;
+}
+function qkBase64(file,cb){
+  var r=new FileReader();
+  r.onload=function(){ cb(null,{name:file.name,type:'application/pdf',data:String(r.result).split(',')[1]}); };
+  r.onerror=function(){ cb(new Error('Fichier illisible : '+file.name)); };
+  r.readAsDataURL(file);
+}
+// CSV des banques souvent en Windows-1252 : on relit dans cet encodage si l UTF-8 donne des caracteres casses
+function qkText(file,cb){
+  var r=new FileReader();
+  r.onload=function(){
+    var t=String(r.result);
+    if(t.indexOf('�')<0) return cb(null,t);
+    var r2=new FileReader(); r2.onload=function(){ cb(null,String(r2.result)); }; r2.onerror=function(){ cb(null,t); };
+    r2.readAsText(file,'windows-1252');
+  };
+  r.onerror=function(){ cb(new Error('Fichier illisible : '+file.name)); };
+  r.readAsText(file,'utf-8');
+}
+function qkFiles(input){
+  var list=[].slice.call(input.files||[]); if(!list.length) return;
+  var body={files:[],text:'',textName:'',cats:getCats().map(function(c){ return {key:c.key,label:c.label,group:c.group}; })};
+  var left=list.length, failed=null;
+  function done(err){
+    if(err&&!failed) failed=err;
+    if(--left) return;
+    if(failed){ showToast(failed.message,3000); return; }
+    qkSend(body);
+  }
+  list.forEach(function(f){
+    var name=(f.name||'').toLowerCase();
+    if(/^image\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp)$/.test(name)) qkImage(f,function(e,x){ if(x) body.files.push(x); done(e); });
+    else if(f.type==='application/pdf'||/\.pdf$/.test(name)) qkBase64(f,function(e,x){ if(x) body.files.push(x); done(e); });
+    else qkText(f,function(e,t){ if(t){ body.text+=(body.text?'\n\n':'')+t; body.textName=body.textName||f.name; } done(e); });
+  });
+  document.getElementById('sheetBody').innerHTML=sheetHead('Ajout éclair')+'<div class="qk-wait"><i></i>Lecture en cours…<br><small>Ça peut prendre jusqu’à une minute pour un long relevé.</small></div>';
+}
+function qkSend(body){
+  var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+'/api/import',true);
+  xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
+  xhr.timeout=180000;
+  function fail(m){ if(!document.getElementById('sheet').classList.contains('open')) return;
+    document.getElementById('sheetBody').innerHTML=sheetHead('Ajout éclair')+'<p class="sheet-note">'+esc(m)+'</p><button class="sheet-btn" onclick="setQuick()">Réessayer</button>'; }
+  xhr.onload=function(){
+    if(xhr.status===401){ authExpired(); return; }
+    var r=null; try{ r=JSON.parse(xhr.responseText); }catch(e){}
+    if(xhr.status===413) return fail('Fichier trop gros. Essaie avec moins de pages à la fois.');
+    if(!r||!r.ok) return fail((r&&r.error)||'Lecture impossible pour le moment.');
+    qkReview(r);
+  };
+  xhr.onerror=function(){ fail('Pas de connexion au serveur.'); };
+  xhr.ontimeout=function(){ fail('Trop long : essaie avec un document plus court.'); };
+  xhr.send(JSON.stringify(body));
+}
+// Deja notee ? meme date, meme montant, meme sens
+function qkDup(o,bank){
+  return getTxns().some(function(t){
+    return t.date===o.date&&Math.abs((+t.amount||0)-o.amount)<0.005&&((t.type==='rev')===(o.kind==='rev'))&&(!bank||!t.bank||String(t.bank)===String(bank));
+  });
+}
+function qkCatOptions(kind,sel){
+  var h='', cats=getCats();
+  for(var i=0;i<cats.length;i++){ var c=cats[i]; if(kind==='rev'?c.group!=='rev':c.group==='rev') continue;
+    h+='<option value="'+esc(c.key)+'"'+(c.key===sel?' selected':'')+'>'+esc(c.icon+' '+c.label)+'</option>'; }
+  return h;
+}
+function qkReview(r){
+  var mine=getAccounts().filter(function(a){ return !a.hidden&&a.owner===currentUser; });
+  var acc=(mine[0]||getAccounts()[0]||{}).id||'';
+  QK.ops=r.operations||[];
+  if(!QK.ops.length){
+    document.getElementById('sheetBody').innerHTML=sheetHead('Ajout éclair')+'<p class="sheet-note">Aucune opération trouvée.'+(r.remarque?' '+esc(r.remarque):'')+'</p><button class="sheet-btn" onclick="setQuick()">Essayer un autre document</button>';
+    return;
+  }
+  var h=sheetHead(r.document==='ticket'?'Ticket lu':'Opérations lues')+
+    '<div class="sf"><label>Compte</label><select id="qkBank" onchange="qkMarkDups()">'+accountOptions(acc,true)+'</select></div>'+
+    '<div class="qk-list">';
+  QK.ops.forEach(function(o,i){
+    h+='<div class="qk-row" id="qkr'+i+'"><input type="checkbox" id="qkc'+i+'" checked onchange="qkCount()">'+
+      '<div class="qk-main"><div class="qk-top"><input type="text" id="qkl'+i+'" value="'+esc(o.label)+'">'+
+      '<span class="qk-amt '+o.kind+'">'+(o.kind==='rev'?'+':'-')+fmtE(o.amount,true)+'</span></div>'+
+      '<div class="qk-sub"><span>'+esc(o.date.split('-').reverse().join('/'))+'</span><select id="qks'+i+'">'+qkCatOptions(o.kind,o.cat)+'</select><span class="qk-dup" id="qkd'+i+'"></span></div></div></div>';
+  });
+  h+='</div>'+(r.remarque?'<p class="sheet-note">'+esc(r.remarque)+'</p>':'')+
+    '<button class="sheet-btn" id="qkGo" onclick="qkSave()">Ajouter</button>';
+  document.getElementById('sheetBody').innerHTML=h;
+  qkMarkDups();
+}
+function qkMarkDups(){
+  var bank=document.getElementById('qkBank').value;
+  QK.ops.forEach(function(o,i){
+    var d=qkDup(o,bank);
+    document.getElementById('qkd'+i).textContent=d?'déjà notée ?':'';
+    document.getElementById('qkc'+i).checked=!d;
+  });
+  qkCount();
+}
+function qkCount(){
+  var n=0; QK.ops.forEach(function(o,i){ var on=document.getElementById('qkc'+i).checked; if(on) n++; document.getElementById('qkr'+i).classList.toggle('off',!on); });
+  var b=document.getElementById('qkGo'); b.disabled=!n;
+  b.textContent=n?'Ajouter '+n+' opération'+(n>1?'s':''):'Rien à ajouter';
+}
+function qkSave(){
+  var bank=document.getElementById('qkBank').value, now=Date.now(), out=[];
+  QK.ops.forEach(function(o,i){
+    if(!document.getElementById('qkc'+i).checked) return;
+    var cat=document.getElementById('qks'+i).value, g=getCatObj(cat).group;
+    out.push({id:now+out.length,date:o.date,label:document.getElementById('qkl'+i).value.trim()||o.label,cat:cat,amount:o.amount,
+      type:o.kind==='rev'?'rev':((g&&g!=='rev')?g:'dep_var'),bank:bank,
+      need:o.kind==='rev'?'':((g==='dep'||g==='epargne')?'obligatoire':''),note:o.detail||null});
+  });
+  if(!out.length) return;
+  document.getElementById('qkGo').disabled=true;
+  apiPost('/api/transactions/bulk',{transactions:out},function(err){
+    if(err){ document.getElementById('qkGo').disabled=false; showToast('Erreur : '+err.message); return; }
+    var txns=getTxns(); out.slice().reverse().forEach(function(t){ txns.unshift(t); }); setTxns(txns);
+    closeSheet(); refreshViews(); showToast(out.length>1?out.length+' opérations ajoutées':'Opération ajoutée');
+  });
 }
 function setSoon(title,txt){ openSheet(sheetHead(title)+'<p class="sheet-note">'+txt+'</p><p class="sheet-note"><b>Bientôt disponible.</b></p>'); }
 function setBug(){

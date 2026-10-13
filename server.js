@@ -12,6 +12,9 @@ const crypto = require('crypto');
 // Envoi des mails (mot de passe oublie) : facultatif, voir mail.config.json
 let nodemailer = null;
 try { nodemailer = require('nodemailer'); } catch (e) {}
+// Ajout eclair (lecture des tickets / releves par Claude) : facultatif, voir anthropic.config.json
+let Anthropic = null;
+try { Anthropic = require('@anthropic-ai/sdk'); Anthropic = Anthropic.default || Anthropic; } catch (e) {}
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -21,7 +24,9 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'etienne@ecotole.re').toLowerC
 
 
 app.use(cors());
-app.use(bodyParser.json({ limit: '5mb' }));
+// L ajout eclair envoie des photos / PDF : il a droit a des envois plus gros
+const jsonSmall = bodyParser.json({ limit: '5mb' }), jsonBig = bodyParser.json({ limit: '40mb' });
+app.use((req, res, next) => (req.path === '/api/import' ? jsonBig : jsonSmall)(req, res, next));
 
 // ── Base de donnees ──
 const db = new Database(DB_PATH);
@@ -829,6 +834,100 @@ function pushTick() {
   });
 }
 setInterval(pushTick, 60000);
+
+// ── Ajout eclair : Claude lit un ticket de caisse ou un releve (photo, PDF, CSV) ──
+// Cle dans anthropic.config.json (jamais sur GitHub) ou variable ANTHROPIC_API_KEY
+function anthropicConfig() {
+  const file = path.join(__dirname, 'anthropic.config.json');
+  let c = {};
+  if (fs.existsSync(file)) { try { c = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { console.log('anthropic.config.json illisible'); } }
+  c.apiKey = process.env.ANTHROPIC_API_KEY || c.apiKey;
+  c.model = process.env.ANTHROPIC_MODEL || c.model || 'claude-opus-5-5';
+  return Anthropic && c.apiKey && !/^sk-ant-\.\.\./.test(c.apiKey) ? c : null;
+}
+app.get('/api/import', requireAuth, (req, res) => {
+  res.json({ ready: !!anthropicConfig(), module: !!Anthropic });
+});
+app.post('/api/import', requireAuth, async (req, res) => {
+  const conf = anthropicConfig();
+  if (!conf) return res.status(503).json({ error: Anthropic ? 'Clé Anthropic pas encore réglée sur le serveur (anthropic.config.json).' : 'Module Anthropic absent : lance « npm install --ignore-scripts » puis relance le site.' });
+  const files = Array.isArray(req.body.files) ? req.body.files.slice(0, 10) : [];
+  const text = typeof req.body.text === 'string' ? req.body.text.slice(0, 400000) : '';
+  const cats = (Array.isArray(req.body.cats) ? req.body.cats : []).filter(c => c && c.key).slice(0, 200);
+  if (!files.length && !text) return res.status(400).json({ error: 'Aucun fichier reçu' });
+
+  const content = [];
+  for (const f of files) {
+    const type = String(f.type || '').toLowerCase(), data = String(f.data || '');
+    if (!data) continue;
+    if (type === 'application/pdf') content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } });
+    else if (/^image\/(jpeg|png|gif|webp)$/.test(type)) content.push({ type: 'image', source: { type: 'base64', media_type: type, data } });
+    else return res.status(400).json({ error: 'Format non pris en charge : ' + (f.name || type) });
+  }
+  if (text) content.push({ type: 'text', text: '<fichier nom="' + String(req.body.textName || 'import.csv').replace(/[<>"]/g, '') + '">\n' + text + '\n</fichier>' });
+  const today = new Date().toISOString().slice(0, 10);
+  content.push({ type: 'text', text:
+    'Date du jour : ' + today + '.\n' +
+    'Catégories disponibles (clé : nom, groupe) :\n' + cats.map(c => '- ' + c.key + ' : ' + c.label + ' (' + (c.group === 'rev' ? 'revenu' : 'dépense') + ')').join('\n') + '\n\n' +
+    'Extrais les opérations de ce document pour un carnet de budget personnel.\n' +
+    '- Ticket de caisse ou facture : UNE seule opération (le total payé), libellé = nom de l\'enseigne, date du ticket ; ' +
+    'mets le détail utile des articles dans "detail" (court).\n' +
+    '- Relevé bancaire (PDF, photo ou CSV) : une opération par ligne du relevé. Ignore les soldes, totaux, reports et lignes d\'en-tête. ' +
+    'Libellé court et lisible (nom du commerçant ou de l\'organisme, sans les numéros de carte ni références) ; "detail" peut garder le libellé brut.\n' +
+    '- amount toujours positif ; sens = "depense" pour un débit, "revenu" pour un crédit.\n' +
+    '- date au format AAAA-MM-JJ (date de l\'opération). Si l\'année manque, déduis-la du document, sinon prends la plus récente avant la date du jour.\n' +
+    '- cat = la clé de catégorie la plus adaptée parmi la liste (une catégorie de revenu pour un revenu).\n' +
+    '- Si le document est illisible ou ne contient aucune opération, renvoie une liste vide et explique pourquoi dans "remarque".'
+  });
+
+  const catKeys = cats.map(c => String(c.key));
+  const schema = {
+    type: 'object', additionalProperties: false, required: ['document', 'remarque', 'operations'],
+    properties: {
+      document: { type: 'string', enum: ['ticket', 'releve', 'autre'] },
+      remarque: { type: 'string' },
+      operations: { type: 'array', items: {
+        type: 'object', additionalProperties: false, required: ['date', 'label', 'amount', 'sens', 'cat', 'detail'],
+        properties: {
+          date: { type: 'string' }, label: { type: 'string' }, amount: { type: 'number' },
+          sens: { type: 'string', enum: ['depense', 'revenu'] },
+          cat: catKeys.length ? { type: 'string', enum: catKeys } : { type: 'string' },
+          detail: { type: 'string' }
+        }
+      } }
+    }
+  };
+
+  try {
+    const client = new Anthropic({ apiKey: conf.apiKey });
+    const msg = await client.beta.messages.create({
+      model: conf.model,
+      max_tokens: 16000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
+      messages: [{ role: 'user', content }]
+    });
+    if (msg.stop_reason === 'refusal') return res.status(422).json({ error: 'Claude n’a pas voulu lire ce document.' });
+    if (msg.stop_reason === 'max_tokens') return res.status(422).json({ error: 'Document trop long : découpe-le (par exemple un mois à la fois).' });
+    const out = msg.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const data = JSON.parse(out);
+    const ops = (data.operations || []).filter(o => o && /^\d{4}-\d{2}-\d{2}$/.test(o.date) && Math.abs(+o.amount) > 0)
+      .map(o => ({ date: o.date, label: String(o.label || '').slice(0, 120), amount: Math.round(Math.abs(+o.amount) * 100) / 100,
+        kind: o.sens === 'revenu' ? 'rev' : 'dep', cat: o.cat || '', detail: String(o.detail || '').slice(0, 300) }));
+    console.log('Ajout eclair : ' + ops.length + ' operation(s) lue(s) pour ' + req.user + ' (' + msg.usage.input_tokens + ' + ' + msg.usage.output_tokens + ' jetons)');
+    res.json({ ok: true, document: data.document, remarque: data.remarque || '', operations: ops });
+  } catch (e) {
+    console.log('Ajout eclair : erreur', e.status || '', e.message);
+    let m = 'Lecture impossible pour le moment, réessaie.';
+    if (e instanceof Anthropic.AuthenticationError) m = 'Clé Anthropic refusée : vérifie anthropic.config.json.';
+    else if (e instanceof Anthropic.PermissionDeniedError) m = 'Clé Anthropic sans accès à ce modèle.';
+    else if (e instanceof Anthropic.RateLimitError) m = 'Trop de demandes d’un coup, réessaie dans une minute.';
+    else if (e instanceof Anthropic.BadRequestError) m = /credit|billing/i.test(e.message) ? 'Plus de crédit sur le compte Anthropic.' : 'Document refusé (trop gros ou illisible ?).';
+    else if (e instanceof SyntaxError) m = 'Réponse illisible, réessaie.';
+    res.status(502).json({ error: m });
+  }
+});
 
 const PUBLIC = path.join(__dirname, 'public');
 if (fs.existsSync(PUBLIC)) {

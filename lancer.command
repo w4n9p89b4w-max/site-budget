@@ -26,7 +26,7 @@ if command -v git >/dev/null 2>&1; then
 fi
 
 # Premier lancement sur ce Mac (ou autre version de Node) : on (re)installe les modules
-if ! node -e "require('better-sqlite3')" >/dev/null 2>&1; then
+if ! node -e "require('better-sqlite3');require('@anthropic-ai/sdk')" >/dev/null 2>&1; then
   echo "Installation des modules pour ce Mac, patiente une minute..."
   # --ignore-scripts : better-sqlite3 contient deja les versions compilees
   npm install --ignore-scripts

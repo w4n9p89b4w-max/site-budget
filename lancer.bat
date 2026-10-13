@@ -30,7 +30,7 @@ if not errorlevel 1 (
 )
 
 rem Premier lancement sur cet ordinateur (ou autre version de Node) : on (re)installe les modules
-node -e "require('better-sqlite3')" >nul 2>nul
+node -e "require('better-sqlite3');require('@anthropic-ai/sdk')" >nul 2>nul
 if errorlevel 1 (
   echo Installation des modules pour cet ordinateur, patiente une minute...
   rem --ignore-scripts : better-sqlite3 contient deja les versions compilees, pas besoin de Visual Studio
