@@ -467,18 +467,55 @@ body.on-home header{display:none;}
 .qk-wait{text-align:center;padding:28px 0;color:var(--muted);font-weight:700;}
 .qk-wait i{display:block;width:34px;height:34px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--accent-light);border-top-color:var(--accent);animation:qkspin .9s linear infinite;}
 @keyframes qkspin{to{transform:rotate(360deg);}}
-.qk-list{max-height:46vh;overflow:auto;margin:0 -4px 10px;padding:0 4px;}
-.qk-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);}
-.qk-row input[type=checkbox]{width:20px;height:20px;margin-top:4px;accent-color:var(--accent);flex:none;}
-.qk-row .qk-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
-.qk-row .qk-top{display:flex;gap:8px;align-items:center;}
-.qk-row .qk-top input{flex:1;min-width:0;font-family:inherit;font-size:15px;font-weight:700;border:none;border-bottom:1px dashed var(--border);background:transparent;color:var(--text);padding:2px 0;}
-.qk-row .qk-amt{font-weight:800;white-space:nowrap;}
-.qk-row .qk-amt.dep{color:var(--red);} .qk-row .qk-amt.rev{color:var(--green);}
-.qk-row .qk-sub{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted);}
-.qk-row select{font-family:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);max-width:60%;}
-.qk-row .qk-dup{color:var(--orange);font-weight:700;}
-.qk-row.off .qk-main{opacity:.45;}
+.sheet.qk-wide{max-width:880px;}
+.qk-sum{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px;}
+.qk-sum button{font-family:inherit;font-size:13.5px;font-weight:800;padding:8px 14px;border-radius:99px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;}
+.qk-sum button b{margin-left:4px;}
+.qk-sum button.on{border-color:var(--accent);background:var(--accent-light);color:#6b5115;}
+.qk-sum button.warn b{color:var(--orange);}
+.qk-bar{display:flex;gap:12px;align-items:flex-end;margin-bottom:6px;}
+.qk-bar .sf{flex:1;margin:0;}
+.qk-list{max-height:min(56vh,620px);overflow:auto;margin:0 0 12px;}
+.qk-row{border-bottom:1px solid var(--border);border-left:4px solid transparent;padding:10px 4px 10px 10px;}
+.qk-line{display:grid;grid-template-columns:22px 1fr 90px 190px 110px;gap:12px;align-items:center;}
+.qk-line input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);margin:0;}
+.qk-line .qk-lab{min-width:0;font-family:inherit;font-size:15px;font-weight:700;border:none;border-bottom:1px dashed var(--border);background:transparent;color:var(--text);padding:3px 0;}
+.qk-line .qk-date{font-size:13px;color:var(--muted);font-weight:700;}
+.qk-line select{font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);min-width:0;}
+.qk-amt{font-weight:800;white-space:nowrap;text-align:right;}
+.qk-amt.dep{color:var(--red);} .qk-amt.rev{color:var(--green);}
+.qk-row.off .qk-line{opacity:.45;}
+.qk-row.off .qk-line .qk-lab{text-decoration:line-through;}
+.qk-row.dup{background:linear-gradient(90deg,#fdf1e4,transparent 70%);border-left-color:var(--orange);}
+.qk-row.dup.sure{border-left-color:var(--red);background:linear-gradient(90deg,var(--red-light),transparent 70%);}
+.qk-flag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--orange);margin:2px 0 0 34px;cursor:pointer;background:none;border:none;font-family:inherit;padding:0;}
+.qk-row.sure .qk-flag{color:var(--red);}
+.qk-flag i{font-style:normal;color:var(--muted);font-weight:700;}
+.qk-cmp{display:none;margin:10px 0 4px 34px;}
+.qk-row.open .qk-cmp{display:block;}
+.qk-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.qk-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;}
+.qk-card h5{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;}
+.qk-card h5 button{font-family:inherit;font-size:11.5px;font-weight:800;border:none;background:none;color:var(--accent);cursor:pointer;padding:0;text-transform:none;letter-spacing:0;}
+.qk-card dl{display:grid;grid-template-columns:78px 1fr;gap:5px 10px;font-size:13.5px;}
+.qk-card dt{color:var(--muted);font-weight:700;}
+.qk-card dd{font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.qk-card dd.diff{background:#fdf1e4;color:#9a4a0b;border-radius:6px;padding:0 6px;margin-left:-6px;}
+.qk-card dd.same::after{content:' ✓';color:var(--green);}
+.qk-choice{display:flex;gap:10px;margin-top:10px;}
+.qk-choice button{flex:1;font-family:inherit;font-size:14px;font-weight:800;padding:11px;border-radius:14px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;}
+.qk-choice button.on.skip{border-color:var(--red);background:var(--red-light);color:var(--red);}
+.qk-choice button.on.add{border-color:var(--green);background:var(--green-light);color:var(--green);}
+.qk-foot{display:flex;gap:14px;align-items:center;}
+.qk-foot p{flex:1;font-size:13.5px;color:var(--muted);font-weight:700;margin:0;}
+.qk-foot .sheet-btn{width:auto;flex:none;padding:14px 26px;margin:0;}
+.qk-foot .sheet-btn:disabled{opacity:.5;cursor:default;}
+@media(max-width:699px){
+  .qk-line{grid-template-columns:22px 1fr auto;}
+  .qk-line .qk-date,.qk-line select{grid-column:2;}
+  .qk-cards{grid-template-columns:1fr;}
+  .qk-foot{flex-direction:column;align-items:stretch;}.qk-foot .sheet-btn{width:100%;}
+}
 .detail-top{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 18px;}
 .detail-top .tx-icon{width:60px;height:60px;font-size:30px;border-radius:16px;}
 .detail-amt{font-size:34px;font-weight:900;}
@@ -2299,7 +2336,7 @@ function openSheet(html){
   document.getElementById('sheetBody').innerHTML=html;
   document.getElementById('sheet').classList.add('open');
 }
-function closeSheet(){ var sh=document.getElementById('sheet'); sh.classList.remove('open'); sh.classList.remove('over'); window._curPick=null; }
+function closeSheet(){ var sh=document.getElementById('sheet'); sh.classList.remove('open'); sh.classList.remove('over'); sh.querySelector('.sheet').classList.remove('qk-wide'); window._curPick=null; }
 function sheetHead(title){ return '<div class="sheet-head"><h3>'+title+'</h3><button class="sheet-close" onclick="closeSheet()">✕</button></div>'; }
 function accountOptions(selected, withNone){
   var accs=getAccounts(), html=withNone?'<option value="">Aucun compte</option>':'';
@@ -5320,6 +5357,7 @@ function setPrivacy(){
 // ---------- Ajout eclair : photo de ticket, releve PDF ou CSV lu par Claude (cle sur le serveur) ----------
 var QK={ops:[]};
 function setQuick(){
+  document.querySelector('#sheet .sheet').classList.remove('qk-wide');
   if(DEMO){ openSheet(sheetHead('Ajout éclair')+'<p class="sheet-note">L’ajout éclair lit tes tickets et relevés avec l’intelligence artificielle. Il ne marche que sur le vrai site, pas en mode démo.</p>'); return; }
   openSheet(sheetHead('Ajout éclair')+
     '<p class="sheet-note">Prends en photo un ticket de caisse, ou choisis un relevé de compte (PDF, CSV ou capture d’écran) : les opérations sont lues pour toi, tu vérifies, puis tu ajoutes.</p>'+
@@ -5398,11 +5436,29 @@ function qkSend(body){
   xhr.ontimeout=function(){ fail('Trop long : essaie avec un document plus court.'); };
   xhr.send(JSON.stringify(body));
 }
-// Deja notee ? meme date, meme montant, meme sens
-function qkDup(o,bank){
-  return getTxns().some(function(t){
-    return t.date===o.date&&Math.abs((+t.amount||0)-o.amount)<0.005&&((t.type==='rev')===(o.kind==='rev'))&&(!bank||!t.bank||String(t.bank)===String(bank));
-  });
+// Doublons : meme montant, meme sens, a 3 jours pres, meme compte si les deux en ont un.
+// Note : 'sure' (meme jour + meme enseigne ou libelle proche), 'likely' (meme jour), 'maybe' (dates proches)
+function qkDays(a,b){ return Math.round(Math.abs(new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/86400000); }
+function qkSameName(a,b){
+  var ma=findMerchant(a), mb=findMerchant(b);
+  if(ma&&mb) return ma[0]===mb[0];
+  var x=normTxt(a).replace(/[^a-z0-9]+/g,' ').trim(), y=normTxt(b).replace(/[^a-z0-9]+/g,' ').trim();
+  if(!x||!y) return false;
+  var wx=x.split(' ').filter(function(w){ return w.length>2; });
+  return x.indexOf(y)>=0||y.indexOf(x)>=0||wx.some(function(w){ return (' '+y+' ').indexOf(' '+w+' ')>=0; });
+}
+function qkMatches(o,bank){
+  var rank={sure:0,likely:1,maybe:2};
+  return getTxns().filter(function(t){
+    if(t.type==='transfert'||t.type==='transfert_in') return false;
+    if((t.type==='rev')!==(o.kind==='rev')) return false;
+    if(Math.abs((+t.amount||0)-o.amount)>=0.005) return false;
+    if(bank&&t.bank&&String(t.bank)!==String(bank)) return false;
+    return qkDays(t.date,o.date)<=3;
+  }).map(function(t){
+    var d=qkDays(t.date,o.date), nm=qkSameName(t.label,o.label);
+    return {t:t,level:d===0&&nm?'sure':d===0||nm?'likely':'maybe',days:d,sameName:nm};
+  }).sort(function(a,b){ return rank[a.level]-rank[b.level]||a.days-b.days; });
 }
 function qkCatOptions(kind,sel){
   var h='', cats=getCats();
@@ -5410,48 +5466,84 @@ function qkCatOptions(kind,sel){
     h+='<option value="'+esc(c.key)+'"'+(c.key===sel?' selected':'')+'>'+esc(c.icon+' '+c.label)+'</option>'; }
   return h;
 }
+function qkFr(d){ return d.split('-').reverse().join('/'); }
 function qkReview(r){
   var mine=getAccounts().filter(function(a){ return !a.hidden&&a.owner===currentUser; });
   var acc=(mine[0]||getAccounts()[0]||{}).id||'';
-  QK.ops=r.operations||[];
+  QK.ops=r.operations||[]; QK.doc=r.document; QK.remarque=r.remarque||''; QK.filter='all';
   if(!QK.ops.length){
-    document.getElementById('sheetBody').innerHTML=sheetHead('Ajout éclair')+'<p class="sheet-note">Aucune opération trouvée.'+(r.remarque?' '+esc(r.remarque):'')+'</p><button class="sheet-btn" onclick="setQuick()">Essayer un autre document</button>';
+    document.getElementById('sheetBody').innerHTML=sheetHead('Ajout éclair')+'<p class="sheet-note">Aucune opération trouvée.'+(QK.remarque?' '+esc(QK.remarque):'')+'</p><button class="sheet-btn" onclick="setQuick()">Essayer un autre document</button>';
     return;
   }
-  var h=sheetHead(r.document==='ticket'?'Ticket lu':'Opérations lues')+
-    '<div class="sf"><label>Compte</label><select id="qkBank" onchange="qkMarkDups()">'+accountOptions(acc,true)+'</select></div>'+
-    '<div class="qk-list">';
+  document.querySelector('#sheet .sheet').classList.add('qk-wide');
+  QK.bank=String(acc);
+  qkScan();
+  qkDraw();
+}
+// Cherche les doublons et remet les choix par defaut (doublon = on n ajoute pas)
+function qkScan(){
+  QK.ops.forEach(function(o){ o.m=qkMatches(o,QK.bank); o.pick=0; o.add=!o.m.length; o.open=false; });
+}
+function qkDraw(){
+  var nDup=QK.ops.filter(function(o){ return o.m.length; }).length;
+  var h=sheetHead(QK.doc==='ticket'?'Ticket lu':'Opérations lues')+
+    '<div class="qk-bar"><div class="sf"><label>Compte</label><select onchange="QK.bank=this.value;qkScan();qkDraw()">'+accountOptions(QK.bank,true)+'</select></div></div>'+
+    '<div class="qk-sum">'+
+      '<button class="'+(QK.filter==='all'?'on':'')+'" onclick="qkFilter(\'all\')">Toutes<b>'+QK.ops.length+'</b></button>'+
+      '<button class="'+(QK.filter==='new'?'on':'')+'" onclick="qkFilter(\'new\')">Nouvelles<b>'+(QK.ops.length-nDup)+'</b></button>'+
+      (nDup?'<button class="warn '+(QK.filter==='dup'?'on':'')+'" onclick="qkFilter(\'dup\')">À contrôler<b>'+nDup+'</b></button>':'')+
+    '</div><div class="qk-list">';
   QK.ops.forEach(function(o,i){
-    h+='<div class="qk-row" id="qkr'+i+'"><input type="checkbox" id="qkc'+i+'" checked onchange="qkCount()">'+
-      '<div class="qk-main"><div class="qk-top"><input type="text" id="qkl'+i+'" value="'+esc(o.label)+'">'+
+    var dup=o.m.length;
+    if(QK.filter==='new'&&dup||QK.filter==='dup'&&!dup) return;
+    var lv=dup?o.m[0].level:'';
+    h+='<div class="qk-row'+(o.add?'':' off')+(dup?' dup'+(lv==='sure'?' sure':''):'')+(o.open?' open':'')+'" id="qkr'+i+'">'+
+      '<div class="qk-line"><input type="checkbox"'+(o.add?' checked':'')+' onchange="qkSet('+i+',this.checked)">'+
+      '<input class="qk-lab" type="text" value="'+esc(o.label)+'" oninput="QK.ops['+i+'].label=this.value">'+
+      '<span class="qk-date">'+qkFr(o.date)+'</span>'+
+      '<select onchange="QK.ops['+i+'].cat=this.value">'+qkCatOptions(o.kind,o.cat)+'</select>'+
       '<span class="qk-amt '+o.kind+'">'+(o.kind==='rev'?'+':'-')+fmtE(o.amount,true)+'</span></div>'+
-      '<div class="qk-sub"><span>'+esc(o.date.split('-').reverse().join('/'))+'</span><select id="qks'+i+'">'+qkCatOptions(o.kind,o.cat)+'</select><span class="qk-dup" id="qkd'+i+'"></span></div></div></div>';
+      (dup?'<button class="qk-flag" onclick="qkToggle('+i+')">'+({sure:'⚠ Doublon presque sûr',likely:'⚠ Doublon probable',maybe:'⚠ Doublon possible'})[lv]+
+        ' <i>· '+(o.add?'sera ajoutée quand même':'ne sera pas ajoutée')+' · '+(o.open?'masquer':'comparer')+'</i></button>'+
+        '<div class="qk-cmp">'+qkCompare(o,i)+'</div>':'')+
+      '</div>';
   });
-  h+='</div>'+(r.remarque?'<p class="sheet-note">'+esc(r.remarque)+'</p>':'')+
-    '<button class="sheet-btn" id="qkGo" onclick="qkSave()">Ajouter</button>';
+  var nAdd=QK.ops.filter(function(o){ return o.add; }).length, nSkip=QK.ops.length-nAdd;
+  h+='</div>'+(QK.remarque?'<p class="sheet-note">'+esc(QK.remarque)+'</p>':'')+
+    '<div class="qk-foot"><p>'+nAdd+' à ajouter'+(nSkip?' · '+nSkip+' mise'+(nSkip>1?'s':'')+' de côté':'')+'</p>'+
+    '<button class="sheet-btn" id="qkGo" onclick="qkSave()"'+(nAdd?'':' disabled')+'>'+(nAdd?'Ajouter '+nAdd+' opération'+(nAdd>1?'s':''):'Rien à ajouter')+'</button></div>';
+  var list=document.querySelector('#sheetBody .qk-list'), top=list?list.scrollTop:0;
   document.getElementById('sheetBody').innerHTML=h;
-  qkMarkDups();
+  document.querySelector('#sheetBody .qk-list').scrollTop=top;
 }
-function qkMarkDups(){
-  var bank=document.getElementById('qkBank').value;
-  QK.ops.forEach(function(o,i){
-    var d=qkDup(o,bank);
-    document.getElementById('qkd'+i).textContent=d?'déjà notée ?':'';
-    document.getElementById('qkc'+i).checked=!d;
-  });
-  qkCount();
+// Comparaison cote a cote : ce que dit le document / ce qui est deja dans le budget
+function qkCompare(o,i){
+  var m=o.m[o.pick], t=m.t, sameDate=t.date===o.date;
+  function dd(v,same){ return '<dd class="'+(same?'same':'diff')+'">'+esc(v)+'</dd>'; }
+  var cat=getCatObj(t.cat), mine=getCatObj(o.cat);
+  return '<div class="qk-cards">'+
+    '<div class="qk-card"><h5>📄 Dans le document</h5><dl>'+
+      '<dt>Libellé</dt>'+dd(o.label,m.sameName)+'<dt>Date</dt>'+dd(qkFr(o.date),sameDate)+
+      '<dt>Montant</dt>'+dd(fmtE(o.amount,true),true)+'<dt>Catégorie</dt>'+dd(mine.label,t.cat===o.cat)+
+      (o.detail?'<dt>Détail</dt><dd>'+esc(o.detail)+'</dd>':'')+'</dl></div>'+
+    '<div class="qk-card"><h5><span>✓ Déjà dans ton budget</span>'+(o.m.length>1?'<button onclick="qkNext('+i+')">'+(o.pick+1)+' / '+o.m.length+' ›</button>':'')+'</h5><dl>'+
+      '<dt>Libellé</dt>'+dd(t.label,m.sameName)+'<dt>Date</dt>'+dd(qkFr(t.date)+(sameDate?'':' ('+m.days+' j d’écart)'),sameDate)+
+      '<dt>Montant</dt>'+dd(fmtE(+t.amount,true),true)+'<dt>Catégorie</dt>'+dd(cat.label,t.cat===o.cat)+
+      '<dt>Compte</dt><dd>'+esc(accountName(t.bank)||'—')+'</dd>'+(t.note?'<dt>Note</dt><dd>'+esc(t.note)+'</dd>':'')+'</dl></div>'+
+  '</div><div class="qk-choice">'+
+    '<button class="skip'+(o.add?'':' on')+'" onclick="qkSet('+i+',false)">C’est la même : ne pas l’ajouter</button>'+
+    '<button class="add'+(o.add?' on':'')+'" onclick="qkSet('+i+',true)">C’en est une autre : l’ajouter</button></div>';
 }
-function qkCount(){
-  var n=0; QK.ops.forEach(function(o,i){ var on=document.getElementById('qkc'+i).checked; if(on) n++; document.getElementById('qkr'+i).classList.toggle('off',!on); });
-  var b=document.getElementById('qkGo'); b.disabled=!n;
-  b.textContent=n?'Ajouter '+n+' opération'+(n>1?'s':''):'Rien à ajouter';
-}
+function qkSet(i,add){ QK.ops[i].add=add; qkDraw(); }
+function qkToggle(i){ QK.ops[i].open=!QK.ops[i].open; qkDraw(); }
+function qkNext(i){ var o=QK.ops[i]; o.pick=(o.pick+1)%o.m.length; qkDraw(); }
+function qkFilter(f){ QK.filter=f; qkDraw(); }
 function qkSave(){
-  var bank=document.getElementById('qkBank').value, now=Date.now(), out=[];
-  QK.ops.forEach(function(o,i){
-    if(!document.getElementById('qkc'+i).checked) return;
-    var cat=document.getElementById('qks'+i).value, g=getCatObj(cat).group;
-    out.push({id:now+out.length,date:o.date,label:document.getElementById('qkl'+i).value.trim()||o.label,cat:cat,amount:o.amount,
+  var bank=QK.bank, now=Date.now(), out=[];
+  QK.ops.forEach(function(o){
+    if(!o.add) return;
+    var g=getCatObj(o.cat).group;
+    out.push({id:now+out.length,date:o.date,label:String(o.label||'').trim()||'Opération',cat:o.cat,amount:o.amount,
       type:o.kind==='rev'?'rev':((g&&g!=='rev')?g:'dep_var'),bank:bank,
       need:o.kind==='rev'?'':((g==='dep'||g==='epargne')?'obligatoire':''),note:o.detail||null});
   });
