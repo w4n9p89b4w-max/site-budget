@@ -1196,6 +1196,9 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .bc-day{position:relative;}
 .bc-mon{position:absolute;top:-7px;left:50%;transform:translateX(-50%);z-index:1;font-style:normal;font-size:9px;font-weight:800;color:#fff;background:var(--accent);border-radius:6px;padding:2px 5px;text-transform:uppercase;letter-spacing:.03em;line-height:1;white-space:nowrap;}
 .bg-range-ed{opacity:.65;font-size:12px;margin-left:4px;}
+.am-rnd-to{display:flex;align-items:center;gap:8px;margin:8px 0 6px;font-size:13.5px;font-weight:700;color:var(--muted);}
+.am-rnd-to select{flex:1;min-width:0;font-family:inherit;font-size:14px;font-weight:700;padding:8px 10px;border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--text);}
+.am-rnd-x button{padding:8px;}
 .oc-rep{flex-wrap:wrap;margin-bottom:4px;}
 .oc-rep button{flex:1 1 auto;padding:9px 8px;font-size:13.5px;}
 .oc-lbl .ico{width:14px;height:14px;vertical-align:-2px;}
@@ -2574,7 +2577,7 @@ function saveSheetTxn(kind){
   var t={id:Date.now(),date:date,label:label,cat:cat,amount:amount,type:type,bank:document.getElementById('shBank').value,need:kind==='rev'?'':sheetNeed};
   apiPost('/api/transactions',t,function(err){
     if(err){ showToast('Erreur : '+err.message); return; }
-    var txns=getTxns(); txns.unshift(t); setTxns(txns);
+    var txns=getTxns(); txns.unshift(t); setTxns(txns); roundAfter(t);
     closeSheet(); refreshViews(); showToast(kind==='rev'?'Revenu ajouté':'Dépense ajoutée');
   });
 }
@@ -2945,7 +2948,7 @@ var AM_TYPE_BG={quotidien:'#e3eef1',credit:'#f8e9e6',epargne:'#e6f1e8',invest:'#
 function openAccountSheet(id){
   if(id==null){ openAccountWizard(); return; }
   var a=findAccount(id); if(!a) return;
-  AM={id:a.id,name:a.name,desc:a.description||'',solde:String(accountBalance(a)).replace('.',','),color:a.color||'',type:a.type||'quotidien',hidden:!!a.hidden,bank:a.bank||'',colors:false,cycle:a.cycle?String(a.cycle):'',owner:a.owner||'',currency:a.currency||''};
+  AM={id:a.id,name:a.name,desc:a.description||'',solde:String(accountBalance(a)).replace('.',','),color:a.color||'',type:a.type||'quotidien',hidden:!!a.hidden,bank:a.bank||'',colors:false,cycle:a.cycle?String(a.cycle):'',owner:a.owner||'',currency:a.currency||'',round:roundCfg(a.id)};
   var types='';
   for(var i=0;i<ACC_TYPES.length;i++){
     var t=ACC_TYPES[i];
@@ -2990,7 +2993,53 @@ function amSettingsHtml(){
     '<label class="oc-lbl">Mois du compte</label>'+
     '<button class="oc-in am-cyc" onclick="amToggleCycle()">'+svgIcon('calendar')+'<span>'+esc(cycleLabel(AM.cycle))+'</span>'+svgIcon('chev')+'</button>';
   if(AM.cycOpen) html+=amCycleCal();
+  html+=amRoundHtml();
   return html+'<label class="oc-lbl">Appartient à</label><div class="seg am-own">'+seg+'</div></div>';
+}
+// ---------- Petite monnaie : arrondi des achats a l euro superieur (comme Revolut) ----------
+// Reglage du foyer settings.rounding = { "<id du compte qui arrondit>": { to: "<id du compte qui recoit>", x: 1|2|5|10 } }
+function roundCfg(id){ var r=((_cache.settings||{}).rounding||{})[String(id)]; return r&&r.to&&findAccount(r.to)?{to:String(r.to),x:r.x||1}:null; }
+function roundSources(id){ var r=(_cache.settings||{}).rounding||{}; return Object.keys(r).filter(function(k){ return String(r[k].to)===String(id)&&findAccount(k); }); }
+function amRoundHtml(){
+  var on=!!AM.round, others=getAccounts().filter(function(a){ return String(a.id)!==String(AM.id); }), src=roundSources(AM.id);
+  var h='<label class="oc-lbl">Petite monnaie</label><div class="seg am-rnd">'+
+    '<button class="'+(on?'':'on')+'" onclick="AM.round=null;amRefreshSettings()">Non</button>'+
+    '<button class="'+(on?'on':'')+'" '+(others.length?'':'disabled ')+'onclick="AM.round=AM.round||{to:\''+(others[0]?others[0].id:'')+'\',x:1};amRefreshSettings()">Arrondir mes achats</button></div>';
+  if(on){
+    var opts=others.map(function(a){ return '<option value="'+esc(a.id)+'"'+(String(a.id)===String(AM.round.to)?' selected':'')+'>'+esc(accLabel(a))+'</option>'; }).join('');
+    h+='<div class="am-rnd-to"><span>Verser la petite monnaie sur</span><select onchange="AM.round.to=this.value">'+opts+'</select></div>'+
+      '<div class="seg am-rnd-x">'+[1,2,5,10].map(function(x){ return '<button class="'+(AM.round.x===x?'on':'')+'" onclick="AM.round.x='+x+';amRefreshSettings()">×'+x+'</button>'; }).join('')+'</div>'+
+      '<p class="am-note">Chaque achat est arrondi à l’euro supérieur (25,60 € → 0,40 € ; 18 € → 1 €)'+(AM.round.x>1?', multiplié par '+AM.round.x:'')+'. La petite monnaie de la semaine est versée en une fois le lundi.</p>';
+  }
+  if(src.length) h+='<p class="am-note">🪙 Reçoit la petite monnaie de : '+src.map(function(k){ return esc(findAccount(k).name); }).join(', ')+'.</p>';
+  return h;
+}
+function saveRoundCfg(id,cfg){
+  var all=Object.assign({},(_cache.settings||{}).rounding||{}), k=String(id), was=JSON.stringify(all[k]||null);
+  if(cfg&&cfg.to) all[k]={to:String(cfg.to),x:cfg.x||1}; else delete all[k];
+  if(JSON.stringify(all[k]||null)===was) return;
+  if(!_cache.settings) _cache.settings={};
+  _cache.settings.rounding=all; apiPost('/api/settings/rounding',{value:all},null);
+}
+// Petite monnaie d un achat : 25,60 -> 0,40 ; 18 -> 1 (x le multiplicateur)
+function roundUpOf(amount,x){ var a=Math.round(amount*100), r=(100-a%100)%100||100; return Math.round(r*(x||1))/100; }
+// Achat saisi a la main sur un compte qui arrondit : on ajoute sa petite monnaie au versement du lundi suivant
+function roundAfter(t){
+  if(!t||!t.bank||t.type==='rev'||/^transfert/.test(t.type||'')||Number(t.no_balance)) return;
+  var cfg=roundCfg(t.bank); if(!cfg) return;
+  var amt=roundUpOf(+t.amount,cfg.x), mon=qkMonday(t.date), txns=getTxns(), part={d:t.date,a:amt};
+  var ex=txns.filter(function(x){ return x.date===mon&&x.type==='transfert'&&String(x.bank)===String(t.bank)&&/^🪙/.test(x.label||''); })[0];
+  if(ex){
+    var parts=qkPartsOf(ex.note).concat([part]).sort(function(p,q){ return p.d<q.d?-1:1; }), total=qkSum(parts), note=qkPartsNote(parts);
+    var pair=ex.transfer_pair?txns.filter(function(x){ return String(x.id)===String(ex.transfer_pair); })[0]:null;
+    [ex,pair].forEach(function(x){ if(!x) return; x.amount=total; x.note=note; apiPost('/api/transactions',x,null); });
+    return;
+  }
+  var now=Date.now()+7, lbl='🪙 Arrondis → '+(findAccount(cfg.to)||{}).name;
+  var a={id:now,date:mon,label:lbl,cat:'autres_dep',amount:amt,type:'transfert',bank:String(t.bank),need:'',transfer_pair:now+1,transferPair:now+1,note:qkPartsNote([part])};
+  var b={id:now+1,date:mon,label:lbl,cat:'autre_rev',amount:amt,type:'transfert_in',bank:String(cfg.to),need:'',transfer_pair:now,transferPair:now,note:a.note};
+  txns.unshift(b,a); setTxns(txns);
+  apiPost('/api/transactions/bulk',{transactions:[a,b]},null);
 }
 // Devise du compte : la meme grande liste que dans les Reglages, par-dessus la fenetre du compte
 function amOpenCur(){
@@ -3098,6 +3147,7 @@ function saveAccount(msg){
     solde:old.solde,soldeDate:old.soldeDate,soldeSetAt:old.soldeSetAt,sortOrder:getAccounts().indexOf(old)};
   // Solde corrige a la main : on repart de ce nouveau solde a partir de maintenant
   if(Math.abs(accountBalance(old)-solde)>=0.005){ acc.solde=solde; acc.soldeDate=todayStr(); acc.soldeSetAt=Date.now(); }
+  saveRoundCfg(acc.id,AM.round);
   apiPost('/api/accounts',acc,function(err){
     if(err){ showToast('Erreur : '+err.message); return; }
     var list=getAccounts().slice();
@@ -3835,6 +3885,7 @@ function saveExpense(){
     try{ if(t.bank) localStorage.setItem('budget_last_acc',t.bank); }catch(e){}
     var txns=getTxns(); txns.unshift(t); setTxns(txns);
     if(s.recur) addRecurFromFlow({kind:'dep',label:t.label,cat:t.cat,bank:t.bank,amount:amount,day:day,next_month:0,start_key:nextMonthKey(s.date)});
+    roundAfter(t);
     closeWiz(); refreshViews(); showToast('Dépense ajoutée');
   });
 }
@@ -4911,6 +4962,7 @@ function bgConfirmOcc(){
   apiPost('/api/transactions/bulk',{transactions:list},function(err){
     if(err){ showToast('Erreur : '+err.message); return; }
     var txns=getTxns(); for(var i=0;i<list.length;i++) txns.unshift(list[i]); setTxns(txns);
+    if(o.kind==='dep') roundAfter(list[0]);
     closeAccModal(); bgRefresh(); showToast('Confirmé');
   });
 }
@@ -5855,7 +5907,8 @@ function qkPair(ops){
     var src=o.kind==='dep'?o:(j>=0?ops[j]:null), dst=o.kind==='rev'?o:(j>=0?ops[j]:null);
     used[i]=1; if(j>=0) used[j]=1;
     var ft=src?(src.compte||'ce compte'):o.lie, tt=dst?(dst.compte||'ce compte'):o.lie;
-    out.push({kind:'tra',date:(src||dst).date,amount:o.amount,cat:'',detail:(src||dst).detail||o.label,round:!!(o.arrondi||(j>=0&&ops[j].arrondi)),
+    var rc=src?roundCfg(qkBankOf(src.compte)):null, byCfg=!!(rc&&dst&&String(qkBankOf(dst.compte))===rc.to&&o.amount<=rc.x+0.001);
+    out.push({kind:'tra',date:(src||dst).date,amount:o.amount,cat:'',detail:(src||dst).detail||o.label,round:!!(o.arrondi||(j>=0&&ops[j].arrondi)||byCfg),
       from:src?src.compte:null, to:dst?dst.compte:null, fromTxt:ft||'?', toTxt:tt||'?', label:'Transfert '+(ft||'?')+' → '+(tt||'?')});
   });
   ops.forEach(function(o,i){ if(!used[i]&&!o.interne) out.push(o); });
