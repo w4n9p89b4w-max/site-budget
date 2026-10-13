@@ -464,6 +464,15 @@ body.on-home header{display:none;}
 .qk-pick label span{font-size:26px;}
 .qk-pick label small{font-size:12px;font-weight:600;color:var(--muted);}
 .qk-pick input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+.qk-drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;min-height:230px;padding:28px 24px;border:2.5px dashed #d9c9a6;border-radius:22px;background:#fff;cursor:pointer;transition:border-color .15s,background .15s,transform .15s;}
+.qk-drop:hover{border-color:var(--accent);}
+.qk-drop.over{border-style:solid;border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 6px rgba(168,132,44,.15);transform:scale(1.01);}
+.qk-drop-ic{font-size:42px;line-height:1;margin-bottom:4px;}
+.qk-drop b{font-size:19px;font-weight:900;color:var(--text);}
+.qk-drop small{font-size:13.5px;color:var(--muted);max-width:340px;line-height:1.45;}
+.qk-drop input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+.qk-or{text-align:center;font-size:14px;color:var(--muted);margin:14px 0 6px;}
+.qk-or a{color:var(--accent);font-weight:800;text-decoration:underline;text-underline-offset:3px;}
 .qk-wait{text-align:center;padding:28px 0;color:var(--muted);font-weight:700;}
 .qk-wait i{display:block;width:34px;height:34px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--accent-light);border-top-color:var(--accent);animation:qkspin .9s linear infinite;}
 @keyframes qkspin{to{transform:rotate(360deg);}}
@@ -5413,6 +5422,17 @@ var QK={ops:[]};
 function setQuick(){
   document.querySelector('#sheet .sheet').classList.remove('qk-wide');
   if(DEMO){ openSheet(sheetHead('Ajout éclair')+'<p class="sheet-note">L’ajout éclair lit tes tickets et relevés avec l’intelligence artificielle. Il ne marche que sur le vrai site, pas en mode démo.</p>'); return; }
+  var ACCEPT='image/*,application/pdf,.pdf,.csv,text/csv,.txt';
+  // Ordinateur : une zone ou glisser le document (ou coller une capture), et un lien pour l ouvrir depuis un dossier
+  if(!qkMobile()){
+    openSheet(sheetHead('Ajout éclair')+
+      '<label class="qk-drop" id="qkDrop" ondragover="qkDrag(event,true)" ondragleave="qkDrag(event,false)" ondrop="qkDrop(event)">'+
+        '<span class="qk-drop-ic">📄</span><b>Glisse ton document ici</b>'+
+        '<small>Relevé de compte (PDF, CSV), ticket de caisse en photo ou capture d’écran</small>'+
+        '<input type="file" accept="'+ACCEPT+'" multiple onchange="qkFiles(this)"></label>'+
+      '<p class="qk-or">ou <a href="#" onclick="document.querySelector(\'#qkDrop input\').click();return false;">ouvrir depuis un dossier</a> · tu peux aussi coller une capture avec Ctrl + V</p>'+
+      '<p class="sheet-note" id="qkInfo"></p>');
+  } else
   openSheet(sheetHead('Ajout éclair')+
     '<p class="sheet-note">Prends en photo un ticket de caisse, ou choisis un relevé de compte (PDF, CSV ou capture d’écran) : les opérations sont lues pour toi, tu vérifies, puis tu ajoutes.</p>'+
     '<div class="qk-pick">'+
@@ -5455,8 +5475,22 @@ function qkText(file,cb){
   r.onerror=function(){ cb(new Error('Fichier illisible : '+file.name)); };
   r.readAsText(file,'utf-8');
 }
-function qkFiles(input){
-  var list=[].slice.call(input.files||[]); if(!list.length) return;
+function qkFiles(input){ qkFileList([].slice.call(input.files||[])); }
+function qkDrag(e,on){ e.preventDefault(); document.getElementById('qkDrop').classList.toggle('over',on); }
+function qkDrop(e){ e.preventDefault(); qkFileList([].slice.call((e.dataTransfer&&e.dataTransfer.files)||[])); }
+// Tant que la fenetre de l ajout eclair est ouverte : un fichier lache a cote n ouvre pas le document dans le navigateur,
+// et Ctrl + V d une capture d ecran l envoie directement
+function qkOpen(){ return !!document.getElementById('qkDrop')&&document.getElementById('sheet').classList.contains('open'); }
+window.addEventListener('dragover',function(e){ if(qkOpen()) e.preventDefault(); });
+window.addEventListener('drop',function(e){ if(qkOpen()&&!e.target.closest('#qkDrop')){ e.preventDefault(); qkDrop(e); } });
+window.addEventListener('paste',function(e){
+  if(!qkOpen()) return;
+  var fs=[].slice.call((e.clipboardData&&e.clipboardData.files)||[]);
+  if(fs.length){ e.preventDefault(); qkFileList(fs); }
+});
+function qkFileList(list){
+  list=list.filter(function(f){ return /^image\/|pdf|csv|text\//.test(f.type)||/\.(pdf|csv|txt|jpe?g|png|webp|heic|heif)$/i.test(f.name||''); });
+  if(!list.length){ showToast('Ce type de fichier n’est pas pris en charge'); return; }
   var body={files:[],text:'',textName:'',cats:getCats().map(function(c){ return {key:c.key,label:c.label,group:c.group}; })};
   var left=list.length, failed=null;
   function done(err){
