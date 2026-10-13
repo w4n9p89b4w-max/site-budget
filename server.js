@@ -993,19 +993,32 @@ app.post('/api/import', requireAuth, async (req, res) => {
     '- amount toujours positif ; sens = "depense" pour un débit, "revenu" pour un crédit.\n' +
     '- date au format AAAA-MM-JJ (date de l\'opération). Si l\'année manque, déduis-la du document, sinon prends la plus récente avant la date du jour.\n' +
     '- cat = la clé de catégorie la plus adaptée parmi la liste (une catégorie de revenu pour un revenu).\n' +
-    '- Si le document est illisible ou ne contient aucune opération, renvoie une liste vide et explique pourquoi dans "remarque".'
+    '- Si le document est illisible ou ne contient aucune opération, renvoie une liste vide et explique pourquoi dans "remarque".\n' +
+    '- Comptes : liste dans "comptes" chaque compte qui a ses propres opérations dans le document (compte principal, sous-comptes, ' +
+    'Pockets ou coffres Revolut, livrets…), avec son nom tel qu\'écrit (sans la devise entre parenthèses), la banque, et les soldes de début ' +
+    'et de fin de période s\'ils sont indiqués (nombre écrit avec un point, ex. "12.54", sinon ""). Pour un ticket de caisse, liste vide.\n' +
+    '- "compte" de chaque opération = le nom exact du compte (tel que dans "comptes") dans lequel la ligne apparaît ; "" pour un ticket.\n' +
+    '- Mouvements entre deux comptes du document (ex. « Sur la Pocket… », « Vers la Pocket… », « Retrait depuis une Pocket », virement vers ' +
+    'son propre coffre ou livret) : interne = true et "compte_lie" = le nom de l\'autre compte (si la ligne ne le dit pas, c\'est le compte ' +
+    'principal pour une Pocket ou un coffre). Garde chaque ligne telle qu\'elle apparaît dans chaque compte, sans les fusionner. ' +
+    'Sinon interne = false et compte_lie = "".'
   });
 
   const catKeys = cats.map(c => String(c.key));
   const schema = {
-    type: 'object', additionalProperties: false, required: ['document', 'remarque', 'operations'],
+    type: 'object', additionalProperties: false, required: ['document', 'remarque', 'comptes', 'operations'],
     properties: {
       document: { type: 'string', enum: ['ticket', 'releve', 'autre'] },
       remarque: { type: 'string' },
+      comptes: { type: 'array', items: {
+        type: 'object', additionalProperties: false, required: ['nom', 'banque', 'solde_debut', 'solde_fin'],
+        properties: { nom: { type: 'string' }, banque: { type: 'string' }, solde_debut: { type: 'string' }, solde_fin: { type: 'string' } }
+      } },
       operations: { type: 'array', items: {
-        type: 'object', additionalProperties: false, required: ['date', 'label', 'amount', 'sens', 'cat', 'detail'],
+        type: 'object', additionalProperties: false, required: ['date', 'label', 'amount', 'sens', 'cat', 'detail', 'compte', 'interne', 'compte_lie'],
         properties: {
           date: { type: 'string' }, label: { type: 'string' }, amount: { type: 'number' },
+          compte: { type: 'string' }, interne: { type: 'boolean' }, compte_lie: { type: 'string' },
           sens: { type: 'string', enum: ['depense', 'revenu'] },
           cat: catKeys.length ? { type: 'string', enum: catKeys } : { type: 'string' },
           detail: { type: 'string' }
@@ -1030,9 +1043,13 @@ app.post('/api/import', requireAuth, async (req, res) => {
     const data = JSON.parse(out);
     const ops = (data.operations || []).filter(o => o && /^\d{4}-\d{2}-\d{2}$/.test(o.date) && Math.abs(+o.amount) > 0)
       .map(o => ({ date: o.date, label: String(o.label || '').slice(0, 120), amount: Math.round(Math.abs(+o.amount) * 100) / 100,
-        kind: o.sens === 'revenu' ? 'rev' : 'dep', cat: o.cat || '', detail: String(o.detail || '').slice(0, 300) }));
+        kind: o.sens === 'revenu' ? 'rev' : 'dep', cat: o.cat || '', detail: String(o.detail || '').slice(0, 300),
+        compte: String(o.compte || '').slice(0, 80), interne: !!o.interne, lie: String(o.compte_lie || '').slice(0, 80) }));
+    const num = v => { const n = parseFloat(String(v || '').replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? null : n; };
+    const comptes = (data.comptes || []).filter(c => c && c.nom).slice(0, 30)
+      .map(c => ({ nom: String(c.nom).slice(0, 80), banque: String(c.banque || '').slice(0, 80), debut: num(c.solde_debut), fin: num(c.solde_fin) }));
     console.log('Ajout eclair : ' + ops.length + ' operation(s) lue(s) pour ' + req.user + ' (' + msg.usage.input_tokens + ' + ' + msg.usage.output_tokens + ' jetons)');
-    res.json({ ok: true, document: data.document, remarque: data.remarque || '', operations: ops });
+    res.json({ ok: true, document: data.document, remarque: data.remarque || '', comptes, operations: ops });
   } catch (e) {
     console.log('Ajout eclair : erreur', e.status || '', e.message);
     let m = 'Lecture impossible pour le moment, réessaie.';
