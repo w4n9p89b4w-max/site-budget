@@ -1009,7 +1009,9 @@ app.post('/api/import', requireAuth, async (req, res) => {
     '- Mouvements entre deux comptes du document (ex. « Sur la Pocket… », « Vers la Pocket… », « Retrait depuis une Pocket », virement vers ' +
     'son propre coffre ou livret) : interne = true et "compte_lie" = le nom de l\'autre compte (si la ligne ne le dit pas, c\'est le compte ' +
     'principal pour une Pocket ou un coffre). Garde chaque ligne telle qu\'elle apparaît dans chaque compte, sans les fusionner. ' +
-    'Sinon interne = false et compte_lie = "".'
+    'Sinon interne = false et compte_lie = "".\n' +
+    '- arrondi = true pour les virements automatiques de petite monnaie (arrondi à l\'euro supérieur après un achat, quelques centimes ' +
+    'à quelques euros, ex. « Sur la Pocket EUR Loisir depuis EUR » juste après un paiement), des deux côtés ; false sinon (un vrai virement choisi).'
   });
 
   const catKeys = cats.map(c => String(c.key));
@@ -1023,10 +1025,10 @@ app.post('/api/import', requireAuth, async (req, res) => {
         properties: { nom: { type: 'string' }, banque: { type: 'string' }, solde_debut: { type: 'string' }, solde_fin: { type: 'string' } }
       } },
       operations: { type: 'array', items: {
-        type: 'object', additionalProperties: false, required: ['date', 'label', 'amount', 'sens', 'cat', 'detail', 'compte', 'interne', 'compte_lie'],
+        type: 'object', additionalProperties: false, required: ['date', 'label', 'amount', 'sens', 'cat', 'detail', 'compte', 'interne', 'compte_lie', 'arrondi'],
         properties: {
           date: { type: 'string' }, label: { type: 'string' }, amount: { type: 'number' },
-          compte: { type: 'string' }, interne: { type: 'boolean' }, compte_lie: { type: 'string' },
+          compte: { type: 'string' }, interne: { type: 'boolean' }, compte_lie: { type: 'string' }, arrondi: { type: 'boolean' },
           sens: { type: 'string', enum: ['depense', 'revenu'] },
           cat: catKeys.length ? { type: 'string', enum: catKeys } : { type: 'string' },
           detail: { type: 'string' }
@@ -1052,7 +1054,7 @@ app.post('/api/import', requireAuth, async (req, res) => {
     const ops = (data.operations || []).filter(o => o && /^\d{4}-\d{2}-\d{2}$/.test(o.date) && Math.abs(+o.amount) > 0)
       .map(o => ({ date: o.date, label: String(o.label || '').slice(0, 120), amount: Math.round(Math.abs(+o.amount) * 100) / 100,
         kind: o.sens === 'revenu' ? 'rev' : 'dep', cat: o.cat || '', detail: String(o.detail || '').slice(0, 300),
-        compte: String(o.compte || '').slice(0, 80), interne: !!o.interne, lie: String(o.compte_lie || '').slice(0, 80) }));
+        compte: String(o.compte || '').slice(0, 80), interne: !!(o.interne || o.arrondi), lie: String(o.compte_lie || '').slice(0, 80), arrondi: !!o.arrondi }));
     const num = v => { const n = parseFloat(String(v || '').replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? null : n; };
     const comptes = (data.comptes || []).filter(c => c && c.nom).slice(0, 30)
       .map(c => ({ nom: String(c.nom).slice(0, 80), banque: String(c.banque || '').slice(0, 80), debut: num(c.solde_debut), fin: num(c.solde_fin) }));
