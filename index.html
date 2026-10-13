@@ -1443,6 +1443,43 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .am-type.on{background:#5b8fa0;color:#fff;box-shadow:0 0 0 3px #dfeaee;}
 .am-type.on .ti{background:rgba(255,255,255,.22)!important;}
 .am-btns{display:flex;gap:10px;margin-top:16px;}
+.am-acc{padding:14px 16px;}
+.am-acc .am-top{margin-bottom:10px;}
+.am-acc .am-hint{margin:5px 0 8px;font-size:11.5px;}
+.am-acc .am-types{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+.am-acc .am-type{padding:8px 2px;gap:4px;border-radius:14px;}
+.am-acc .am-type .ti{width:30px;height:30px;}
+.am-acc .am-type .ti .ico{width:17px;height:17px;}
+.am-acc .am-type b{font-size:11.5px;white-space:nowrap;}
+.am-acc .oc-lbl{margin:10px 0 5px;font-size:11px;letter-spacing:.6px;}
+.am-acc .oc-in{padding:9px 11px;font-size:14px;border-radius:13px;}
+.am-acc .am-cur{gap:8px;}
+.am-acc .am-cur .cur-sym{width:22px;height:22px;font-size:12px;border-radius:7px;}
+.am-acc .am-cur>span:nth-child(2),.am-acc .am-cyc span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.am-acc .am-cyc{gap:7px;}
+.am-acc .am-cyc .ico,.am-acc .am-cur .ico{width:16px;height:16px;}
+.am-2col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
+.am-2col>div{min-width:0;}
+.am-2col .oc-in{height:42px;padding-top:0;padding-bottom:0;}
+.am-line{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.am-line .oc-lbl{margin:0;flex:none;width:92px;line-height:1.2;}
+.am-line .seg{flex:1;min-width:0;}
+.am-acc .seg button{padding:8px 6px;font-size:13.5px;}
+.am-acc .am-note{margin:4px 2px 0;font-size:11.5px;}
+.am-acc .am-rnd-to{margin:6px 0 0;gap:6px;font-size:12.5px;}
+.am-acc .am-rnd-to select{padding:6px 8px;font-size:13px;}
+.am-acc .am-rnd-x{flex:none;gap:4px;}
+.am-acc .am-rnd-x button{flex:none;padding:6px 7px;font-size:12.5px;}
+.am-acc .am-btns{margin-top:12px;}
+.am-acc .am-btns button{padding:13px;}
+.am-btns .am-del2{flex:none;width:52px;padding:0!important;border:none;background:#fbe9e6;color:#c8423b;display:flex;align-items:center;justify-content:center;}
+.am-btns .am-del2 .ico{width:21px;height:21px;}
+.am-confirm{flex:1;display:flex;flex-direction:column;gap:3px;background:#fbe9e6;border-radius:16px;padding:12px 12px 10px;text-align:center;}
+.am-confirm b{font-size:15px;color:#9b2c25;}
+.am-confirm span{font-size:12.5px;color:#8a6e6a;}
+.am-confirm div{display:flex;gap:8px;margin-top:7px;}
+.am-confirm div button{flex:1;padding:11px!important;font-size:15px!important;}
+.am-del-go{border:none;background:#c8423b;color:#fff;}
 .am-btns button{flex:1;padding:15px;border-radius:16px;font-family:inherit;font-size:17px;font-weight:800;cursor:pointer;}
 .am-cancel{border:1.5px solid #e2d3b4;background:#f3eee4;color:#6f6455;}
 .am-save{border:none;background:#2f5e3c;color:#fff;}
@@ -2952,13 +2989,13 @@ function openAccountSheet(id){
   var types='';
   for(var i=0;i<ACC_TYPES.length;i++){
     var t=ACC_TYPES[i];
-    types+='<button class="am-type" data-k="'+t.key+'" style="--tbg:'+(AM_TYPE_BG[t.key]||'#eee')+'" onclick="amPickType(\''+t.key+'\')">'+accTypeIc(t.key)+'<b>'+t.label+'</b></button>';
+    types+='<button class="am-type" data-k="'+t.key+'" style="--tbg:'+(AM_TYPE_BG[t.key]||'#eee')+'" onclick="amPickType(\''+t.key+'\')" title="'+esc(t.label)+'">'+accTypeIc(t.key)+'<b>'+(AM_TYPE_SHORT[t.key]||t.label)+'</b></button>';
   }
   var m=document.getElementById('accModal');
-  m.innerHTML='<div class="am">'+
+  m.innerHTML='<div class="am am-acc">'+
     '<div class="am-top"><button class="am-color" id="amColorBtn" onclick="amToggleColors()" title="Couleur de la carte"></button><span style="flex:1"></span>'+
     '<button class="am-hide" onclick="amToggleHidden()"><svg class="ico" viewBox="0 0 24 24"><path d="'+(AM.hidden?'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6':'M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.8 8.4 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2')+'"/></svg>'+(AM.hidden?'Afficher':'Masquer')+'</button>'+
-    '<button class="am-del" onclick="deleteAccount(\''+Number(a.id)+'\')" title="Supprimer"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button></div>'+
+    '</div>'+
     '<div class="am-colors" id="amColors"></div>'+
     '<div class="acc-card am-card" id="amCard">'+
       '<span class="am-head"><span id="amLogo"></span><input class="am-name" id="amName" maxlength="24" autocomplete="off"></span>'+
@@ -2968,7 +3005,7 @@ function openAccountSheet(id){
     '</div>'+
     '<p class="am-hint">Touche le nom ou le solde pour les modifier.</p>'+
     '<div class="am-types">'+types+'</div>'+amSettingsHtml()+
-    '<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save" onclick="saveAccount()">Enregistrer</button></div>'+
+    '<div class="am-btns" id="amBtns">'+amBtnsHtml()+'</div>'+
   '</div>';
   m.classList.add('open');
   var n=document.getElementById('amName'), d=document.getElementById('amDesc'), s=document.getElementById('amSolde');
@@ -2986,15 +3023,15 @@ function amSettingsHtml(){
   var who=(AUTH.household.members||[]).map(function(m){ return [String(m.id),m.name]; }).concat([['','Commun']]), seg='';
   for(var w=0;w<who.length;w++) seg+='<button class="'+(AM.owner===who[w][0]?'on':'')+'" onclick="AM.owner=\''+who[w][0]+'\';amRefreshSettings()">'+who[w][1]+'</button>';
   var cc=AM.currency||mainCur(), foreign=cc!==mainCur(), rate=((_cache.settings||{}).rates||{})[cc];
-  var html='<div class="am-set" id="amSet"><label class="oc-lbl">Devise du compte</label>'+
-    '<button class="oc-in am-cur" onclick="amOpenCur()"><span class="cur-sym">'+esc(curSym(cc))+'</span><span><b>'+cc+'</b> — '+esc(curInfo(cc)[2])+'</span>'+svgIcon('chev')+'</button>'+
+  var html='<div class="am-set" id="amSet"><div class="am-2col"><div><label class="oc-lbl">Devise</label>'+
+    '<button class="oc-in am-cur" onclick="amOpenCur()" title="'+esc(curInfo(cc)[2])+'"><span class="cur-sym">'+esc(curSym(cc))+'</span><span><b>'+cc+'</b></span>'+svgIcon('chev')+'</button></div>'+
+    '<div><label class="oc-lbl">Mois du compte</label>'+
+    '<button class="oc-in am-cyc" onclick="amToggleCycle()">'+svgIcon('calendar')+'<span>'+esc(cycleLabel(AM.cycle).replace('Calendaire (du 1er au 31)','Du 1er au 31'))+'</span>'+svgIcon('chev')+'</button></div></div>'+
     (foreign?'<div class="rate-row small"><span>1 '+esc(curSym(cc))+' =</span><input type="number" step="0.0001" min="0" inputmode="decimal" id="amRate" value="'+(rate||'')+'" placeholder="taux"><span>'+esc(curSym())+'</span></div>'+
-      '<p class="am-note">Sert à additionner ce compte avec les autres (Total, Budget, Stats).</p>':'')+
-    '<label class="oc-lbl">Mois du compte</label>'+
-    '<button class="oc-in am-cyc" onclick="amToggleCycle()">'+svgIcon('calendar')+'<span>'+esc(cycleLabel(AM.cycle))+'</span>'+svgIcon('chev')+'</button>';
+      '<p class="am-note">Sert à additionner ce compte avec les autres (Total, Budget, Stats).</p>':'');
   if(AM.cycOpen) html+=amCycleCal();
   html+=amRoundHtml();
-  return html+'<label class="oc-lbl">Appartient à</label><div class="seg am-own">'+seg+'</div></div>';
+  return html+'<div class="am-line"><label class="oc-lbl">Appartient à</label><div class="seg am-own">'+seg+'</div></div></div>';
 }
 // ---------- Petite monnaie : arrondi des achats a l euro superieur (comme Revolut) ----------
 // Reglage du foyer settings.rounding = { "<id du compte qui arrondit>": { to: "<id du compte qui recoit>", x: 1|2|5|10 } }
@@ -3002,14 +3039,14 @@ function roundCfg(id){ var r=((_cache.settings||{}).rounding||{})[String(id)]; r
 function roundSources(id){ var r=(_cache.settings||{}).rounding||{}; return Object.keys(r).filter(function(k){ return String(r[k].to)===String(id)&&findAccount(k); }); }
 function amRoundHtml(){
   var on=!!AM.round, others=getAccounts().filter(function(a){ return String(a.id)!==String(AM.id); }), src=roundSources(AM.id);
-  var h='<label class="oc-lbl">Petite monnaie</label><div class="seg am-rnd">'+
+  var h='<div class="am-line"><label class="oc-lbl">Petite monnaie</label><div class="seg am-rnd">'+
     '<button class="'+(on?'':'on')+'" onclick="AM.round=null;amRefreshSettings()">Non</button>'+
-    '<button class="'+(on?'on':'')+'" '+(others.length?'':'disabled ')+'onclick="AM.round=AM.round||{to:\''+(others[0]?others[0].id:'')+'\',x:1};amRefreshSettings()">Arrondir mes achats</button></div>';
+    '<button class="'+(on?'on':'')+'" '+(others.length?'':'disabled ')+'onclick="AM.round=AM.round||{to:\''+(others[0]?others[0].id:'')+'\',x:1};amRefreshSettings()">Arrondir</button></div></div>';
   if(on){
     var opts=others.map(function(a){ return '<option value="'+esc(a.id)+'"'+(String(a.id)===String(AM.round.to)?' selected':'')+'>'+esc(accLabel(a))+'</option>'; }).join('');
-    h+='<div class="am-rnd-to"><span>Verser la petite monnaie sur</span><select onchange="AM.round.to=this.value">'+opts+'</select></div>'+
-      '<div class="seg am-rnd-x">'+[1,2,5,10].map(function(x){ return '<button class="'+(AM.round.x===x?'on':'')+'" onclick="AM.round.x='+x+';amRefreshSettings()">×'+x+'</button>'; }).join('')+'</div>'+
-      '<p class="am-note">Chaque achat est arrondi à l’euro supérieur (25,60 € → 0,40 € ; 18 € → 1 €)'+(AM.round.x>1?', multiplié par '+AM.round.x:'')+'. La petite monnaie de la semaine est versée en une fois le lundi.</p>';
+    h+='<div class="am-rnd-to"><span>Vers</span><select onchange="AM.round.to=this.value">'+opts+'</select>'+
+      '<div class="seg am-rnd-x">'+[1,2,5,10].map(function(x){ return '<button class="'+(AM.round.x===x?'on':'')+'" onclick="AM.round.x='+x+';amRefreshSettings()">×'+x+'</button>'; }).join('')+'</div></div>'+
+      '<p class="am-note">25,60 € → 0,40 €'+(AM.round.x>1?' ×'+AM.round.x:'')+' · versé en une fois chaque lundi.</p>';
   }
   if(src.length) h+='<p class="am-note">🪙 Reçoit la petite monnaie de : '+src.map(function(k){ return esc(findAccount(k).name); }).join(', ')+'.</p>';
   return h;
@@ -3129,6 +3166,19 @@ function amPickColor(c,live){
   amRefresh();
 }
 function amPickType(k){ AM.type=k; amRefresh(); }
+var AM_TYPE_SHORT={quotidien:'Quotidien',credit:'Crédit',epargne:'Épargne',invest:'Placements'};
+// Boutons du bas : Annuler · Supprimer · Enregistrer ; la suppression demande une confirmation
+function amBtnsHtml(){
+  return '<button class="am-cancel" onclick="closeAccModal()">Annuler</button>'+
+    '<button class="am-del2" onclick="amAskDelete()" title="Supprimer le compte"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button>'+
+    '<button class="am-save" onclick="saveAccount()">Enregistrer</button>';
+}
+function amAskDelete(){
+  var el=document.getElementById('amBtns'); if(!el) return;
+  el.innerHTML='<div class="am-confirm"><b>Supprimer « '+esc(AM.name)+' » ?</b><span>Les opérations déjà saisies sont gardées.</span>'+
+    '<div><button class="am-cancel" onclick="document.getElementById(\'amBtns\').innerHTML=amBtnsHtml()">Non, garder</button>'+
+    '<button class="am-del-go" onclick="deleteAccount(\''+Number(AM.id)+'\',true)">Oui, supprimer</button></div></div>';
+}
 function amToggleHidden(){
   AM.hidden=!AM.hidden;
   saveAccount(AM.hidden?'Compte masqué':'Compte affiché');
@@ -3156,8 +3206,8 @@ function saveAccount(msg){
     closeAccModal(); refreshViews(); showToast(typeof msg==='string'?msg:'Compte mis à jour');
   });
 }
-function deleteAccount(id){
-  if(!confirm('Supprimer ce compte ? Les transactions déjà saisies sont conservées.')) return;
+function deleteAccount(id,ok){
+  if(!ok&&!confirm('Supprimer ce compte ? Les transactions déjà saisies sont conservées.')) return;
   apiDelete('/api/accounts/'+id,function(err){
     if(err){ showToast('Erreur suppression'); return; }
     var list=getAccounts(), out=[];
