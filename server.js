@@ -291,6 +291,7 @@ app.get('/api/admin/users', requireAuth, (req, res) => {
     u.admin = isAdmin(u);
   });
   const households = db.prepare('SELECT id, created_at FROM households ORDER BY id').all();
+  households.forEach(h => { h.counts = householdCounts(householdData(h.id)); });
   res.json({ users, households });
 });
 
@@ -834,6 +835,121 @@ function pushTick() {
   });
 }
 setInterval(pushTick, 60000);
+
+// ── Sauvegardes des foyers (dossier sauvegardes/, jamais sur GitHub) ──
+// Une copie complete des donnees d un foyer : automatique chaque nuit, et avant tout effacement ou restauration.
+const BACKUP_DIR = process.env.BACKUP_DIR || path.join(__dirname, 'sauvegardes');
+const BACKUP_KEEP = 40;                                       // copies gardees par foyer
+const HH_ROWS = ['transactions', 'accounts', 'recurring'];   // tables avec une colonne household_id
+const HH_KEYS = { settings: 'key', budget: 'key', categories: 'key', applied_months: 'month_key', epargne: 'key' }; // cles "h<id>|..."
+const REASONS = { auto: 'Sauvegarde de la nuit', manuel: 'Sauvegarde manuelle', 'avant-effacement': 'Avant effacement', 'avant-restauration': 'Avant restauration' };
+
+function householdData(hid) {
+  const out = {}, p = 'h' + hid + '|';
+  HH_ROWS.forEach(t => { out[t] = db.prepare('SELECT * FROM ' + t + ' WHERE household_id = ?').all(hid); });
+  Object.keys(HH_KEYS).forEach(t => { const c = HH_KEYS[t]; out[t] = db.prepare('SELECT * FROM ' + t + ' WHERE substr(' + c + ', 1, ?) = ?').all(p.length, p); });
+  return out;
+}
+function householdCounts(data) {
+  const goals = (data.settings || []).find(r => /\|goals$/.test(r.key));
+  let ng = 0; try { ng = goals ? JSON.parse(goals.value).length : 0; } catch (e) {}
+  return { accounts: data.accounts.length, transactions: data.transactions.length, recurring: data.recurring.length, goals: ng };
+}
+function wipeHousehold(hid) {
+  const p = 'h' + hid + '|';
+  HH_ROWS.forEach(t => db.prepare('DELETE FROM ' + t + ' WHERE household_id = ?').run(hid));
+  Object.keys(HH_KEYS).forEach(t => { const c = HH_KEYS[t]; db.prepare('DELETE FROM ' + t + ' WHERE substr(' + c + ', 1, ?) = ?').run(p.length, p); });
+}
+function backupDir(hid) { return path.join(BACKUP_DIR, 'foyer-' + parseInt(hid, 10)); }
+function saveBackup(hid, reason) {
+  const data = householdData(hid), now = new Date();
+  const stamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+  const dir = backupDir(hid);
+  fs.mkdirSync(dir, { recursive: true });
+  const file = stamp + '_' + reason + '.json';
+  fs.writeFileSync(path.join(dir, file), JSON.stringify({ version: 1, household_id: hid, at: now.toISOString(), reason, counts: householdCounts(data), data }));
+  // on ne garde que les plus recentes
+  fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort().reverse().slice(BACKUP_KEEP).forEach(f => { try { fs.unlinkSync(path.join(dir, f)); } catch (e) {} });
+  return file;
+}
+function listBackups(hid) {
+  const dir = backupDir(hid);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort().reverse().map(f => {
+    try { const b = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { file: f, at: b.at, reason: b.reason, label: REASONS[b.reason] || b.reason, counts: b.counts }; }
+    catch (e) { return null; }
+  }).filter(Boolean);
+}
+function backupFile(hid, file) {
+  if (!/^[\w-]+\.json$/.test(String(file || ''))) return null;
+  const f = path.join(backupDir(hid), file);
+  return fs.existsSync(f) ? f : null;
+}
+function restoreHousehold(hid, backup) {
+  if (!backup || backup.household_id !== hid || !backup.data) throw new Error('Sauvegarde d’un autre foyer');
+  db.transaction(() => {
+    wipeHousehold(hid);
+    [...HH_ROWS, ...Object.keys(HH_KEYS)].forEach(t => {
+      const cols = db.prepare('PRAGMA table_info(' + t + ')').all().map(c => c.name);
+      (backup.data[t] || []).forEach(row => {
+        const keys = Object.keys(row).filter(k => cols.indexOf(k) >= 0);
+        if (!keys.length) return;
+        db.prepare('INSERT OR REPLACE INTO ' + t + ' (' + keys.join(', ') + ') VALUES (' + keys.map(() => '?').join(', ') + ')').run(keys.map(k => row[k]));
+      });
+    });
+  })();
+}
+// Chaque nuit (a partir de 3 h) : une sauvegarde par foyer qui a des donnees
+function nightlyBackups() {
+  const now = new Date(), today = now.toISOString().slice(0, 10);
+  if (now.getHours() < 3) return;
+  db.prepare('SELECT id FROM households').all().forEach(h => {
+    const last = listBackups(h.id).find(b => b.reason === 'auto');
+    if (last && String(last.at).slice(0, 10) === today) return;
+    const c = householdCounts(householdData(h.id));
+    if (!c.accounts && !c.transactions && !c.recurring) return;
+    try { saveBackup(h.id, 'auto'); } catch (e) { console.log('Sauvegarde du foyer ' + h.id + ' impossible : ' + e.message); }
+  });
+}
+setTimeout(nightlyBackups, 10000);
+setInterval(nightlyBackups, 3600000);
+
+function requireAdmin(req, res, next) {
+  const me = db.prepare('SELECT * FROM users WHERE id = ?').get(req.uid);
+  if (!isAdmin(me)) return res.status(403).json({ error: 'Réservé à l’administrateur' });
+  const hid = parseInt(req.params.hid, 10);
+  if (!db.prepare('SELECT 1 FROM households WHERE id = ?').get(hid)) return res.status(404).json({ error: 'Foyer introuvable' });
+  req.target = hid;
+  next();
+}
+app.get('/api/admin/households/:hid', requireAuth, requireAdmin, (req, res) => {
+  res.json({ id: req.target, members: householdInfo(req.target).members, counts: householdCounts(householdData(req.target)), backups: listBackups(req.target) });
+});
+app.post('/api/admin/households/:hid/backup', requireAuth, requireAdmin, (req, res) => {
+  const file = saveBackup(req.target, 'manuel');
+  res.json({ ok: true, file, backups: listBackups(req.target) });
+});
+app.post('/api/admin/households/:hid/wipe', requireAuth, requireAdmin, (req, res) => {
+  if (req.body.confirm !== 'EFFACER') return res.status(400).json({ error: 'Confirmation manquante' });
+  const file = saveBackup(req.target, 'avant-effacement');
+  db.transaction(() => wipeHousehold(req.target))();
+  console.log('Administration : donnees du foyer ' + req.target + ' effacees par ' + req.user + ' (copie ' + file + ')');
+  res.json({ ok: true, file, counts: householdCounts(householdData(req.target)), backups: listBackups(req.target) });
+});
+app.post('/api/admin/households/:hid/restore', requireAuth, requireAdmin, (req, res) => {
+  const f = backupFile(req.target, req.body.file);
+  if (!f) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+  let backup; try { backup = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return res.status(400).json({ error: 'Sauvegarde illisible' }); }
+  const before = saveBackup(req.target, 'avant-restauration');
+  try { restoreHousehold(req.target, backup); } catch (e) { return res.status(400).json({ error: e.message }); }
+  console.log('Administration : foyer ' + req.target + ' remis a la sauvegarde ' + req.body.file + ' par ' + req.user + ' (copie ' + before + ')');
+  res.json({ ok: true, counts: householdCounts(householdData(req.target)), backups: listBackups(req.target) });
+});
+app.get('/api/admin/households/:hid/backups/:file', requireAuth, requireAdmin, (req, res) => {
+  const f = backupFile(req.target, req.params.file);
+  if (!f) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+  res.download(f, 'foyer-' + req.target + '_' + req.params.file);
+});
 
 // ── Ajout eclair : Claude lit un ticket de caisse ou un releve (photo, PDF, CSV) ──
 // Cle dans anthropic.config.json (jamais sur GitHub) ou variable ANTHROPIC_API_KEY
