@@ -1076,6 +1076,21 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .am-own{display:flex;gap:6px;}
 .am-own button.on{background:#2f5e3c;border-color:#2f5e3c;color:#fff;}
 .chip-av{width:24px;height:24px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;overflow:hidden;}
+.am-locked .am-types,.am-locked .am-set,.am-locked .am-hide,.am-locked .am-color,.am-locked .am-hint{pointer-events:none;opacity:.55;}
+.am-locked .am-hint{display:none;}
+.oc-locked .oc-in,.oc-locked .exp-car{pointer-events:none;}
+.oc-locked .oc-in{opacity:.75;}
+.hh-me{font-style:normal;color:#9a8f7c;font-weight:600;}
+.hh-adm{color:#a8781c;font-weight:800;}
+.hh-mk{border:1px solid #e3d6bc;background:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;color:#7a6a4c;cursor:pointer;}
+.hh-rule{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px;}
+.hh-rule button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:2px solid #ece3d2;background:#fff;border-radius:14px;padding:11px 14px;font:inherit;cursor:pointer;}
+.hh-rule button b{font-size:15px;}
+.hh-rule button span{font-size:12.5px;color:#8a7f6c;}
+.hh-rule button.on{border-color:#c9a14a;background:#fbf5e8;}
+.hh-rule.ro button{cursor:default;color:inherit;}
+.hh-rule.ro button:not(.on){opacity:.5;}
+.lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
 .pv-chip.mine.on{border-style:solid;border-color:#e8893a;}
@@ -1847,6 +1862,32 @@ function apiGet(path,cb){
   xhr.onerror=function(){ syncBar(false); cb(new Error('reseau')); };
   xhr.send();
 }
+// Regle du foyer : le serveur a refuse de toucher au compte d un autre membre -> message, puis on recharge les vraies donnees
+var LOCK_MSG='🔒 Ce compte appartient à un autre membre du foyer : l’admin du foyer n’autorise pas à le modifier.', _lockT=0;
+function lockRefused(xhr){
+  if(xhr.status!==403) return false;
+  var d={}; try{ d=JSON.parse(xhr.responseText); }catch(e){}
+  if(!d.locked) return false;
+  setTimeout(function(){ showToast(LOCK_MSG); },60); // apres le message d erreur eventuel de l appelant
+  clearTimeout(_lockT); _lockT=setTimeout(function(){ refreshMe(function(){ loadAllData(function(){ refreshViews(); }); }); },400);
+  return true;
+}
+// Ce compte appartient-il a un autre membre alors que l admin du foyer ne permet pas d y toucher ?
+function accLocked(id){
+  var h=AUTH&&AUTH.household; if(!h||h.membersEdit!==false||id==null||id==='') return false;
+  var a=getAccounts().filter(function(x){ return String(x.id)===String(id); })[0];
+  if(!a||!a.owner||String(a.owner)===String(currentUser)) return false;
+  return (h.members||[]).some(function(m){ return String(m.id)===String(a.owner); });
+}
+function pairOf(t){ var p=t&&t.transfer_pair; if(!p) return null; return getTxns().filter(function(x){ return String(x.id)===String(p)&&x!==t; })[0]||null; }
+// Comptes que l on peut utiliser pour une depense, un revenu ou le depart d un transfert
+function myAccounts(){ return getAccounts().filter(function(a){ return !accLocked(a.id); }); }
+// Une operation verrouillee : sur un compte verrouille (l argent qui y arrive par virement reste permis)
+function txnLocked(t){ return !!t&&t.type!=='transfert_in'&&accLocked(t.bank); }
+function lockNote(id){
+  var a=getAccounts().filter(function(x){ return String(x.id)===String(id); })[0];
+  return '<p class="lock-note">🔒 Compte de '+esc(memberName(a&&a.owner)||'un autre membre')+' : tu peux le consulter, pas le modifier (règle du foyer).</p>';
+}
 // Numeros de compte enregistres comme nombres a virgule ("123.0") : on les remet en entier pour retrouver le compte
 function cleanIds(d){
   if(Array.isArray(d)) d.forEach(function(x){ if(x&&typeof x==='object'){ ['bank','to_bank'].forEach(function(k){ if(typeof x[k]==='string'&&/^\d+\.0+$/.test(x[k])) x[k]=x[k].replace(/\.0+$/,''); }); } });
@@ -1857,7 +1898,7 @@ function apiPost(path,data,cb){
   if(DEMO){ setTimeout(function(){ var r=demoApi('POST',path,data||{}); if(cb) cb(null,r); },0); return; }
   var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+path,true);
   xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
-  xhr.onload=function(){ if(xhr.status===401){ authExpired(); if(cb) cb(new Error('HTTP 401')); return; } if(cb){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}} };
+  xhr.onload=function(){ if(xhr.status===401){ authExpired(); if(cb) cb(new Error('HTTP 401')); return; } if(lockRefused(xhr)){ if(cb) cb(new Error('HTTP 403'),{error:LOCK_MSG}); return; } if(cb){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}} };
   xhr.onerror=function(){ if(cb) cb(new Error('reseau')); };
   xhr.send(JSON.stringify(data));
 }
@@ -1866,7 +1907,7 @@ function apiDelete(path,cb){
   if(DEMO){ setTimeout(function(){ demoApi('DELETE',path); if(cb) cb(null); },0); return; }
   var xhr=new XMLHttpRequest(); xhr.open('DELETE',API_BASE+path,true);
   xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
-  xhr.onload=function(){ if(xhr.status===401){ authExpired(); if(cb) cb(new Error('HTTP 401')); return; } if(cb) cb(null); };
+  xhr.onload=function(){ if(xhr.status===401){ authExpired(); if(cb) cb(new Error('HTTP 401')); return; } if(lockRefused(xhr)){ if(cb) cb(new Error('HTTP 403')); return; } if(cb) cb(null); };
   xhr.onerror=function(){ if(cb) cb(new Error('reseau')); };
   xhr.send();
 }
@@ -1893,7 +1934,7 @@ function migrateAccNames(){
   for(var i=0;i<accs.length;i++){
     var a=accs[i], b=findBank(a.bank), d=String(a.description||'').trim();
     if(!d||normTxt(d)===normTxt(a.name)) continue;
-    if(b&&normTxt(a.name)===normTxt(b.name)){ a.name=d; apiPost('/api/accounts',a,null); }
+    if(b&&normTxt(a.name)===normTxt(b.name)&&!accLocked(a.id)){ a.name=d; apiPost('/api/accounts',a,null); }
   }
 }
 function initApp(){
@@ -1905,7 +1946,7 @@ function initApp(){
 }
 // A l ouverture : Budget et Prevision presentent les comptes de la personne connectee (et son mois de paie)
 function bgDefaultSelection(){
-  BG.prevAcc='all';
+  BG.prevAcc=''; bgCheckSel();
   BG.y=new Date().getFullYear(); BG.m=new Date().getMonth();
   withAccFilter(function(){ var c=filterCycle(); var d=c&&cycleMonthNow(c); if(d){ BG.y=d.getFullYear(); BG.m=d.getMonth(); } });
 }
@@ -3003,14 +3044,14 @@ var AM_TYPE_BG={quotidien:'#e3eef1',credit:'#f8e9e6',epargne:'#e6f1e8',invest:'#
 function openAccountSheet(id){
   if(id==null){ openAccountWizard(); return; }
   var a=findAccount(id); if(!a) return;
-  AM={id:a.id,name:a.name,desc:a.description||'',solde:String(accountBalance(a)).replace('.',','),color:a.color||'',type:a.type||'quotidien',hidden:!!a.hidden,bank:a.bank||'',colors:false,cycle:a.cycle?String(a.cycle):'',owner:a.owner||'',currency:a.currency||'',round:roundCfg(a.id)};
+  AM={id:a.id,name:a.name,desc:a.description||'',solde:String(accountBalance(a)).replace('.',','),color:a.color||'',type:a.type||'quotidien',hidden:!!a.hidden,bank:a.bank||'',colors:false,cycle:a.cycle?String(a.cycle):'',owner:a.owner||'',currency:a.currency||'',round:roundCfg(a.id),locked:accLocked(a.id)};
   var types='';
   for(var i=0;i<ACC_TYPES.length;i++){
     var t=ACC_TYPES[i];
     types+='<button class="am-type" data-k="'+t.key+'" style="--tbg:'+(AM_TYPE_BG[t.key]||'#eee')+'" onclick="amPickType(\''+t.key+'\')" title="'+esc(t.label)+'">'+accTypeIc(t.key)+'<b>'+(AM_TYPE_SHORT[t.key]||t.label)+'</b></button>';
   }
   var m=document.getElementById('accModal');
-  m.innerHTML='<div class="am am-acc">'+
+  m.innerHTML='<div class="am am-acc'+(AM.locked?' am-locked':'')+'">'+
     '<div class="am-top"><button class="am-color" id="amColorBtn" onclick="amToggleColors()" title="Couleur de la carte"></button><span style="flex:1"></span>'+
     '<button class="am-hide" onclick="amToggleHidden()"><svg class="ico" viewBox="0 0 24 24"><path d="'+(AM.hidden?'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6':'M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.8 8.4 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2')+'"/></svg>'+(AM.hidden?'Afficher':'Masquer')+'</button>'+
     '<button class="sheet-close am-x" onclick="closeAccModal()" title="Fermer">✕</button>'+
@@ -3029,6 +3070,7 @@ function openAccountSheet(id){
   m.classList.add('open');
   var n=document.getElementById('amName'), d=document.getElementById('amDesc'), s=document.getElementById('amSolde');
   n.value=AM.name; d.value=AM.desc; s.value=AM.solde;
+  if(AM.locked){ n.readOnly=true; s.readOnly=true; }
   n.oninput=function(){ AM.name=n.value; amFit(); };
   d.oninput=function(){ AM.desc=d.value; amFit(); };
   s.oninput=function(){
@@ -3039,7 +3081,8 @@ function openAccountSheet(id){
 }
 // Reglages du compte : mois (calendaire ou selon une paie) et proprietaire
 function amSettingsHtml(){
-  var who=(AUTH.household.members||[]).map(function(m){ return [String(m.id),m.name]; }).concat([['','Commun']]), seg='';
+  // Regle du foyer : on ne peut pas donner son compte a un autre membre
+  var who=(AUTH.household.members||[]).filter(function(m){ return AUTH.household.membersEdit!==false||AM.locked||String(m.id)===String(currentUser)||String(m.id)===String(AM.owner); }).map(function(m){ return [String(m.id),m.name]; }).concat([['','Commun']]), seg='';
   for(var w=0;w<who.length;w++) seg+='<button class="'+(AM.owner===who[w][0]?'on':'')+'" onclick="AM.owner=\''+who[w][0]+'\';amRefreshSettings()">'+who[w][1]+'</button>';
   var cc=AM.currency||mainCur(), foreign=cc!==mainCur(), rate=((_cache.settings||{}).rates||{})[cc];
   var html='<div class="am-set" id="amSet"><div class="am-2col"><div><label class="oc-lbl">Devise</label>'+
@@ -3188,6 +3231,7 @@ function amPickType(k){ AM.type=k; amRefresh(); }
 var AM_TYPE_SHORT={quotidien:'Quotidien',credit:'Crédit',epargne:'Épargne',invest:'Placements'};
 // Boutons du bas : Annuler · Supprimer · Enregistrer ; la suppression demande une confirmation
 function amBtnsHtml(){
+  if(AM.locked) return '<div style="flex:1">'+lockNote(AM.id)+'<button class="am-cancel" style="width:100%" onclick="closeAccModal()">Fermer</button></div>';
   return '<button class="am-cancel" onclick="closeAccModal()">Annuler</button>'+
     '<button class="am-del2" onclick="amAskDelete()" title="Supprimer le compte"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button>'+
     '<button class="am-save" onclick="saveAccount()">Enregistrer</button>';
@@ -3259,8 +3303,9 @@ function openTxnDetail(id){
     '<div class="detail-top">'+(kind==='tra'?'<span class="tx-icon">⇄</span>':catIconHtml(cat,'tx-icon'))+'<div style="font-size:18px;font-weight:800;">'+esc(t.label)+'</div>'+
     '<div class="detail-amt tx-amt '+kind+'" style="background:none;padding:0;">'+(txnSign(t)>0?'+ ':'– ')+fmtEur(parseFloat(t.amount)||0,bankCur(t.bank))+'</div></div>'+
     '<div class="detail-list">'+list+'</div>'+
+    (txnLocked(t)||(kind==='tra'&&txnLocked(pairOf(t)))?lockNote(t.type==='transfert_in'?pairOf(t).bank:t.bank):
     (Number(t.later_pay)?'<button class="sheet-btn" onclick="markTxnPaid(\''+Number(t.id)+'\')">Marquer comme payée</button>':'')+
-    '<button class="sheet-btn ghost" onclick="deleteHomeTxn('+("'"+Number(t.id)+"'")+')">Supprimer'+(kind==='tra'?' le transfert':'')+'</button>');
+    '<button class="sheet-btn ghost" onclick="deleteHomeTxn('+("'"+Number(t.id)+"'")+')">Supprimer'+(kind==='tra'?' le transfert':'')+'</button>'));
 }
 function deleteHomeTxn(id){
   if(!confirm('Supprimer cette transaction ?')) return;
@@ -3558,7 +3603,7 @@ function bindNameInput(li,kind){
 // Transfert : compte de depart, montant, compte d arrivee, recapitulatif.
 var E=null, expResume=null;
 function newFlow(kind,date){
-  var accs=getAccounts(), last=null, acc=accs.length?accs[0].id:'';
+  var accs=myAccounts(), last=null, acc=accs.length?accs[0].id:'';
   try{ last=localStorage.getItem('budget_last_acc'); }catch(e){}
   for(var i=0;i<accs.length;i++){ if(String(accs[i].id)===String(last)) acc=accs[i].id; }
   return {kind:kind,step:1,acc:acc,to:'',pick:'acc',view:kind==='tra'?'list':'car',amount:'',label:'',cat:'',date:date||todayStr(),
@@ -3595,7 +3640,7 @@ function renderExp(){
   document.getElementById('wizSum').innerHTML='';
   E.btnAdd=false;
   if(E.step===1){
-    renderAccStep(tra?'Transfert depuis&nbsp;?':(E.kind==='rev'?'Sur quel compte&nbsp;?':'Depuis quel compte&nbsp;?'),'acc',getAccounts());
+    renderAccStep(tra?'Transfert depuis&nbsp;?':(E.kind==='rev'?'Sur quel compte&nbsp;?':'Depuis quel compte&nbsp;?'),'acc',myAccounts());
   } else if(E.step===2){
     body.innerHTML='<div class="wiz-title center">Pour quel montant&nbsp;?</div>'+
       '<label class="amt-big exp-amt" id="wizAmtBox"><input type="text" id="wizAmt" inputmode="decimal" placeholder="0" autocomplete="off"><span>'+curSym(bankCur(E.acc))+'</span></label>';
@@ -4845,7 +4890,8 @@ function bgSuggest(btn){ openRegularWizard({label:btn.getAttribute('data-n'),cat
 function bgRegularSheet(kind,opt,existing){
   opt=opt||{};
   var r=existing||{label:opt.label||'',amount:'',day:new Date().getDate(),cat:opt.cat||'',bank:''};
-  var accs=getAccounts(), accOpts='<option value="">Aucun compte</option>';
+  if(existing&&accLocked(existing.bank)){ openSheet(sheetHead(existing.label||'Opération régulière')+lockNote(existing.bank)); return; }
+  var accs=myAccounts(), accOpts='<option value="">Aucun compte</option>';
   for(var a=0;a<accs.length;a++) accOpts+='<option value="'+esc(accs[a].id)+'"'+(String(accs[a].id)===String(r.bank)?' selected':'')+'>'+esc(accLabel(accs[a]))+'</option>';
   var catField='';
   if(kind==='dep'){
@@ -4948,7 +4994,7 @@ var OC=null;
 function bgOpenOcc(key){
   var o=bgOcc(key); if(!o) return;
   OC={key:key,kind:o.kind,label:o.label,amount:String(o.amount).replace('.',','),cat:o.cat||(o.kind==='rev'?'autre_rev':''),bank:o.bank||'',
-    date:o.date>todayStr()?todayStr():o.date,note:'',picking:false,rid:o.r.id,to:o.r.to_bank};
+    date:o.date>todayStr()?todayStr():o.date,note:'',picking:false,rid:o.r.id,to:o.r.to_bank,locked:accLocked(o.bank)};
   renderOccModal();
   document.getElementById('accModal').classList.add('open');
 }
@@ -4961,7 +5007,7 @@ function openTxnEdit(id){
   if(k==='tra'){ openTxnDetail(id); return; } // virements : detail habituel
   closeSheet();
   OC={txnId:t.id,kind:k,label:t.label||'',amount:String(parseFloat(t.amount)||0).replace('.',','),cat:t.cat||(k==='rev'?'autre_rev':''),bank:t.bank||'',
-    date:t.date,note:t.note||'',picking:false,reg:!!t.rec_key,later:!!Number(t.later_pay)};
+    date:t.date,note:t.note||'',picking:false,reg:!!t.rec_key,later:!!Number(t.later_pay),locked:txnLocked(t)};
   renderOccModal();
   document.getElementById('accModal').classList.add('open');
 }
@@ -5008,15 +5054,17 @@ function renderOccModal(){
   var rev=OC.kind==='rev', tra=OC.kind==='tra', cat=getCatObj(OC.cat), accs=getAccounts(), cards='';
   for(var i=0;i<accs.length;i++){
     if(tra&&String(accs[i].id)===String(OC.to)) continue;
+    if(OC.locked?String(accs[i].id)!==String(OC.bank):accLocked(accs[i].id)) continue; // regle du foyer
     cards+='<div data-id="'+esc(accs[i].id)+'"></div>';
   }
   var edit=!!OC.txnId;
   var title=edit?(rev?(OC.reg?'Revenu régulier':'Revenu'):(OC.reg?'Dépense régulière':'Dépense')):(tra?'Transfert régulier':(rev?'Revenu régulier':'Dépense régulière'));
   var od=parseDs(OC.date), when=OC.date===todayStr()?'aujourd’hui':'le '+od.getDate()+' '+MONTHS_ABBR[od.getMonth()].toLowerCase();
   var btn=edit?'Enregistrer':(tra?'Transfert fait ':(rev?'Revenu reçu ':'Dépense payée '))+when;
-  var html='<div class="am oc'+(rev?' rev':'')+'"><div class="oc-top"><span class="oc-tic">'+svgIcon(edit&&!OC.reg?(rev?'cash':'card'):'repeat')+'</span><b>'+title+'</b>'+
-    (edit?'':'<button class="oc-flag" onclick="bgSkipOcc()" title="Ignorer cette échéance (pas cette fois)"><svg class="ico" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>')+
-    '<button class="am-del" onclick="'+(edit?'deleteTxnFromEdit()':'bgDeleteRegularFromOcc()')+'" title="'+(edit?'Supprimer':'Supprimer l’opération régulière')+'"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button></div>'+
+  var html='<div class="am oc'+(rev?' rev':'')+(OC.locked?' oc-locked':'')+'"><div class="oc-top"><span class="oc-tic">'+svgIcon(edit&&!OC.reg?(rev?'cash':'card'):'repeat')+'</span><b>'+title+'</b>'+
+    (OC.locked?'<button class="sheet-close am-x" onclick="closeAccModal()" title="Fermer">✕</button></div>':'')+
+    (OC.locked?'':edit?'':'<button class="oc-flag" onclick="bgSkipOcc()" title="Ignorer cette échéance (pas cette fois)"><svg class="ico" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button>')+
+    (OC.locked?'':'<button class="am-del" onclick="'+(edit?'deleteTxnFromEdit()':'bgDeleteRegularFromOcc()')+'" title="'+(edit?'Supprimer':'Supprimer l’opération régulière')+'"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button></div>')+
     '<label class="oc-lbl">Nom</label><input class="oc-in" id="ocName" maxlength="40" value="'+esc(OC.label)+'">'+
     '<div class="oc-row"><div><label class="oc-lbl">Montant</label><div class="oc-amt"><input class="oc-in" id="ocAmount" inputmode="decimal" value="'+esc(OC.amount)+'"><span>'+curSym(bankCur(OC.bank))+'</span></div></div>'+
     (tra?'':'<div><label class="oc-lbl">Catégorie</label><button class="oc-in oc-cat" onclick="OC.picking=!OC.picking;renderOccModal()">'+catIconHtml(cat,'oc-cic')+'<span>'+esc(cat.label)+'</span></button></div>')+'</div>';
@@ -5029,9 +5077,10 @@ function renderOccModal(){
     '<div class="oc-row"><div class="oc-date"><label class="oc-lbl">Date</label><button class="oc-in oc-dt" onclick="ocToggleCal()">'+svgIcon('calendar')+'<span>'+esc(niceDate(OC.date))+'</span></button></div>'+
     '<div><label class="oc-lbl">Note</label><input class="oc-in" id="ocNote" maxlength="80" placeholder="Note facultative…" value="'+esc(OC.note)+'"></div></div>'+
     (OC.calOpen?ocCalHtml():'')+
-    (edit&&!OC.reg?ocRegHtml(rev,od):'')+
-    (edit&&OC.later?'<button class="cyc-reset" onclick="closeAccModal();markTxnPaid(\''+Number(OC.txnId)+'\')">Marquer comme payée</button>':'')+
-    '<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save oc-go" onclick="'+(edit?'saveTxnEdit()':'bgConfirmOcc()')+'">'+btn+'</button></div></div>';
+    (edit&&!OC.reg&&!OC.locked?ocRegHtml(rev,od):'')+
+    (OC.locked?lockNote(OC.bank)+'<div class="am-btns"><button class="am-cancel" style="flex:1" onclick="closeAccModal()">Fermer</button></div></div>':'')+
+    (OC.locked?'':edit&&OC.later?'<button class="cyc-reset" onclick="closeAccModal();markTxnPaid(\''+Number(OC.txnId)+'\')">Marquer comme payée</button>':'')+
+    (OC.locked?'':'<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save oc-go" onclick="'+(edit?'saveTxnEdit()':'bgConfirmOcc()')+'">'+btn+'</button></div></div>');
   var m=document.getElementById('accModal'), y=m.firstChild?m.firstChild.scrollTop:0;
   m.innerHTML=html; m.firstChild.scrollTop=y;
   var car=document.getElementById('ocCar');
@@ -5247,14 +5296,21 @@ function renderBgYear(){
 }
 
 // Boutons "Tous / compte" : le choix vaut pour les onglets Budget et Prevision
-// Filtre du Budget : « Tous » + un bouton par personne inscrite dans le foyer (ses comptes, ceux qui lui appartiennent).
+// Filtre du Budget : un bouton par personne inscrite dans le foyer (ses comptes, ceux qui lui appartiennent) + « Commun ».
 // Rien a choisir quand on est seul dans le foyer.
+// Choix du filtre encore valable ? Seul dans le foyer : tout ; sinon une personne (soi par defaut) ou « Commun »
+function bgCheckSel(){
+  var ms=hhMembers();
+  if(ms.length<2){ BG.prevAcc='all'; return; }
+  if(BG.prevAcc==='common'||/^u:/.test(BG.prevAcc||'')&&ms.some(function(m){ return 'u:'+m.id===BG.prevAcc; })) return;
+  BG.prevAcc=ms.some(function(m){ return String(m.id)===String(currentUser); })?'u:'+currentUser:'u:'+ms[0].id;
+}
 function hhMembers(){ return (AUTH&&AUTH.household&&AUTH.household.members)||[]; }
 function accChipsHtml(){
   var ms=hhMembers();
-  if(BG.prevAcc!=='all'&&BG.prevAcc!=='common'&&!(/^u:/.test(BG.prevAcc)&&ms.some(function(m){ return 'u:'+m.id===BG.prevAcc; }))) BG.prevAcc='all';
+  bgCheckSel();
   if(ms.length<2) return '';
-  var sel=BG.prevAcc, chips='<button class="pv-chip'+(sel==='all'?' on':'')+'" onclick="bgPickAcc(\'all\')">Tous</button>';
+  var sel=BG.prevAcc, chips='';
   ms.forEach(function(m){
     var v='u:'+m.id;
     chips+='<button class="pv-chip'+(sel===v?' on':'')+'" onclick="bgPickAcc(\''+v+'\')"><span class="chip-av" data-uid="'+esc(m.id)+'"></span>'+esc(m.name)+'</button>';
@@ -6010,7 +6066,7 @@ function qkSkipped(nom){ return QK.map[nom||'']==='skip'; }
 function qkActive(o){ return o.kind==='tra'?!((o.from==null||qkSkipped(o.from))&&(o.to==null||qkSkipped(o.to))):!qkSkipped(o.compte); }
 function qkGuessAcc(nom){
   var n=normTxt(nom).trim(); if(!n) return null;
-  var accs=getAccounts(), best=null;
+  var accs=myAccounts(), best=null;
   accs.forEach(function(a){
     var x=normTxt(a.name).trim(), y=normTxt(a.description||'').trim();
     if(x===n||y===n) best=best||a;
@@ -6084,7 +6140,7 @@ function qkGroupRounds(list){
 }
 function qkReview(r){
   var mine=getAccounts().filter(function(a){ return !a.hidden&&a.owner===currentUser; });
-  var first=(mine[0]||getAccounts()[0]||{}).id||'';
+  var first=(mine[0]||myAccounts()[0]||{}).id||'';
   QK.doc=r.document; QK.remarque=r.remarque||''; QK.filter='all';
   QK.accs=(r.comptes||[]).slice(); QK.map={};
   var raw=r.operations||[], names={};
@@ -6095,7 +6151,7 @@ function qkReview(r){
   var multi=QK.accs.length>1;
   QK.accs.forEach(function(c){
     var g=qkGuessAcc(c.nom), memo=qkMemo()[normTxt(c.nom)];
-    if(memo&&(memo==='skip'||findAccount(memo))) QK.map[c.nom]=memo;
+    if(memo&&(memo==='skip'||findAccount(memo)&&!accLocked(memo))) QK.map[c.nom]=memo;
     else QK.map[c.nom]=g?String(g.id):(multi&&c.nom||!first?'new':String(first));
   });
   QK.ops=qkPair(raw);
@@ -6137,7 +6193,7 @@ function qkWizardBack(){
 }
 function qkAccOptions(c){
   var v=QK.map[c.nom], h='';
-  getAccounts().forEach(function(a){ h+='<option value="'+esc(a.id)+'"'+(String(a.id)===v?' selected':'')+'>'+esc(accLabel(a))+'</option>'; });
+  myAccounts().forEach(function(a){ h+='<option value="'+esc(a.id)+'"'+(String(a.id)===v?' selected':'')+'>'+esc(accLabel(a))+'</option>'; });
   h+='<option value="wiz">✏️ Nouveau compte… (nom, banque, solde, couleur)</option>';
   h+='<option value="new"'+(v==='new'?' selected':'')+'>➕ Créer « '+esc(qkNewName(c))+' » tel quel</option>';
   h+='<option value="none"'+(v==='none'?' selected':'')+'>Sans compte</option>';
@@ -6629,15 +6685,40 @@ function admDownload(hid,file){
   xhr.send();
 }
 function setHousehold(){
-  var ms=AUTH.household.members||[], rows='';
-  for(var i=0;i<ms.length;i++) rows+='<div><span>'+esc(ms[i].name)+'</span><span>'+(String(ms[i].id)===currentUser?'Toi':'Membre')+'</span></div>';
+  var h=AUTH.household, ms=h.members||[], rows='', adm=String(h.adminId||''), iAmAdmin=adm===String(currentUser), edit=h.membersEdit!==false;
+  for(var i=0;i<ms.length;i++){
+    var me=String(ms[i].id)===currentUser, isA=String(ms[i].id)===adm;
+    rows+='<div><span>'+esc(ms[i].name)+(me?' <i class="hh-me">(toi)</i>':'')+'</span><span>'+(isA?'<b class="hh-adm">👑 Admin du foyer</b>':
+      (iAmAdmin&&ms.length>1?'<button class="hh-mk" onclick="setHouseholdAdmin(\''+ms[i].id+'\')">Rendre admin</button>':'Membre'))+'</span></div>';
+  }
+  var rule='';
+  if(ms.length>1||iAmAdmin) rule='<div class="adm-h"><span>Règle du foyer</span></div>'+
+    '<p class="sheet-note">Chacun peut-il modifier les comptes des autres (ajouter, modifier ou supprimer une opération, changer le compte) ? Les comptes communs restent ouverts à tous, et chacun voit tout.</p>'+
+    '<div class="hh-rule'+(iAmAdmin?'':' ro')+'">'+
+      '<button class="'+(edit?'on':'')+'" '+(iAmAdmin?'onclick="setHouseholdRule(true)"':'disabled')+'><b>✅ Autorisé</b><span>Tout le monde modifie tous les comptes</span></button>'+
+      '<button class="'+(!edit?'on':'')+'" '+(iAmAdmin?'onclick="setHouseholdRule(false)"':'disabled')+'><b>🔒 Chacun ses comptes</b><span>Les comptes des autres se consultent sans pouvoir être modifiés</span></button>'+
+    '</div>'+(iAmAdmin?'':'<p class="sheet-note">Seul l’admin du foyer ('+esc(memberName(adm)||'—')+') peut changer cette règle.</p>');
   openSheet(sheetHead('Mon foyer')+
     '<p class="sheet-note">Les personnes du foyer partagent les mêmes comptes, budgets et opérations (3 personnes maximum).</p>'+
-    '<div class="detail-list">'+rows+'</div>'+
+    '<div class="detail-list">'+rows+'</div>'+rule+
     (DEMO?'<p class="sheet-note">Pas de foyer en mode démo.</p>':
     (ms.length<3?'<button class="sheet-btn" onclick="setInvite()">Inviter quelqu’un</button>':'')+
     '<button class="sheet-btn ghost" onclick="setJoin()">Rejoindre un autre foyer</button>'+
     (ms.length>1?'<button class="cyc-reset" onclick="setLeave()">Quitter ce foyer</button>':'')));
+}
+function setHouseholdRule(v){
+  apiPost('/api/household/rules',{membersEdit:v},function(err,d){
+    if(err||!d||!d.ok){ showToast((d&&d.error)||'Impossible'); return; }
+    AUTH.household=d.household; setHousehold(); refreshViews();
+    showToast(v?'Tout le monde peut modifier tous les comptes':'Chacun ne modifie plus que ses comptes');
+  });
+}
+function setHouseholdAdmin(id){
+  if(!confirm('Donner le rôle d’admin du foyer à '+memberName(id)+' ? Tu ne pourras plus changer la règle du foyer.')) return;
+  apiPost('/api/household/rules',{adminId:Number(id)},function(err,d){
+    if(err||!d||!d.ok){ showToast((d&&d.error)||'Impossible'); return; }
+    AUTH.household=d.household; setHousehold(); showToast(memberName(id)+' est maintenant admin du foyer');
+  });
 }
 function setInvite(){
   apiPost('/api/household/invite',{},function(err,d){
@@ -6800,6 +6881,7 @@ function paySuggestions(){
       b:'Suivre « '+mine.label+' »', go:function(){ payUseCycle(mine.id); }});
   }
   pays.forEach(function(r){
+    if(accLocked(r.bank)) return; // paie d un autre membre : la regle du foyer ne permet pas d y toucher
     var h=payHistory(r), day=parseInt(r.day,10)||1;
     // 2. paie qui arrive souvent un autre jour que prevu
     if(h.length>=2&&(r.freq||'month')==='month'){
@@ -6826,7 +6908,7 @@ function paySuggestions(){
     var o=payOwner(r);
     var inHc=String(r.id)===String(hc)||(isMix(hc)&&(mixParts(hc).a===String(r.id)||mixParts(hc).b===String(r.id)));
     if(o&&!inHc&&!(mine&&String(mine.id)===String(r.id))){
-      var accs=getAccounts().filter(function(a){ return String(a.owner)===String(o.id)&&!a.hidden&&String(a.cycle)!==String(r.id); });
+      var accs=getAccounts().filter(function(a){ return String(a.owner)===String(o.id)&&!a.hidden&&String(a.cycle)!==String(r.id)&&!accLocked(a.id); });
       if(accs.length) out.push({t:'Les comptes de '+o.name+' ('+accs.map(function(a){ return a.name; }).join(', ')+') suivent le mois du foyer. Les faire démarrer avec sa paie « '+r.label+' » ?',
         b:'Régler '+(accs.length>1?'ses comptes':'son compte'), go:function(){ payAccountsCycle(accs,r.id); }});
     }
