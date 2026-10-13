@@ -153,6 +153,8 @@ addColumnIfMissing('transactions', 'household_id', 'INTEGER');
 addColumnIfMissing('accounts', 'household_id', 'INTEGER');
 addColumnIfMissing('recurring', 'household_id', 'INTEGER');
 addColumnIfMissing('users', 'avatar', 'TEXT');
+addColumnIfMissing('households', 'admin_id', 'INTEGER');        // admin du foyer (par defaut : le premier inscrit)
+addColumnIfMissing('households', 'members_edit', 'INTEGER DEFAULT 1'); // 0 : chacun ne modifie que ses comptes (et les communs)
 
 const MAX_MEMBERS = 3;
 const SESSION_DAYS = 60;
@@ -180,8 +182,40 @@ function isAdmin(u) { return !!u && ADMIN_EMAILS.indexOf(String(u.email || '').t
 function parseAvatar(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function publicUser(u) { return { id: u.id, name: u.name, email: u.email, login: u.login || '', admin: isAdmin(u), avatar: parseAvatar(u.avatar) }; }
 function householdInfo(hid) {
-  return { id: hid, members: db.prepare('SELECT id, name, avatar FROM users WHERE household_id = ? ORDER BY id').all(hid).map(m => ({ id: m.id, name: m.name, avatar: parseAvatar(m.avatar) })) };
+  const members = db.prepare('SELECT id, name, avatar FROM users WHERE household_id = ? ORDER BY id').all(hid).map(m => ({ id: m.id, name: m.name, avatar: parseAvatar(m.avatar) }));
+  const h = db.prepare('SELECT admin_id, members_edit FROM households WHERE id = ?').get(hid) || {};
+  return { id: hid, members, adminId: householdAdmin(hid, members, h), membersEdit: h.members_edit !== 0 };
 }
+// Admin du foyer : celui choisi s il fait toujours partie du foyer, sinon le premier inscrit
+function householdAdmin(hid, members, h) {
+  members = members || db.prepare('SELECT id FROM users WHERE household_id = ? ORDER BY id').all(hid);
+  h = h || db.prepare('SELECT admin_id FROM households WHERE id = ?').get(hid) || {};
+  if (members.some(m => m.id === h.admin_id)) return h.admin_id;
+  return members.length ? members[0].id : null;
+}
+
+// ── Regle du foyer : chacun ne touche qu a ses comptes (et aux comptes communs) ──
+// Renvoie true quand le compte appartient a un autre membre et que l admin ne l autorise pas.
+function accountLocked(req, accId) {
+  if (accId == null || accId === '') return false;
+  const h = db.prepare('SELECT members_edit FROM households WHERE id = ?').get(req.hid);
+  if (!h || h.members_edit !== 0) return false;
+  const a = db.prepare('SELECT owner FROM accounts WHERE household_id = ? AND CAST(id AS TEXT) = ?').get(req.hid, String(accId));
+  return !!a && ownerLocked(req, a.owner);
+}
+function ownerLocked(req, owner) {
+  if (!owner || String(owner) === String(req.uid)) return false;
+  return !!db.prepare('SELECT 1 FROM users WHERE id = ? AND household_id = ?').get(owner, req.hid);
+}
+// Une operation touche-t-elle un compte verrouille ? L argent qui arrive (moitie « entree » d un virement) reste permis.
+function txnLocked(req, t) {
+  if (!t) return false;
+  if (t.type === 'transfert_in') return false;
+  return accountLocked(req, t.bank);
+}
+const LOCK_MSG = 'Ce compte appartient à un autre membre du foyer : l’admin du foyer n’autorise pas à le modifier.';
+function membersEditOff(req) { const h = db.prepare('SELECT members_edit FROM households WHERE id = ?').get(req.hid); return !!h && h.members_edit === 0; }
+function lockedRes(res) { return res.status(403).json({ error: LOCK_MSG, locked: true }); }
 
 // Trop d essais rates : on bloque quelques minutes (par adresse IP et par identifiant)
 const attempts = new Map();
@@ -387,6 +421,19 @@ app.post('/api/household/join', requireAuth, (req, res) => {
 });
 
 // Quitter le foyer : on repart avec un foyer vide
+// Reglage du foyer, reserve a son admin : les membres peuvent-ils modifier les comptes des autres ?
+app.post('/api/household/rules', requireAuth, (req, res) => {
+  if (householdAdmin(req.hid) !== req.uid) return res.status(403).json({ error: 'Seul l’admin du foyer peut changer cette règle' });
+  if (typeof req.body.membersEdit === 'boolean')
+    db.prepare('UPDATE households SET members_edit = ? WHERE id = ?').run(req.body.membersEdit ? 1 : 0, req.hid);
+  if (req.body.adminId != null) {
+    const to = db.prepare('SELECT id FROM users WHERE id = ? AND household_id = ?').get(req.body.adminId, req.hid);
+    if (!to) return res.status(400).json({ error: 'Cette personne n’est pas dans le foyer' });
+    db.prepare('UPDATE households SET admin_id = ? WHERE id = ?').run(to.id, req.hid);
+  }
+  res.json({ ok: true, household: householdInfo(req.hid) });
+});
+
 app.post('/api/household/leave', requireAuth, (req, res) => {
   if (householdInfo(req.hid).members.length <= 1) return res.status(400).json({ error: 'Tu es seul dans ce foyer' });
   const hid = db.prepare('INSERT INTO households DEFAULT VALUES').run().lastInsertRowid;
@@ -403,6 +450,7 @@ app.get('/api/transactions', requireAuth, (req, res) => {
 app.post('/api/transactions', requireAuth, (req, res) => {
   const t = req.body;
   if (t.id && foreignRow('transactions', t.id, req.hid)) return res.status(403).json({ error: 'Opération introuvable' });
+  if (txnLocked(req, t) || (t.id && txnLocked(req, db.prepare('SELECT type, bank FROM transactions WHERE id = ?').get(t.id)))) return lockedRes(res);
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip, rec_key, note, household_id)
     VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip, @rec_key, @note, @household_id)
@@ -435,6 +483,8 @@ app.post('/api/transactions', requireAuth, (req, res) => {
 // Import en masse (releve bancaire, depenses recurrentes)
 app.post('/api/transactions/bulk', requireAuth, (req, res) => {
   const txns = req.body.transactions || [];
+  const getOld = db.prepare('SELECT type, bank FROM transactions WHERE id = ?');
+  if (txns.some(t => txnLocked(req, t) || (t.id && txnLocked(req, getOld.get(t.id))))) return lockedRes(res);
   const insert = db.prepare(`
     INSERT OR REPLACE INTO transactions (id, date, label, cat, amount, type, bank, need, auto, transfer_pair, created_by, affect_year, affect_month_num, remb, later_pay, no_balance, trip, rec_key, note, household_id)
     VALUES (@id, @date, @label, @cat, @amount, @type, @bank, @need, @auto, @transfer_pair, @created_by, @affect_year, @affect_month_num, @remb, @later_pay, @no_balance, @trip, @rec_key, @note, @household_id)
@@ -471,6 +521,7 @@ app.post('/api/transactions/bulk', requireAuth, (req, res) => {
 });
 
 app.delete('/api/transactions/:id', requireAuth, (req, res) => {
+  if (txnLocked(req, db.prepare('SELECT type, bank FROM transactions WHERE id = ? AND household_id = ?').get(req.params.id, req.hid))) return lockedRes(res);
   db.prepare('DELETE FROM transactions WHERE id = ? AND household_id = ?').run(req.params.id, req.hid);
   res.json({ ok: true });
 });
@@ -547,8 +598,11 @@ app.get('/api/recurring', requireAuth, (req, res) => {
 
 app.post('/api/recurring', requireAuth, (req, res) => {
   const r = req.body;
+  if (accountLocked(req, r.bank)) return lockedRes(res);
   // Mise a jour d une operation reguliere existante
   if (r.id) {
+    const old = db.prepare('SELECT bank FROM recurring WHERE id = ? AND household_id = ?').get(r.id, req.hid);
+    if (old && accountLocked(req, old.bank)) return lockedRes(res);
     db.prepare('UPDATE recurring SET label=?, cat=?, bank=?, amount=?, day=?, to_bank=?, kind=? WHERE id=? AND household_id=?')
       .run(r.label, r.cat || '', r.bank == null ? '' : String(r.bank), parseFloat(r.amount) || 0, parseInt(r.day)||1, r.to_bank == null || r.to_bank === '' ? null : String(r.to_bank), r.kind || null, r.id, req.hid);
     return res.json({ ok: true, id: r.id });
@@ -561,6 +615,8 @@ app.post('/api/recurring', requireAuth, (req, res) => {
 });
 
 app.delete('/api/recurring/:id', requireAuth, (req, res) => {
+  const old = db.prepare('SELECT bank FROM recurring WHERE id = ? AND household_id = ?').get(req.params.id, req.hid);
+  if (old && accountLocked(req, old.bank)) return lockedRes(res);
   db.prepare('DELETE FROM recurring WHERE id = ? AND household_id = ?').run(req.params.id, req.hid);
   res.json({ ok: true });
 });
@@ -614,6 +670,8 @@ app.post('/api/accounts', requireAuth, (req, res) => {
   if (!a.name) return res.status(400).json({ error: 'Nom du compte manquant' });
   const id = a.id || Date.now();
   if (foreignRow('accounts', id, req.hid)) return res.status(403).json({ error: 'Compte introuvable' });
+  // Regle du foyer : pas de compte d un autre membre, ni avant ni apres l enregistrement
+  if (accountLocked(req, id) || (membersEditOff(req) && ownerLocked(req, a.owner))) return lockedRes(res);
   db.prepare(`
     INSERT INTO accounts (id, name, color, solde, solde_date, solde_set_at, sort_order, created_by, bank_key, acc_type, description, hidden, cycle_rec, owner, currency, household_id)
     VALUES (@id, @name, @color, @solde, @solde_date, @solde_set_at, @sort_order, @created_by, @bank_key, @acc_type, @description, @hidden, @cycle_rec, @owner, @currency, @household_id)
@@ -651,6 +709,7 @@ app.post('/api/accounts/order', requireAuth, (req, res) => {
 });
 
 app.delete('/api/accounts/:id', requireAuth, (req, res) => {
+  if (accountLocked(req, req.params.id)) return lockedRes(res);
   db.prepare('DELETE FROM accounts WHERE id = ? AND household_id = ?').run(req.params.id, req.hid);
   res.json({ ok: true });
 });
