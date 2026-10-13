@@ -5555,7 +5555,7 @@ function qkSameName(a,b){
 }
 function qkMatches(o){
   var rank={sure:0,likely:1,maybe:2}, tra=o.kind==='tra';
-  function real(n){ var b=n?qkBankOf(n):null; return b&&b!=='new'?b:null; }
+  function real(n){ var b=n!=null?qkBankOf(n):null; return b&&b!=='new'?b:null; }
   var bank=tra?(real(o.from)||real(o.to)):qkBankOf(o.compte);
   if(!bank||bank==='new') return [];                           // compte cree a l import : rien a comparer
   var want=tra?(real(o.from)?'transfert':'transfert_in'):null;
@@ -5580,9 +5580,12 @@ function qkCatOptions(kind,sel){
 function qkFr(d){ return d.split('-').reverse().join('/'); }
 // Comptes du document (releve a plusieurs comptes : Pockets Revolut, livrets...) et compte du site choisi pour chacun
 // QK.map[nom] = id d un compte du site, 'new' (a creer) ou 'skip' (ne pas importer)
-function qkBankOf(nom){ var v=QK.map[nom||'']; return v==='skip'?null:(v||null); }
+function qkBankOf(nom){ var v=QK.map[nom||'']; return v==='skip'||v==='none'?null:(v||null); }
+// Nom d un compte a creer : celui du document, sinon la banque, sinon un nom par defaut
+function qkNewName(c){ return c.nom||c.banque||'Compte importé'; }
 function qkSkipped(nom){ return QK.map[nom||'']==='skip'; }
-function qkActive(o){ return o.kind==='tra'?!((!o.from||qkSkipped(o.from))&&(!o.to||qkSkipped(o.to))):!qkSkipped(o.compte); }
+// Transfert : from / to = null quand ce cote n est pas dans le document ("" = le compte sans nom du document)
+function qkActive(o){ return o.kind==='tra'?!((o.from==null||qkSkipped(o.from))&&(o.to==null||qkSkipped(o.to))):!qkSkipped(o.compte); }
 function qkGuessAcc(nom){
   var n=normTxt(nom).trim(); if(!n) return null;
   var accs=getAccounts(), best=null;
@@ -5614,9 +5617,9 @@ function qkPair(ops){
     var j=link[i]!=null?link[i]:-1;
     var src=o.kind==='dep'?o:(j>=0?ops[j]:null), dst=o.kind==='rev'?o:(j>=0?ops[j]:null);
     used[i]=1; if(j>=0) used[j]=1;
-    var ft=src?src.compte:o.lie, tt=dst?dst.compte:o.lie;
+    var ft=src?(src.compte||'ce compte'):o.lie, tt=dst?(dst.compte||'ce compte'):o.lie;
     out.push({kind:'tra',date:(src||dst).date,amount:o.amount,cat:'',detail:(src||dst).detail||o.label,
-      from:src?src.compte:'', to:dst?dst.compte:'', fromTxt:ft||'?', toTxt:tt||'?', label:'Transfert '+(ft||'?')+' → '+(tt||'?')});
+      from:src?src.compte:null, to:dst?dst.compte:null, fromTxt:ft||'?', toTxt:tt||'?', label:'Transfert '+(ft||'?')+' → '+(tt||'?')});
   });
   ops.forEach(function(o,i){ if(!used[i]&&!o.interne) out.push(o); });
   return out.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
@@ -5635,7 +5638,7 @@ function qkReview(r){
   QK.accs.forEach(function(c){
     var g=qkGuessAcc(c.nom), memo=qkMemo()[normTxt(c.nom)];
     if(memo&&(memo==='skip'||findAccount(memo))) QK.map[c.nom]=memo;
-    else QK.map[c.nom]=g?String(g.id):(multi&&c.nom?'new':String(first));
+    else QK.map[c.nom]=g?String(g.id):(multi&&c.nom||!first?'new':String(first));
   });
   QK.ops=qkPair(raw);
   if(!QK.ops.length){
@@ -5657,7 +5660,8 @@ function qkMapSet(i,v){ QK.map[QK.accs[i].nom]=v; qkMemoSet(QK.accs[i].nom,v); q
 function qkAccOptions(c){
   var v=QK.map[c.nom], h='';
   getAccounts().forEach(function(a){ h+='<option value="'+esc(a.id)+'"'+(String(a.id)===v?' selected':'')+'>'+esc(accLabel(a))+'</option>'; });
-  if(c.nom) h+='<option value="new"'+(v==='new'?' selected':'')+'>➕ Créer « '+esc(c.nom)+' »</option>';
+  h+='<option value="new"'+(v==='new'?' selected':'')+'>➕ Créer « '+esc(qkNewName(c))+' »</option>';
+  h+='<option value="none"'+(v==='none'?' selected':'')+'>Sans compte</option>';
   if(QK.accs.length>1) h+='<option value="skip"'+(v==='skip'?' selected':'')+'>Ne pas importer</option>';
   return h;
 }
@@ -5678,7 +5682,7 @@ function qkVisible(){ var r=[]; QK.ops.forEach(function(o,i){ if(qkActive(o)) r.
 function qkAccTag(o){ return QK.accs.length>1&&o.kind!=='tra'?'<span class="qk-tag">'+esc(o.compte)+'</span>':''; }
 function qkAmt(o){ return '<span class="qk-amt '+o.kind+'">'+(o.kind==='rev'?'+':o.kind==='dep'?'-':'')+fmtE(o.amount,true)+'</span>'; }
 function qkCatCell(o,i){
-  if(o.kind==='tra') return '<span class="qk-tra" title="'+(o.from&&o.to?'':'Seul ce côté figure dans le document')+'">⇄ '+esc(o.fromTxt)+' → '+esc(o.toTxt)+(o.from&&o.to?'':' <i>(un côté)</i>')+'</span>';
+  if(o.kind==='tra') return '<span class="qk-tra" title="'+(o.from!=null&&o.to!=null?'':'Seul ce côté figure dans le document')+'">⇄ '+esc(o.fromTxt)+' → '+esc(o.toTxt)+(o.from!=null&&o.to!=null?'':' <i>(un côté)</i>')+'</span>';
   return '<select onchange="QK.ops['+i+'].cat=this.value">'+qkCatOptions(o.kind,o.cat)+'</select>';
 }
 function qkMobile(){ return window.matchMedia('(max-width:699px)').matches; }
@@ -5815,7 +5819,7 @@ function qkSave(){
   var vis=qkVisible(), todo=vis.map(function(i){ return QK.ops[i]; }).filter(function(o){ return o.add; });
   if(!todo.length) return;
   var used={};
-  todo.forEach(function(o){ (o.kind==='tra'?[o.from,o.to]:[o.compte]).forEach(function(n){ if(QK.map[n||'']==='new') used[n]=1; }); });
+  todo.forEach(function(o){ (o.kind==='tra'?[o.from,o.to]:[o.compte]).forEach(function(n){ if(n!=null&&QK.map[n]==='new') used[n]=1; }); });
   var toCreate=QK.accs.filter(function(c){ return used[c.nom]; });
   document.getElementById('qkGo').disabled=true;
   function fail(err){ document.getElementById('qkGo').disabled=false; showToast('Erreur : '+err.message); }
@@ -5824,7 +5828,7 @@ function qkSave(){
   (function next(){
     if(k>=toCreate.length) return qkSaveTxns(todo,toCreate.length);
     var c=toCreate[k], ep=/epargne|livret|coffre|precaution|ldds|lep|pel/.test(normTxt(c.nom));
-    var acc={id:base+k,name:c.nom,bank:qkBankKey(c.banque),type:ep?'epargne':'quotidien',description:c.nom,color:'',
+    var acc={id:base+k,name:qkNewName(c),bank:qkBankKey(c.banque||c.nom),type:ep?'epargne':'quotidien',description:c.nom,color:'',
       solde:c.debut!=null?c.debut:0,soldeDate:todayStr(),soldeSetAt:Date.now(),sortOrder:getAccounts().length,owner:currentUser||'',currency:''};
     apiPost('/api/accounts',acc,function(err){
       if(err) return fail(err);
@@ -5837,7 +5841,7 @@ function qkSaveTxns(todo,nAcc){
   todo.forEach(function(o){
     var label=String(o.label||'').trim()||'Opération';
     if(o.kind==='tra'){
-      var from=qkBankOf(o.from), to=qkBankOf(o.to);
+      var from=o.from!=null?qkBankOf(o.from):null, to=o.to!=null?qkBankOf(o.to):null;
       var a={id:now+out.length,date:o.date,label:label,cat:'autres_dep',amount:o.amount,type:'transfert',bank:from,need:'',note:o.detail||null};
       var b={id:now+out.length+1,date:o.date,label:label,cat:'autre_rev',amount:o.amount,type:'transfert_in',bank:to,need:'',note:o.detail||null};
       if(from&&to){ a.transfer_pair=b.id; a.transferPair=b.id; b.transfer_pair=a.id; b.transferPair=a.id; out.push(a,b); }
