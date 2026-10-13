@@ -510,11 +510,50 @@ body.on-home header{display:none;}
 .qk-foot p{flex:1;font-size:13.5px;color:var(--muted);font-weight:700;margin:0;}
 .qk-foot .sheet-btn{width:auto;flex:none;padding:14px 26px;margin:0;}
 .qk-foot .sheet-btn:disabled{opacity:.5;cursor:default;}
+.qk-m{border-bottom:1px solid var(--border);padding:11px 2px;display:grid;grid-template-columns:24px 1fr auto;gap:2px 10px;align-items:center;}
+.qk-m input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);margin:0;}
+.qk-m .qk-lab{min-width:0;font-family:inherit;font-size:15.5px;font-weight:800;border:none;background:transparent;color:var(--text);padding:2px 0;}
+.qk-m .qk-sub{grid-column:2/4;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-weight:700;min-width:0;}
+.qk-m .qk-sub select{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);border:none;background:transparent;padding:0;max-width:46%;min-width:0;}
+.qk-m.off .qk-lab,.qk-m.off .qk-amt{opacity:.45;}
+.qk-m.off .qk-lab{text-decoration:line-through;}
+.qk-badge{margin-left:auto;flex:none;font-family:inherit;font-size:12px;font-weight:800;border:none;border-radius:99px;padding:4px 9px;cursor:pointer;background:#fdf1e4;color:var(--orange);}
+.qk-badge.sure{background:var(--red-light);color:var(--red);}
+.qk-badge.done{background:#efe9df;color:var(--muted);}
+.qk-check{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;font-size:15px;font-weight:800;padding:13px;border-radius:16px;border:1.5px solid var(--orange);background:#fdf1e4;color:#9a4a0b;cursor:pointer;margin-bottom:6px;}
+.qk-check.done{border-color:var(--border);background:#fff;color:var(--muted);}
+.qk-rv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.qk-rv-top button{font-family:inherit;font-size:15px;font-weight:800;border:none;background:none;color:var(--accent);cursor:pointer;padding:6px 0;}
+.qk-rv-top span{font-size:13px;font-weight:800;color:var(--muted);}
+.qk-dots{display:flex;gap:5px;justify-content:center;margin-bottom:14px;}
+.qk-dots i{width:7px;height:7px;border-radius:50%;background:#e2d9cb;}
+.qk-dots i.on{background:var(--accent);width:18px;border-radius:99px;}
+.qk-dots i.ok{background:#cdbf9f;}
+.qk-rv h4{font-size:20px;font-weight:900;margin-bottom:4px;}
+.qk-lvl{display:inline-block;font-size:12.5px;font-weight:800;border-radius:99px;padding:4px 10px;margin-bottom:14px;background:#fdf1e4;color:var(--orange);}
+.qk-lvl.sure{background:var(--red-light);color:var(--red);}
+.qk-tab{background:#fff;border:1.5px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:10px;}
+.qk-tab .r{display:grid;grid-template-columns:72px 1fr 1fr 18px;gap:8px;padding:10px 12px;border-top:1px solid #f1e9de;font-size:13.5px;align-items:center;}
+.qk-tab .r:first-child{border-top:none;background:#faf6ef;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 12px;}
+.qk-tab .r b{font-weight:700;color:var(--muted);font-size:12.5px;}
+.qk-tab .r span{font-weight:700;min-width:0;overflow-wrap:anywhere;}
+.qk-tab .r.diff span{color:#9a4a0b;}
+.qk-tab .r.diff{background:#fffaf3;}
+.qk-tab .r em{font-style:normal;text-align:center;font-weight:800;color:var(--green);}
+.qk-tab .r.diff em{color:var(--orange);}
+.qk-other{display:block;width:100%;text-align:center;font-family:inherit;font-size:13px;font-weight:800;border:none;background:none;color:var(--accent);cursor:pointer;padding:4px 0 10px;}
+.qk-rv-btns{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+.qk-rv-btns button{font-family:inherit;font-size:16px;font-weight:800;padding:15px;border-radius:16px;cursor:pointer;border:1.5px solid;}
+.qk-rv-btns .skip{border-color:#ecd0ca;background:#fff;color:var(--red);}
+.qk-rv-btns .add{border-color:#bfdcc9;background:#fff;color:var(--green);}
+.qk-rv-btns .skip.on{background:var(--red-light);border-color:var(--red);}
+.qk-rv-btns .add.on{background:var(--green-light);border-color:var(--green);}
 @media(max-width:699px){
-  .qk-line{grid-template-columns:22px 1fr auto;}
-  .qk-line .qk-date,.qk-line select{grid-column:2;}
-  .qk-cards{grid-template-columns:1fr;}
-  .qk-foot{flex-direction:column;align-items:stretch;}.qk-foot .sheet-btn{width:100%;}
+  .qk-list{max-height:none;overflow:visible;}
+  .qk-foot{position:sticky;bottom:calc(-24px - env(safe-area-inset-bottom));background:var(--bg);margin:0 -20px;padding:12px 20px calc(14px + env(safe-area-inset-bottom));flex-direction:column;align-items:stretch;gap:8px;box-shadow:0 -8px 16px -12px rgba(40,28,15,.25);}
+  .qk-foot p{text-align:center;}
+  .qk-foot .sheet-btn{width:100%;}
+}
 }
 .detail-top{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 18px;}
 .detail-top .tx-icon{width:60px;height:60px;font-size:30px;border-radius:16px;}
@@ -5482,9 +5521,11 @@ function qkReview(r){
 }
 // Cherche les doublons et remet les choix par defaut (doublon = on n ajoute pas)
 function qkScan(){
-  QK.ops.forEach(function(o){ o.m=qkMatches(o,QK.bank); o.pick=0; o.add=!o.m.length; o.open=false; });
+  QK.ops.forEach(function(o){ o.m=qkMatches(o,QK.bank); o.pick=0; o.add=!o.m.length; o.open=false; o.seen=false; }); QK.rv=null;
 }
+function qkMobile(){ return window.matchMedia('(max-width:699px)').matches; }
 function qkDraw(){
+  if(qkMobile()) return qkDrawMobile();
   var nDup=QK.ops.filter(function(o){ return o.m.length; }).length;
   var h=sheetHead(QK.doc==='ticket'?'Ticket lu':'Opérations lues')+
     '<div class="qk-bar"><div class="sf"><label>Compte</label><select onchange="QK.bank=this.value;qkScan();qkDraw()">'+accountOptions(QK.bank,true)+'</select></div></div>'+
@@ -5534,9 +5575,79 @@ function qkCompare(o,i){
     '<button class="skip'+(o.add?'':' on')+'" onclick="qkSet('+i+',false)">C’est la même : ne pas l’ajouter</button>'+
     '<button class="add'+(o.add?' on':'')+'" onclick="qkSet('+i+',true)">C’en est une autre : l’ajouter</button></div>';
 }
-function qkSet(i,add){ QK.ops[i].add=add; qkDraw(); }
+var QK_LV={sure:'Doublon presque sûr',likely:'Doublon probable',maybe:'Doublon possible'};
+function qkDups(){ var r=[]; QK.ops.forEach(function(o,i){ if(o.m.length) r.push(i); }); return r; }
+function qkFootHtml(){
+  var nAdd=QK.ops.filter(function(o){ return o.add; }).length, nSkip=QK.ops.length-nAdd;
+  return '<div class="qk-foot"><p>'+nAdd+' à ajouter'+(nSkip?' · '+nSkip+' mise'+(nSkip>1?'s':'')+' de côté':'')+'</p>'+
+    '<button class="sheet-btn" id="qkGo" onclick="qkSave()"'+(nAdd?'':' disabled')+'>'+(nAdd?'Ajouter '+nAdd+' opération'+(nAdd>1?'s':''):'Rien à ajouter')+'</button></div>';
+}
+// Telephone : liste en cartes sur deux lignes
+function qkDrawMobile(){
+  var dups=qkDups(), left=dups.filter(function(i){ return !QK.ops[i].seen; }).length;
+  var h=sheetHead(QK.doc==='ticket'?'Ticket lu':'Opérations lues')+
+    '<div class="sf"><label>Compte</label><select onchange="QK.bank=this.value;qkScan();qkDraw()">'+accountOptions(QK.bank,true)+'</select></div>'+
+    '<div class="qk-sum">'+
+      '<button class="'+(QK.filter==='all'?'on':'')+'" onclick="qkFilter(\'all\')">Toutes<b>'+QK.ops.length+'</b></button>'+
+      '<button class="'+(QK.filter==='new'?'on':'')+'" onclick="qkFilter(\'new\')">Nouvelles<b>'+(QK.ops.length-dups.length)+'</b></button>'+
+      (dups.length?'<button class="warn '+(QK.filter==='dup'?'on':'')+'" onclick="qkFilter(\'dup\')">À contrôler<b>'+dups.length+'</b></button>':'')+
+    '</div>'+
+    (dups.length?'<button class="qk-check'+(left?'':' done')+'" onclick="qkReviewOpen('+(left?dups.filter(function(i){ return !QK.ops[i].seen; })[0]:dups[0])+')">'+
+      (left?'⚠ Contrôler '+(left>1?'les '+left+' doublons':'le doublon'):'✓ Doublons contrôlés · revoir')+'</button>':'')+
+    '<div class="qk-list">';
+  QK.ops.forEach(function(o,i){
+    var dup=o.m.length;
+    if(QK.filter==='new'&&dup||QK.filter==='dup'&&!dup) return;
+    var lv=dup?o.m[0].level:'';
+    h+='<div class="qk-m'+(o.add?'':' off')+'"><input type="checkbox"'+(o.add?' checked':'')+' onchange="qkSet('+i+',this.checked)">'+
+      '<input class="qk-lab" type="text" value="'+esc(o.label)+'" oninput="QK.ops['+i+'].label=this.value">'+
+      '<span class="qk-amt '+o.kind+'">'+(o.kind==='rev'?'+':'-')+fmtE(o.amount,true)+'</span>'+
+      '<div class="qk-sub"><span>'+qkFr(o.date).slice(0,5)+' ·</span><select onchange="QK.ops['+i+'].cat=this.value">'+qkCatOptions(o.kind,o.cat)+'</select>'+
+      (dup?'<button class="qk-badge'+(o.seen?' done':lv==='sure'?' sure':'')+'" onclick="qkReviewOpen('+i+')">'+(o.seen?(o.add?'Ajoutée':'Écartée')+' ✓':'⚠ '+QK_LV[lv].replace('Doublon ',''))+' ›</button>':'')+
+      '</div></div>';
+  });
+  h+='</div>'+(QK.remarque?'<p class="sheet-note">'+esc(QK.remarque)+'</p>':'')+qkFootHtml();
+  QK.rv=null;
+  var sh=document.querySelector('#sheet .sheet'), top=sh.scrollTop;
+  document.getElementById('sheetBody').innerHTML=h;
+  sh.scrollTop=top;
+}
+// Controle des doublons un par un (telephone)
+function qkReviewOpen(i){ QK.rv=i; qkDrawReview(); document.querySelector('#sheet .sheet').scrollTop=0; }
+function qkDrawReview(){
+  var dups=qkDups(), i=QK.rv, pos=dups.indexOf(i), o=QK.ops[i], m=o.m[o.pick], t=m.t, lv=o.m[0].level;
+  function row(name,a,b,same){ return '<div class="r'+(same===false?' diff':'')+'"><b>'+name+'</b><span>'+esc(a)+'</span><span>'+esc(b)+'</span><em>'+(same===true?'✓':same===false?'≠':'')+'</em></div>'; }
+  var h='<div class="qk-rv"><div class="qk-rv-top"><button onclick="qkDrawMobile()">‹ Liste</button><span>Doublon '+(pos+1)+' sur '+dups.length+'</span>'+
+      '<button class="sheet-close" onclick="closeSheet()">✕</button></div>'+
+    '<div class="qk-dots">'+dups.map(function(d){ return '<i class="'+(d===i?'on':QK.ops[d].seen?'ok':'')+'"></i>'; }).join('')+'</div>'+
+    '<h4>'+esc(o.label)+'</h4><span class="qk-lvl'+(lv==='sure'?' sure':'')+'">⚠ '+QK_LV[m.level]+'</span>'+
+    '<div class="qk-tab">'+
+      '<div class="r"><b></b><span>Document</span><span>Ton budget</span><em></em></div>'+
+      row('Libellé',o.label,t.label,m.sameName)+
+      row('Date',qkFr(o.date),qkFr(t.date)+(m.days?' ('+m.days+' j)':''),t.date===o.date)+
+      row('Montant',fmtE(o.amount,true),fmtE(+t.amount,true),true)+
+      row('Catégorie',getCatObj(o.cat).label,getCatObj(t.cat).label,t.cat===o.cat)+
+      row('Compte',accountName(QK.bank)||'—',accountName(t.bank)||'—',null)+
+      (o.detail||t.note?row('Détail',o.detail||'—',t.note||'—',null):'')+
+    '</div>'+
+    (o.m.length>1?'<button class="qk-other" onclick="qkNext('+i+')">Autre opération ressemblante ('+(o.pick+1)+' / '+o.m.length+') ›</button>':'')+
+    '<div class="qk-rv-btns">'+
+      '<button class="skip'+(o.seen&&!o.add?' on':'')+'" onclick="qkDecide(false)">C’est la même : ne pas l’ajouter</button>'+
+      '<button class="add'+(o.seen&&o.add?' on':'')+'" onclick="qkDecide(true)">C’en est une autre : l’ajouter</button>'+
+    '</div></div>';
+  document.getElementById('sheetBody').innerHTML=h;
+}
+// Choix fait : on passe au doublon suivant pas encore vu, sinon retour a la liste
+function qkDecide(add){
+  var o=QK.ops[QK.rv]; o.add=add; o.seen=true;
+  var dups=qkDups(), pos=dups.indexOf(QK.rv), next=null;
+  for(var k=1;k<=dups.length;k++){ var d=dups[(pos+k)%dups.length]; if(!QK.ops[d].seen){ next=d; break; } }
+  if(next==null){ qkDrawMobile(); showToast('Doublons contrôlés'); return; }
+  qkReviewOpen(next);
+}
+function qkSet(i,add){ var o=QK.ops[i]; o.add=add; if(o.m.length) o.seen=true; qkDraw(); }
 function qkToggle(i){ QK.ops[i].open=!QK.ops[i].open; qkDraw(); }
-function qkNext(i){ var o=QK.ops[i]; o.pick=(o.pick+1)%o.m.length; qkDraw(); }
+function qkNext(i){ var o=QK.ops[i]; o.pick=(o.pick+1)%o.m.length; if(QK.rv!=null) qkDrawReview(); else qkDraw(); }
 function qkFilter(f){ QK.filter=f; qkDraw(); }
 function qkSave(){
   var bank=QK.bank, now=Date.now(), out=[];
