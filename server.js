@@ -1059,43 +1059,59 @@ function anthropicConfig() {
   c.model = process.env.ANTHROPIC_MODEL || c.model || 'claude-opus-5-5';
   return Anthropic && c.apiKey && !/^sk-ant-\.\.\./.test(c.apiKey) ? c : null;
 }
-// Analyse de budget : conseils de Claude a partir des seuls totaux mensuels (jamais le detail des operations)
-app.post('/api/budget-advice', requireAuth, async (req, res) => {
+// Analyse de budget : Claude construit le budget du mois a partir du salaire et des totaux (jamais le detail des operations),
+// et range dans une categorie les libelles qui sont dans « Divers » ou hors groupes.
+app.post('/api/budget-plan', requireAuth, async (req, res) => {
   const conf = anthropicConfig();
   if (!conf) return res.status(503).json({ error: 'Clé Anthropic pas encore réglée sur le serveur (anthropic.config.json).' });
-  const summary = JSON.stringify(req.body.summary || {}).slice(0, 20000);
+  const b = req.body || {};
+  const groups = (Array.isArray(b.groupes) ? b.groupes : []).slice(0, 40), cats = (Array.isArray(b.categories) ? b.categories : []).slice(0, 300);
+  const gKeys = groups.map(g => String(g.cle)), cKeys = cats.map(c => String(c.key));
+  if (!gKeys.length || !cKeys.length) return res.status(400).json({ error: 'Données incomplètes' });
   const schema = {
-    type: 'object', additionalProperties: false, required: ['conseils'],
-    properties: { conseils: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titre', 'texte'],
-      properties: { titre: { type: 'string' }, texte: { type: 'string' } } } } }
+    type: 'object', additionalProperties: false, required: ['reclasse', 'budgets', 'epargne', 'conseils'],
+    properties: {
+      reclasse: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['libelle', 'cat'],
+        properties: { libelle: { type: 'string' }, cat: { type: 'string', enum: cKeys } } } },
+      budgets: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['groupe', 'montant', 'pourquoi'],
+        properties: { groupe: { type: 'string', enum: gKeys }, montant: { type: 'number' }, pourquoi: { type: 'string' } } } },
+      epargne: { type: 'object', additionalProperties: false, required: ['montant', 'pourquoi'], properties: { montant: { type: 'number' }, pourquoi: { type: 'string' } } },
+      conseils: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titre', 'texte'], properties: { titre: { type: 'string' }, texte: { type: 'string' } } } }
+    }
   };
+  const data = JSON.stringify({ revenu_a_repartir: b.revenu, style: b.style, mois_analyses: b.mois, groupes: groups, charges_fixes: b.charges_fixes, a_ranger: b.a_ranger, categories: cats }).slice(0, 60000);
   try {
     const client = new Anthropic({ apiKey: conf.apiKey });
-    const msg = await client.beta.messages.create({
+    const msg = await client.beta.messages.stream({
       model: conf.model,
-      max_tokens: 4000,
+      max_tokens: 32000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { effort: 'low', format: { type: 'json_schema', schema } },
+      output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
       messages: [{ role: 'user', content:
-        'Voici le résumé des finances d\'un foyer sur plusieurs mois (moyennes mensuelles en euros, calculées par son appli de budget) :\n' +
-        summary + '\n\n' +
-        'Donne 3 à 5 conseils concrets pour son budget, en français simple, en tutoyant, sur un ton bienveillant. ' +
-        'Appuie-toi sur les chiffres : dépenses en hausse ou très variables, abonnements qui s\'additionnent, budget proposé trop serré ou trop large, ' +
-        'capacité d\'épargne et comment l\'utiliser. Pas de conseils génériques ni de placements financiers précis. ' +
-        'titre : 6 mots maximum, avec un émoji au début ; texte : 2 phrases maximum, avec les montants utiles.' }]
-    });
+        'Tu aides un foyer à construire son budget mensuel dans son appli. Voici ses données (moyennes par mois, en euros) :\n' + data + '\n\n' +
+        '1. reclasse : pour chaque libellé de "a_ranger" (dépenses aujourd\'hui sans vraie catégorie), donne la clé de catégorie la plus probable ' +
+        'parmi "categories", d\'après le nom du commerçant. Garde la catégorie fourre-tout seulement si c\'est vraiment impossible à deviner.\n' +
+        '2. budgets : un montant mensuel pour CHAQUE groupe de "groupes" (0 si le groupe ne le concerne pas), en tenant compte des dépenses rangées ' +
+        'à l\'étape 1. Couvre d\'abord les charges fixes, puis un budget réaliste pour les dépenses variables d\'après l\'historique, ' +
+        'selon le style demandé (serre = un peu en dessous de l\'habitude, reel = l\'habitude, confort = un peu au-dessus). Montants ronds (multiples de 5). ' +
+        'pourquoi : une phrase courte.\n' +
+        '3. epargne : ce qui reste du revenu à répartir. La somme des budgets + epargne doit être égale au revenu à répartir ; si les dépenses ' +
+        'habituelles dépassent le revenu, réduis d\'abord les dépenses variables non essentielles et explique-le.\n' +
+        '4. conseils : 3 ou 4 conseils concrets et chiffrés, en français simple, en tutoyant (titre de 6 mots maximum avec un émoji au début, texte de 2 phrases maximum).' }]
+    }).finalMessage();
     if (msg.stop_reason === 'refusal') return res.status(422).json({ error: 'Claude n’a pas voulu répondre.' });
-    const data = JSON.parse(msg.content.filter(b => b.type === 'text').map(b => b.text).join(''));
-    const conseils = (data.conseils || []).slice(0, 6).map(c => ({ titre: String(c.titre || '').slice(0, 80), texte: String(c.texte || '').slice(0, 400) }));
-    console.log('Analyse de budget : ' + conseils.length + ' conseil(s) pour ' + req.user + ' (' + msg.usage.input_tokens + ' + ' + msg.usage.output_tokens + ' jetons)');
-    res.json({ ok: true, conseils });
+    if (msg.stop_reason === 'max_tokens') return res.status(422).json({ error: 'Trop de données d’un coup, réessaie.' });
+    const out = JSON.parse(msg.content.filter(x => x.type === 'text').map(x => x.text).join(''));
+    console.log('Analyse de budget : plan pour ' + req.user + ' (' + msg.usage.input_tokens + ' + ' + msg.usage.output_tokens + ' jetons)');
+    res.json({ ok: true, reclasse: out.reclasse || [], budgets: out.budgets || [], epargne: out.epargne || null, conseils: (out.conseils || []).slice(0, 6) });
   } catch (e) {
     console.log('Analyse de budget : erreur', e.status || '', e.message);
-    let m = 'Conseils indisponibles pour le moment, réessaie.';
+    let m = 'Budget indisponible pour le moment, réessaie.';
     if (e instanceof Anthropic.AuthenticationError) m = 'Clé Anthropic refusée : vérifie anthropic.config.json.';
     else if (e instanceof Anthropic.RateLimitError) m = 'Trop de demandes d’un coup, réessaie dans une minute.';
     else if (e instanceof Anthropic.BadRequestError && /credit|billing/i.test(e.message)) m = 'Plus de crédit sur le compte Anthropic.';
+    else if (e instanceof SyntaxError) m = 'Réponse illisible, réessaie.';
     res.status(502).json({ error: m });
   }
 });
@@ -1128,10 +1144,12 @@ app.post('/api/import', requireAuth, async (req, res) => {
     '- Ticket de caisse ou facture : UNE seule opération (le total payé), libellé = nom de l\'enseigne, date du ticket ; ' +
     'mets le détail utile des articles dans "detail" (court).\n' +
     '- Relevé bancaire (PDF, photo ou CSV) : une opération par ligne du relevé. Ignore les soldes, totaux, reports et lignes d\'en-tête. ' +
-    'Libellé court et lisible (nom du commerçant ou de l\'organisme, sans les numéros de carte ni références) ; "detail" peut garder le libellé brut.\n' +
+    'Libellé court et lisible (nom du commerçant ou de l\'organisme, sans les numéros de carte ni références) ; "detail" vide pour un relevé.\n' +
     '- amount toujours positif ; sens = "depense" pour un débit, "revenu" pour un crédit.\n' +
     '- date au format AAAA-MM-JJ (date de l\'opération). Si l\'année manque, déduis-la du document, sinon prends la plus récente avant la date du jour.\n' +
-    '- cat = la clé de catégorie la plus adaptée parmi la liste (une catégorie de revenu pour un revenu).\n' +
+    '- cat = la clé de catégorie la plus adaptée parmi la liste (une catégorie de revenu pour un revenu). Déduis-la du commerçant ' +
+    '(supermarché = courses, boulangerie / café / fast-food = restaurant ou snacks, station-service = carburant, pharmacie, opérateur téléphone, ' +
+    'assurance, banque…). N\'utilise la catégorie fourre-tout (Divers / Autre) que si le libellé ne permet vraiment pas de deviner.\n' +
     '- Si le document est illisible ou ne contient aucune opération, renvoie une liste vide et explique pourquoi dans "remarque".\n' +
     '- Comptes : liste dans "comptes" chaque compte qui a ses propres opérations dans le document (compte principal, sous-comptes, ' +
     'Pockets ou coffres Revolut, livrets…), avec son nom tel qu\'écrit (sans la devise entre parenthèses), la banque, et les soldes de début ' +
@@ -1173,14 +1191,15 @@ app.post('/api/import', requireAuth, async (req, res) => {
 
   try {
     const client = new Anthropic({ apiKey: conf.apiKey });
-    const msg = await client.beta.messages.create({
+    // En flux : un releve de plusieurs mois peut demander une longue reponse
+    const msg = await client.beta.messages.stream({
       model: conf.model,
-      max_tokens: 16000,
+      max_tokens: 64000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
       messages: [{ role: 'user', content }]
-    });
+    }).finalMessage();
     if (msg.stop_reason === 'refusal') return res.status(422).json({ error: 'Claude n’a pas voulu lire ce document.' });
     if (msg.stop_reason === 'max_tokens') return res.status(422).json({ error: 'Document trop long : découpe-le (par exemple un mois à la fois).' });
     const out = msg.content.filter(b => b.type === 'text').map(b => b.text).join('');
@@ -1222,7 +1241,7 @@ if (fs.existsSync(PUBLIC)) {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+const httpServer = app.listen(PORT, '0.0.0.0', () => {
   console.log('Budget Mensuel API demarree sur le port ' + PORT);
   console.log('DB: ' + DB_PATH);
 
@@ -1242,3 +1261,5 @@ app.listen(PORT, '0.0.0.0', () => {
   }
   console.log('');
 });
+// Lecture d un long releve par Claude : plusieurs minutes possibles
+httpServer.requestTimeout = 15 * 60000;
