@@ -1102,6 +1102,14 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .rv-day{display:flex;flex-direction:column;align-items:flex-end;background:#f8f3e8;border-radius:12px;padding:5px 10px;}
 .rv-day b{font-size:16px;font-weight:900;color:#8b6b35;}
 .rv-day small{font-size:11px;color:#9a8f7c;font-weight:700;}
+.rv-accs{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+.rv-acc{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:14px;border:1.5px solid #ece3d2;background:#fff;font:inherit;text-align:left;cursor:pointer;opacity:.6;}
+.rv-acc.on{opacity:1;border-color:#c9a14a;background:#fbf5e8;}
+.rv-ck{width:22px;height:22px;border-radius:7px;border:2px solid #d8c9a8;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0;}
+.rv-acc.on .rv-ck{background:#2f6a46;border-color:#2f6a46;}
+.rv-an{flex:1;font-weight:800;font-size:15px;}
+.rv-ab{font-weight:800;font-size:14px;color:#8a7f72;}
+.rv-sum{font-weight:900;}
 .rv-m{color:#b5523f;font-weight:800;}.rv-p{color:#2f8a55;font-weight:800;}
 .rv-late{font-style:normal;font-size:11px;color:#b5523f;background:#fbe9e6;border-radius:6px;padding:1px 5px;}
 .rv-total{display:flex;flex-direction:column;align-items:center;gap:2px;margin:16px 0 6px;padding:14px;border-radius:16px;background:#f6efe0;}
@@ -2332,8 +2340,11 @@ function accountProjected(acc){
 
 // ---------- Reste a vivre et soldes bas ----------
 // Comptes du quotidien de la personne connectee : les siens et les communs (tous quand on est seul)
+// Comptes choisis a la main par la personne (reglage du foyer rvAccs : {idPersonne: [idsComptes]}), sinon null
+function rvChosen(){ var c=((_cache.settings||{}).rvAccs||{})[String(currentUser)]; return Array.isArray(c)?c.map(String):null; }
 function rvAccounts(){
-  var ms=hhMembers().map(function(m){ return String(m.id); }), me=String(currentUser);
+  var ms=hhMembers().map(function(m){ return String(m.id); }), me=String(currentUser), ch=rvChosen();
+  if(ch) return getAccounts().filter(function(a){ return !a.hidden&&ch.indexOf(String(a.id))>=0; });
   return getAccounts().filter(function(a){
     if(a.hidden||(a.type||'quotidien')!=='quotidien') return false;
     return ms.length<2||!a.owner||String(a.owner)===me||ms.indexOf(String(a.owner))<0;
@@ -2351,7 +2362,7 @@ function rvPay(){
   return nx?{r:r,date:nx}:null;
 }
 function resteAVivre(){
-  var accs=rvAccounts(); if(!accs.length) return null;
+  var accs=rvAccounts(); if(!accs.length&&!rvChosen()) return null;
   var ids=accs.map(function(a){ return String(a.id); }), inS=function(b){ return ids.indexOf(String(b))>=0; };
   var today=todayStr(), d=new Date(), pay=rvPay(), end=pay?addDays(pay.date,-1):mPrefix(d.getFullYear(),d.getMonth())+'-'+pad(daysIn(d.getFullYear(),d.getMonth()));
   if(end<today) end=today;
@@ -2399,12 +2410,30 @@ function lowBalanceRisks(){
   });
   return out;
 }
+function rvSave(list){
+  if(!_cache.settings) _cache.settings={};
+  var all=Object.assign({},_cache.settings.rvAccs||{});
+  if(list) all[String(currentUser)]=list; else delete all[String(currentUser)];
+  _cache.settings.rvAccs=all; apiPost('/api/settings/rvAccs',{value:all},null);
+  openResteAVivre(); renderHome();
+}
+function rvToggle(id){
+  var cur=rvAccounts().map(function(a){ return String(a.id); }), k=String(id), i=cur.indexOf(k);
+  if(i>=0) cur.splice(i,1); else cur.push(k);
+  rvSave(cur);
+}
+function rvReset(){ rvSave(null); }
 function openResteAVivre(){
   var r=resteAVivre(); if(!r) return;
   var rows=r.items.map(function(x){ return '<div><span>'+esc(shortDay(x.date))+' · '+esc(x.label)+(x.late?' <i class="rv-late">en retard</i>':'')+'</span><span class="'+(x.v<0?'rv-m':'rv-p')+'">'+(x.v<0?'– ':'+ ')+fmtE(Math.abs(x.v),true)+'</span></div>'; }).join('');
   openSheet(sheetHead('Reste à vivre')+
     '<p class="sheet-note">Ce qu’il te reste pour vivre jusqu’au <b>'+esc(shortDay(r.end))+'</b>'+(r.pay?' (veille de « '+esc(r.pay.r.label)+' »)':'')+', une fois payé ce qui est déjà prévu. Les revenus ne sont pas comptés avant d’être reçus.</p>'+
-    '<div class="detail-list"><div><span>Comptes du quotidien ('+r.accs.map(function(a){ return esc(a.name); }).join(', ')+')</span><span>'+fmtE(r.bal,true)+'</span></div></div>'+
+    '<div class="adm-h"><span>Comptes comptés</span><span class="rv-sum">'+fmtE(r.bal,true)+'</span></div>'+
+    '<div class="rv-accs">'+getAccounts().filter(function(a){ return !a.hidden; }).map(function(a){
+      var on=r.accs.some(function(x){ return String(x.id)===String(a.id); });
+      return '<button class="rv-acc'+(on?' on':'')+'" onclick="rvToggle(\''+a.id+'\')"><span class="rv-ck">'+(on?'✓':'')+'</span><span class="rv-an">'+esc(a.name)+'</span><span class="rv-ab">'+fmtE(accountBalance(a),true)+'</span></button>';
+    }).join('')+'</div>'+
+    (rvChosen()?'<button class="cyc-reset" onclick="rvReset()">Revenir au choix automatique (comptes du quotidien)</button>':'<p class="am-note">Choix automatique : tes comptes du quotidien'+(hhMembers().length>1?' et les comptes communs':'')+'. Touche un compte pour l’ajouter ou le retirer.</p>')+
     (rows?'<div class="adm-h"><span>Déjà prévu d’ici là</span></div><div class="detail-list">'+rows+'</div>':'<p class="sheet-note">Rien de prévu d’ici là.</p>')+
     '<div class="rv-total"><span>Reste à vivre</span><b class="'+(r.reste<0?'neg':'')+'">'+fmtE(r.reste,true)+'</b><small>soit '+fmtE(Math.max(0,r.perDay),true)+' par jour pendant '+r.days+' jour'+(r.days>1?'s':'')+'</small></div>');
 }
