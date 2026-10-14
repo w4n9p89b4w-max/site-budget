@@ -737,7 +737,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT);
 `);
 // Ce que l administrateur autorise pour tout le site (chaque compte choisit ensuite parmi ces categories)
-const PUSH_DEFAULTS = { daily: true, hour: '20:00', due: true, dueHour: '09:00', budget: true };
+const PUSH_DEFAULTS = { daily: true, hour: '20:00', due: true, dueHour: '09:00', budget: true, low: true };
+// Alerte de solde bas : chacun doit l autoriser lui-meme (desactivee au depart)
+addColumnIfMissing('push_prefs', 'low', 'INTEGER DEFAULT 0');
 function pushAdmin() {
   const r = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('push');
   let v = {}; try { v = r ? JSON.parse(r.value) : {}; } catch (e) {}
@@ -824,19 +826,19 @@ app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
 });
 app.get('/api/push/prefs', requireAuth, (req, res) => {
   const p = prefsOf(req.uid);
-  res.json({ daily: !!p.daily, due: !!p.due, budget: !!p.budget, admin: pushAdmin(), devices: db.prepare('SELECT COUNT(*) n FROM push_subs WHERE user_id = ?').get(req.uid).n });
+  res.json({ daily: !!p.daily, due: !!p.due, budget: !!p.budget, low: !!p.low, admin: pushAdmin(), devices: db.prepare('SELECT COUNT(*) n FROM push_subs WHERE user_id = ?').get(req.uid).n });
 });
 // Chaque compte autorise (ou non) les categories ouvertes par l admin
 app.post('/api/push/prefs', requireAuth, (req, res) => {
   const b = req.body; prefsOf(req.uid);
-  db.prepare('UPDATE push_prefs SET daily = ?, due = ?, budget = ? WHERE user_id = ?').run(b.daily ? 1 : 0, b.due ? 1 : 0, b.budget ? 1 : 0, req.uid);
+  db.prepare('UPDATE push_prefs SET daily = ?, due = ?, budget = ?, low = ? WHERE user_id = ?').run(b.daily ? 1 : 0, b.due ? 1 : 0, b.budget ? 1 : 0, b.low ? 1 : 0, req.uid);
   res.json({ ok: true });
 });
 // Administration des notifications : categories ouvertes, heures d envoi, annonce a tout le monde
 app.post('/api/push/admin', requireAuth, (req, res) => {
   if (!requireAdmin(req, res)) return;
   const b = req.body, cur = pushAdmin(), hh = v => /^\d{2}:\d{2}$/.test(v || '') ? v : null;
-  const v = { daily: !!b.daily, hour: hh(b.hour) || cur.hour, due: !!b.due, dueHour: hh(b.dueHour) || cur.dueHour, budget: !!b.budget };
+  const v = { daily: !!b.daily, hour: hh(b.hour) || cur.hour, due: !!b.due, dueHour: hh(b.dueHour) || cur.dueHour, budget: !!b.budget, low: !!b.low };
   db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('push', JSON.stringify(v));
   res.json({ ok: true, admin: v });
 });
@@ -861,6 +863,24 @@ app.post('/api/push/budget', requireAuth, async (req, res) => {
   const users = db.prepare('SELECT user_id FROM push_prefs WHERE budget = 1').all().map(r => r.user_id);
   await Promise.all(db.prepare('SELECT * FROM push_subs WHERE household_id = ?').all(req.hid).filter(s => users.indexOf(s.user_id) >= 0).map(s => sendPush(s, msg)));
   res.json({ ok: true });
+});
+
+// Alerte de solde bas, calculee par le site (prevision du compte) : une seule fois par compte et par date prevue.
+// Envoyee a ceux qui l ont autorisee : le proprietaire du compte, ou tout le foyer pour un compte commun.
+app.post('/api/push/low', requireAuth, async (req, res) => {
+  const acc = db.prepare('SELECT id, owner FROM accounts WHERE household_id = ? AND CAST(id AS TEXT) = ?').get(req.hid, String(req.body.acc || ''));
+  if (!acc || !req.body.key) return res.status(400).json({ error: 'Compte introuvable' });
+  const key = 'l|' + req.hid + '|' + String(req.body.key).slice(0, 80);
+  if (db.prepare('SELECT 1 FROM push_log WHERE key = ?').get(key)) return res.json({ ok: true, skipped: true });
+  db.prepare('INSERT INTO push_log (key) VALUES (?)').run(key);
+  if (!pushAdmin().low) return res.json({ ok: true, off: true });
+  const members = db.prepare('SELECT id FROM users WHERE household_id = ?').all(req.hid).map(u => u.id);
+  const owner = acc.owner && members.indexOf(Number(acc.owner)) >= 0 ? Number(acc.owner) : null;
+  const users = db.prepare('SELECT user_id FROM push_prefs WHERE low = 1').all().map(r => r.user_id)
+    .filter(u => members.indexOf(u) >= 0 && (owner === null || u === owner));
+  const msg = { title: String(req.body.title || 'Solde bas').slice(0, 80), body: String(req.body.body || '').slice(0, 200), url: '/' };
+  await Promise.all(db.prepare('SELECT * FROM push_subs WHERE household_id = ?').all(req.hid).filter(s => users.indexOf(s.user_id) >= 0).map(s => sendPush(s, msg)));
+  res.json({ ok: true, users: users.length });
 });
 
 // ── Programmateur : rappel du soir et echeances du jour (heure de Paris) ──
