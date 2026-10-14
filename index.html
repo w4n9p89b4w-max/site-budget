@@ -888,8 +888,8 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
   #page-budget .bg-body:has(>:nth-child(2))>.bg-card:first-child,#page-dashboard .bg-body:has(>:nth-child(2))>.bg-card:first-child{grid-column:1;grid-row:1 / span 60;position:sticky;top:20px;}
   #page-budget .bg-body:has(>:nth-child(2))>*:not(:first-child),#page-dashboard .bg-body:has(>:nth-child(2))>*:not(:first-child){grid-column:2;}
   #page-budget .bg-body>:nth-child(2),#page-dashboard .bg-body>:nth-child(2){margin-top:62px;}
-  /* vue Budget : graphique + analyse a gauche, alignes en haut sur « Revenus » et qui defilent avec la liste */
-  #page-budget .bg-body:has(>:nth-child(2))>.bg-left:first-child{grid-column:1;grid-row:1 / span 60;margin-top:62px;}
+  /* vue Budget : graphique + analyse a gauche, alignes au depart sur « Revenus », puis qui restent a l ecran pendant que la liste defile */
+  #page-budget .bg-body:has(>:nth-child(2))>.bg-left:first-child{grid-column:1;grid-row:1 / span 60;margin-top:62px;position:sticky;top:20px;}
   /* une seule carte (calendrier) : elle prend toute la largeur */
   #page-budget .bg-body:not(:has(>:nth-child(2))){max-width:980px;}
   #page-budget .bg-head,#page-dashboard .st-head{padding-bottom:70px;}
