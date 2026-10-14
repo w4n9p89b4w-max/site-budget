@@ -1157,6 +1157,7 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .bg-manage b+.ab-entry-sub{margin-left:auto;}
 @media(max-width:699px){ .ab-entry-sub{display:none;} .bg-manage b{flex:1;text-align:left;} }
 .qk-wait.small{padding:14px;font-size:14px;}
+.gd-move{margin-top:4px;max-width:100%;padding:5px 8px;border-radius:9px;border:1.5px solid #e6dcc8;background:#fbf8f2;font:inherit;font-size:12.5px;font-weight:700;color:#8a7f72;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
@@ -5012,7 +5013,7 @@ function renderBgBudgetInner(){
     }
   }
   var oth=st.byGroup._autres||0;
-  if(oth>0) html+=bgRow('<span class="bg-ic" style="background:#8a8178;color:#fff">'+svgIcon('box')+'</span>','Autres dépenses','Hors groupes','<b>'+fmtE(oth)+'</b>','bgManageGroups()');
+  if(oth>0) html+=bgRow('<span class="bg-ic" style="background:#8a8178;color:#fff">'+svgIcon('box')+'</span>','Autres dépenses','Hors groupes','<b>'+fmtE(oth)+'</b>','bgOpenGroup(\'_autres\')');
   html+='<button class="bg-add" onclick="bgNewGroup()">+ Ajouter un groupe</button></div>';
   html+='<button class="bg-manage" onclick="bgManageGroups()"><span class="bg-ic" style="background:#f1dedb;color:#8a7f72">'+svgIcon('gear')+'</span><b>Gérer mes groupes</b>'+svgIcon('chev')+'</button>';
   return html;
@@ -5029,7 +5030,61 @@ function bgRow(icon,title,sub,right,action,bar,barColor,cls){
 function bgOpenGroup(key){ BG.detail=key; renderGroupDetail(); document.getElementById('bgDetail').classList.add('open'); }
 function bgCloseGroup(){ BG.detail=null; document.getElementById('bgDetail').classList.remove('open'); renderBudget(); }
 function renderGroupDetail(){ return withAccFilter(renderGroupDetailInner); }
+// Autres depenses : categories rangees dans aucun groupe. Meme page qu un groupe, avec de quoi ranger chaque categorie.
+function bgOtherCats(){ var gc={}; getGroups().forEach(function(g){ g.cats.forEach(function(c){ gc[c]=1; }); }); return function(c){ return !gc[c]; }; }
+function renderOtherDetail(){
+  var st=monthStats(BG.y,BG.m), el=document.getElementById('bgDetail'), out=bgOtherCats(), html='';
+  html+='<div class="gd-top"><button class="wiz-icon" onclick="bgCloseGroup()"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>'+
+    '<span class="bg-ic big" style="background:#8a8178;color:#fff">'+svgIcon('box')+'</span>'+
+    '<span class="gd-title"><b>Autres dépenses</b><span>'+MONTHS_FR[BG.m].charAt(0).toUpperCase()+MONTHS_FR[BG.m].slice(1)+' '+BG.y+'</span></span></div>';
+  var sp=st.byGroup._autres||0, up=(st.upByGroup||{})._autres||0;
+  html+='<div class="gd-card"><span class="gd-lbl">Dépensé hors groupes</span><b class="gd-amt">'+fmtE(sp)+'</b>'+
+    '<span class="gd-pct">Ces dépenses ont une catégorie qui n’est rangée dans aucun groupe, donc sans budget'+(up?' · encore '+fmtE(up)+' prévus':'')+'. Range leurs catégories ci-dessous pour les suivre.</span></div>';
+  var tx=rangeTxns(st.range).filter(function(t){ return txnKind(t)==='dep'&&out(t.cat); });
+  var regs=regulars('dep').filter(function(r){ return out(r.cat); });
+  // par categorie, avec le groupe ou la ranger
+  var byCat={};
+  tx.forEach(function(t){ var k=t.cat||'autres_dep'; byCat[k]=(byCat[k]||0)+(parseFloat(t.amount)||0); });
+  regs.forEach(function(r){ var k=r.cat||'autres_dep'; if(byCat[k]==null) byCat[k]=0; });
+  var keys=Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
+  if(keys.length){
+    var gopts=getGroups().filter(function(g){ return !g.special; }).map(function(g){ return '<option value="'+g.key+'">'+esc(g.label)+'</option>'; }).join('');
+    html+='<div class="gd-sec">Par catégorie</div><div class="bg-list">';
+    keys.forEach(function(k){
+      var c=getCatObj(k);
+      html+='<div class="bg-row">'+catIconHtml(c,'bg-ic')+'<span class="bg-mid"><b>'+esc(c.label)+'</b>'+
+        '<select class="gd-move" onchange="bgOtherMove(\''+k+'\',this.value)"><option value="">Ranger dans un groupe…</option>'+gopts+'</select></span>'+
+        '<span class="bg-amt"><b>'+fmtE(byCat[k])+'</b></span></div>';
+    });
+    html+='</div>';
+  }
+  if(regs.length){
+    html+='<div class="gd-sec">Prévu ce mois</div><div class="bg-list">';
+    regs.forEach(function(r){
+      html+='<div class="bg-row">'+itemIcon(r.label,r.cat,'dep','bg-ic')+'<span class="bg-mid" onclick="bgEditRegular('+r.id+')"><b>'+esc(r.label)+'</b><span>'+esc(freqLabel(r))+'</span></span>'+
+        '<span class="bg-amt"><b>'+fmtEur(parseFloat(r.amount)||0,bankCur(r.bank))+'</b></span></div>';
+    });
+    html+='</div>';
+  }
+  if(tx.length){
+    html+='<div class="gd-sec">Dépensé ce mois</div><div class="bg-list">';
+    tx.sort(function(a,c){ return c.date.localeCompare(a.date); });
+    tx.forEach(function(t){ html+=bgRow(itemIcon(t.label,t.cat,'dep','bg-ic'),t.label,dayLabel(t.date)+' · '+getCatObj(t.cat).label+(isPending(t)?' · à venir':''),'<b class="red">-'+fmtEur(parseFloat(t.amount)||0,bankCur(t.bank))+'</b>','openTxnEdit(\''+Number(t.id)+'\')'); });
+    html+='</div>';
+  }
+  if(!keys.length&&!regs.length) html+='<div class="bg-list"><div class="bg-empty">Aucune dépense hors groupes ce mois-ci.</div></div>';
+  el.innerHTML='<div class="gd">'+html+'</div>';
+}
+// Range une categorie dans un groupe (elle quitte « Autres dépenses » et compte dans le budget de ce groupe)
+function bgOtherMove(cat,gkey){
+  var g=findGroup(gkey); if(!g||!cat) return;
+  getGroups().forEach(function(x){ x.cats=x.cats.filter(function(c){ return c!==cat; }); });
+  g.cats.push(cat); saveGroups();
+  showToast('« '+getCatObj(cat).label+' » rangée dans '+g.label);
+  renderGroupDetail();
+}
 function renderGroupDetailInner(){
+  if(BG.detail==='_autres') return renderOtherDetail();
   var g=findGroup(BG.detail); if(!g){ bgCloseGroup(); return; }
   var st=monthStats(BG.y,BG.m), el=document.getElementById('bgDetail'), html='';
   html+='<div class="gd-top"><button class="wiz-icon" onclick="bgCloseGroup()"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>'+
