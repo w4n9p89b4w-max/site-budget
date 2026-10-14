@@ -1126,6 +1126,33 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .rb-logo{width:30px;height:30px;border-radius:8px;background:#f5efe3;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:17px;}
 .rb-logo img{width:100%;height:100%;object-fit:contain;}
 .rb-sel{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #e6dcc8;background:#fbf8f2;font:inherit;font-size:15px;font-weight:700;color:inherit;}
+.ab-check{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:14px;margin:12px 2px;}
+.ab-check input{width:20px;height:20px;accent-color:#2f6a46;}
+.ab-check small{font-weight:600;color:#9a8f7c;}
+.ab-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 6px;}
+.ab-tiles div{background:#fff;border-radius:14px;padding:10px 12px;border:1.5px solid #efe5d2;display:flex;flex-direction:column;}
+.ab-tiles small{font-size:12px;font-weight:800;color:#8a7f72;}
+.ab-tiles b{font-size:20px;font-weight:900;}
+.ab-tiles b.up,.ab-ra.up{color:#2f8a55;} .ab-tiles b.down{color:#b5523f;}
+.ab-rec,.ab-grp{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #efe5d2;border-radius:14px;padding:9px 10px;margin:6px 0;}
+.ab-rec{opacity:.65;} .ab-rec.on,.ab-rec.ex{opacity:1;} .ab-rec.on{border-color:#c9a14a;background:#fbf5e8;}
+.ab-ck{border:2px solid #d8c9a8;background:#fff;cursor:pointer;padding:0;}
+.ab-rec.on .ab-ck{background:#2f6a46;border-color:#2f6a46;}
+.ab-tag{font-size:10.5px;font-weight:800;color:#2f6a46;background:#e3f0e6;border-radius:6px;padding:2px 6px;white-space:nowrap;}
+.ab-cic{width:32px;height:32px;border-radius:10px;flex-shrink:0;}
+.ab-rt{flex:1;min-width:0;display:flex;flex-direction:column;}
+.ab-rt b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ab-rt small{font-size:12px;color:#8a7f72;font-weight:600;}
+.ab-ra{font-weight:900;font-size:14.5px;white-space:nowrap;}
+.ab-no{border:none;background:none;color:#a89a80;font:inherit;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:2px;}
+.ab-style{margin:4px 0 2px;}
+.ab-in{display:flex;align-items:center;gap:4px;}
+.ab-in input{width:72px;text-align:right;padding:8px;border-radius:10px;border:1.5px solid #e6dcc8;background:#fbf8f2;font:inherit;font-weight:900;font-size:15px;color:inherit;}
+.ab-in i{font-style:normal;font-weight:800;color:#8a7f72;}
+.ab-tip{background:#fff;border-left:4px solid #c9a14a;border-radius:12px;padding:10px 12px;margin:6px 0;}
+.ab-tip b{font-size:15px;} .ab-tip p{margin:4px 0 0;font-size:14px;color:#5a5048;line-height:1.4;}
+.ab-entry-sub{flex:1;text-align:left;font-size:12px;color:#9a8f7c;font-weight:600;margin-left:6px;}
+.qk-wait.small{padding:14px;font-size:14px;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
@@ -4982,6 +5009,7 @@ function renderBgBudgetInner(){
   if(oth>0) html+=bgRow('<span class="bg-ic" style="background:#8a8178;color:#fff">'+svgIcon('box')+'</span>','Autres dépenses','Hors groupes','<b>'+fmtE(oth)+'</b>','bgManageGroups()');
   html+='<button class="bg-add" onclick="bgNewGroup()">+ Ajouter un groupe</button></div>';
   html+='<button class="bg-manage" onclick="bgManageGroups()"><span class="bg-ic" style="background:#f1dedb;color:#8a7f72">'+svgIcon('gear')+'</span><b>Gérer mes groupes</b>'+svgIcon('chev')+'</button>';
+  html+='<button class="bg-manage" onclick="openBudgetAnalysis()"><span class="bg-ic" style="background:#f6edd9">🔍</span><b>Analyse de budget</b><small class="ab-entry-sub">Mes relevés de 3 mois → un budget proposé</small>'+svgIcon('chev')+'</button>';
   return html;
 }
 // Ligne de liste : icone, titre, sous-titre, montant, action, barre (0-1)
@@ -6015,6 +6043,7 @@ function renderSettingsPage(){
       row(svgIcon('sun'),'Apparence',{auto:'Automatique',light:'Clair',dark:'Sombre'}[themePref()],'setAppearance()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
       row('<span class="set-eu">🪙</span>','Petite monnaie',Object.keys((_cache.settings||{}).roundBank||{}).length?String(Object.keys(_cache.settings.roundBank).length):'','setRoundBanks()')+
+      row('<span class="set-eu">🔍</span>','Analyse de budget','','openBudgetAnalysis()')+
       row(svgIcon('cash'),'Paies du foyer',payList().length?String(payList().length):'','setPays()')+
       row(svgIcon('bell'),'Notifications','','setNotif()')+
       row(svgIcon('bolt'),'Ajout éclair','','setQuick()')+
@@ -7128,6 +7157,260 @@ function setRoundBank(bank,to){
   if(to) getAccounts().forEach(function(a){ var c=roundCfg(a.id); if(a.bank===bank&&c&&String(a.id)!==String(to)&&c.to!==String(to)){ saveRoundCfg(a.id,{to:to,x:c.x}); n++; } });
   setRoundBanks(); refreshViews();
   showToast(to?(n?n+' compte'+(n>1?'s':'')+' mis à jour':'Compte enregistré'):'Choix retiré');
+}
+// ---------- Analyse de budget ----------
+// Releves de 3 mois ou plus (lus par Claude, comme l ajout eclair) ou operations deja saisies :
+// charges fixes reperees (a rendre regulieres), depenses variables par categorie, budget propose par groupe, conseils de Claude.
+var AB=null;
+var AB_STYLES=[['serre','Serré',0.9],['reel','Réaliste',1],['confort','Confortable',1.1]];
+// Nom simplifie d une operation : « PRLV SEPA NETFLIX.COM 12/10 » -> « netflix »
+function abNorm(l){
+  var n=normTxt(l).replace(/[^a-z ]/g,' ').replace(/\b(prlv|prelevement|sepa|cb|carte|vir|virement|paiement|achat|facture|echeance|recu|inst|instantane|de|du|la|le|les|des|sas|sa|sarl|fr|www|com|europe|eur)\b/g,' ').replace(/\s+/g,' ').trim();
+  return n.split(' ').slice(0,2).join(' ')||normTxt(l).slice(0,12);
+}
+function abSiteOps(){
+  return getTxns().filter(function(t){ return txnKind(t)!=='tra'&&t.date&&t.date<=todayStr()&&!Number(t.later_pay); })
+    .map(function(t){ return {date:t.date,label:t.label||'',amount:amtMain(t),kind:txnKind(t),cat:t.cat||'',bank:t.bank}; });
+}
+function abSpanDays(ops){ if(!ops.length) return 0; var ds=ops.map(function(o){ return o.date; }).sort(); return qkDays(ds[0],ds[ds.length-1]); }
+function openBudgetAnalysis(){
+  if(DEMO){ openSheet(sheetHead('Analyse de budget')+'<p class="sheet-note">L’analyse lit tes relevés avec l’intelligence artificielle : elle ne marche que sur le vrai site.</p>'); return; }
+  document.querySelector('#sheet .sheet').classList.remove('qk-wide');
+  AB={add:AB?AB.add:true,style:'reel'};
+  var site=abSiteOps(), span=abSpanDays(site), nm=Math.round(span/30.4);
+  var ACCEPT='image/*,application/pdf,.pdf,.csv,text/csv,.txt';
+  openSheet(sheetHead('Analyse de budget')+
+    '<p class="sheet-note">Donne-moi <b>au moins 3 mois</b> de relevés : je repère tes charges fixes, je calcule ce que tu dépenses vraiment par catégorie et je te propose un budget.</p>'+
+    '<label class="qk-drop ab-drop" id="abDrop" ondragover="event.preventDefault();this.classList.add(\'over\')" ondragleave="this.classList.remove(\'over\')" ondrop="event.preventDefault();this.classList.remove(\'over\');abFiles([].slice.call(event.dataTransfer.files||[]))">'+
+      '<span class="qk-drop-ic">📑</span><b>'+(qkMobile()?'Choisir mes relevés':'Glisse tes relevés ici')+'</b>'+
+      '<small>PDF, CSV ou captures · plusieurs fichiers d’un coup (un par mois, c’est le plus fiable)</small>'+
+      '<input type="file" accept="'+ACCEPT+'" multiple onchange="abFiles([].slice.call(this.files||[]))"></label>'+
+    '<label class="ab-check"><input type="checkbox" '+(AB.add?'checked ':'')+'onchange="AB.add=this.checked"> Ajouter aussi ces opérations à mes comptes <small>(avec le contrôle des doublons)</small></label>'+
+    '<div class="qk-or">ou</div>'+
+    '<button class="sheet-btn ghost" '+(span>=80?'':'disabled ')+'onclick="abStart(abSiteOps(),\'site\')">Analyser mes opérations déjà saisies</button>'+
+    '<p class="am-note" style="text-align:center">'+(span>=80?'Tu as environ '+nm+' mois d’opérations sur le site.':'Il faut au moins 3 mois d’opérations saisies (tu en as '+(nm<1?'moins d’un':'environ '+nm)+').')+'</p>'+
+    '<p class="sheet-note" id="abInfo"></p>');
+  apiGet('/api/import',function(err,r){ var el=document.getElementById('abInfo'); if(el&&!err&&r&&!r.ready) el.innerHTML='<b>Pas encore prêt :</b> la clé Anthropic n’est pas réglée sur le serveur (anthropic.config.json). L’analyse des opérations déjà saisies marche quand même.'; });
+}
+// Lecture des releves, un fichier apres l autre (un long releve d un coup risque d etre coupe)
+function abFiles(list){
+  list=list.filter(function(f){ return /^image\/|pdf|csv|text\//.test(f.type)||/\.(pdf|csv|txt|jpe?g|png|webp|heic|heif)$/i.test(f.name||''); });
+  if(!list.length){ showToast('Ce type de fichier n’est pas pris en charge'); return; }
+  var res=[], errs=[], i=0;
+  function wait(){ document.getElementById('sheetBody').innerHTML=sheetHead('Analyse de budget')+'<div class="qk-wait"><i></i>Lecture du relevé '+(i+1)+' sur '+list.length+'…<br><small>'+esc(list[i].name||'')+' · jusqu’à une minute par relevé</small></div>'; }
+  function next(){
+    if(!document.getElementById('sheet').classList.contains('open')) return;
+    if(i>=list.length) return abRead(res,errs);
+    wait();
+    var f=list[i], name=(f.name||'').toLowerCase(), body={files:[],text:'',textName:'',cats:getCats().map(function(c){ return {key:c.key,label:c.label,group:c.group}; })};
+    function send(err){
+      if(err){ errs.push(err.message); i++; return next(); }
+      var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+'/api/import',true);
+      xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token); xhr.timeout=180000;
+      function fin(m){ if(m) errs.push((f.name||'Relevé')+' : '+m); i++; next(); }
+      xhr.onload=function(){
+        if(xhr.status===401){ authExpired(); return; }
+        var r=null; try{ r=JSON.parse(xhr.responseText); }catch(e){}
+        if(xhr.status===413) return fin('fichier trop gros');
+        if(!r||!r.ok) return fin((r&&r.error)||'lecture impossible');
+        res.push(r); fin();
+      };
+      xhr.onerror=function(){ fin('pas de connexion au serveur'); };
+      xhr.ontimeout=function(){ fin('trop long, découpe-le par mois'); };
+      xhr.send(JSON.stringify(body));
+    }
+    if(/^image\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp)$/.test(name)) qkImage(f,function(e,x){ if(x) body.files.push(x); send(e); });
+    else if(f.type==='application/pdf'||/\.pdf$/.test(name)) qkBase64(f,function(e,x){ if(x) body.files.push(x); send(e); });
+    else qkText(f,function(e,t){ if(t){ body.text=t; body.textName=f.name; } send(e); });
+  }
+  next();
+}
+// Releves lus : on les rassemble (sans les lignes en double entre deux releves qui se chevauchent)
+function abRead(res,errs){
+  var comptes=[], seen={}, ops=[];
+  res.forEach(function(r){
+    (r.comptes||[]).forEach(function(c){ if(!comptes.some(function(x){ return x.nom===c.nom; })) comptes.push(c); });
+    (r.operations||[]).forEach(function(o){ var k=[o.date,o.kind,o.amount,normTxt(o.label),o.compte].join('|'); if(!seen[k]){ seen[k]=1; ops.push(o); } });
+  });
+  if(!ops.length){
+    document.getElementById('sheetBody').innerHTML=sheetHead('Analyse de budget')+'<p class="sheet-note">Aucune opération lue.'+(errs.length?'<br>'+errs.map(esc).join('<br>'):'')+'</p><button class="sheet-btn" onclick="openBudgetAnalysis()">Réessayer</button>';
+    return;
+  }
+  AB.raw={document:'releve',remarque:'',comptes:comptes,operations:ops}; AB.errs=errs;
+  abStart(ops.filter(function(o){ return !o.interne; }).map(function(o){ return {date:o.date,label:o.label,amount:o.amount,kind:o.kind,cat:o.cat,compte:o.compte}; }),'imp');
+}
+function abStart(ops,src){
+  AB.src=src; AB.ops=ops.filter(function(o){ return o.amount>0&&/^\d{4}-\d{2}-\d{2}$/.test(o.date); }).sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  if(!AB.ops.length){ showToast('Aucune opération à analyser'); return; }
+  AB.edit={}; AB.tips=null;
+  abAnalyze(); abDraw();
+}
+function abMedian(a){ if(!a.length) return 0; var s=a.slice().sort(function(x,y){ return x-y; }), m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+function abAnalyze(){
+  var ops=AB.ops, d0=ops[0].date, d1=ops[ops.length-1].date, months=[];
+  for(var d=new Date(+d0.slice(0,4),+d0.slice(5,7)-1,1);dsOf(d)<=d1;d=new Date(d.getFullYear(),d.getMonth()+1,1)) months.push(dsOf(d).slice(0,7));
+  // mois complets seulement (un mois commence ou finit au milieu du releve : il fausserait les moyennes)
+  var full=months.filter(function(m,i){
+    var y=+m.slice(0,4), mm=+m.slice(5,7)-1;
+    return (i>0||+d0.slice(8)<=5)&&(i<months.length-1||+d1.slice(8)>=daysIn(y,mm)-4);
+  });
+  if(full.length<2) full=months;
+  AB.months=full; AB.nM=full.length; AB.d0=d0; AB.d1=d1;
+  var inFull=function(o){ return full.indexOf(o.date.slice(0,7))>=0; };
+  // 1. operations qui reviennent : meme nom simplifie, montant proche, rythme mensuel ou hebdomadaire
+  var no=(_cache.settings||{}).recurNo||[], groups={};
+  ops.forEach(function(o){ var k=o.kind+'|'+abNorm(o.label); (groups[k]=groups[k]||[]).push(o); });
+  var recs=[];
+  Object.keys(groups).forEach(function(k){
+    var g=groups[k]; if(g.length<2) return;
+    var md=abMedian(g.map(function(o){ return o.amount; }));
+    var mem=g.filter(function(o){ return Math.abs(o.amount-md)<=Math.max(1,md*0.15); });
+    if(mem.length<2) return;
+    var gaps=[]; for(var i=1;i<mem.length;i++) gaps.push(qkDays(mem[i-1].date,mem[i].date));
+    var freq=null, ms={};
+    mem.forEach(function(o){ ms[o.date.slice(0,7)]=1; });
+    if(mem.length>=3&&gaps.every(function(x){ return x>=5&&x<=9; })) freq='week';
+    else if(Object.keys(ms).length===mem.length&&gaps.every(function(x){ return x>=20&&x<=40; })){
+      var days=mem.map(function(o){ return +o.date.slice(8); }), dd=abMedian(days);
+      if(days.every(function(x){ return Math.abs(x-dd)<=6||Math.abs(x-dd)>=24; })) freq='month';
+    }
+    if(!freq) return;
+    var last=mem[mem.length-1], cats={};
+    mem.forEach(function(o){ if(o.cat) cats[o.cat]=(cats[o.cat]||0)+1; });
+    var cat=Object.keys(cats).sort(function(a,b){ return cats[b]-cats[a]; })[0]||(last.kind==='rev'?'autre_rev':'autres_dep');
+    var key=k, amount=last.amount, monthly=freq==='week'?amount*52/12:amount;
+    var ex=getRecurring().filter(function(r){ return r.kind===last.kind&&(abNorm(r.label)===abNorm(last.label)||(r.cat===cat&&Math.abs((+r.amount)-amount)<=amount*0.1)); })[0];
+    if(no.indexOf(key)>=0&&!ex) return;
+    var bank=last.bank||(last.compte!=null?(qkGuessAcc(last.compte)||{}).id:'')||'';
+    recs.push({key:key,label:last.label,kind:last.kind,amount:amount,monthly:monthly,freq:freq,day:+last.date.slice(8),cat:cat,n:mem.length,
+      dates:mem.map(function(o){ return o.date; }),last:last.date,bank:bank?String(bank):'',exists:ex||null,sel:!ex,mem:mem});
+  });
+  recs.sort(function(a,b){ return a.kind===b.kind?b.monthly-a.monthly:(a.kind==='rev'?-1:1); });
+  AB.recs=recs;
+  var inRec=new Set(); recs.forEach(function(r){ r.mem.forEach(function(o){ inRec.add(o); }); });
+  // 2. revenus et depenses variables par categorie (total de chaque mois complet)
+  var rev=0, byCat={};
+  ops.forEach(function(o){
+    if(!inFull(o)) return;
+    if(o.kind==='rev'){ rev+=o.amount; return; }
+    if(inRec.has(o)) return;
+    var c=byCat[o.cat||'autres_dep']=byCat[o.cat||'autres_dep']||{};
+    c[o.date.slice(0,7)]=(c[o.date.slice(0,7)]||0)+o.amount;
+  });
+  AB.rev=rev/AB.nM;
+  AB.cats=Object.keys(byCat).map(function(k){
+    var per=full.map(function(m){ return byCat[k][m]||0; });
+    return {cat:k,med:abMedian(per),max:Math.max.apply(null,per),avg:per.reduce(function(s,x){ return s+x; },0)/AB.nM,per:per};
+  }).sort(function(a,b){ return b.avg-a.avg; });
+}
+function abStyleK(){ return (AB_STYLES.filter(function(s){ return s[0]===AB.style; })[0]||AB_STYLES[1])[2]; }
+// Budget propose par groupe : charges fixes reperees + depenses variables habituelles (mediane des mois), arrondi a 5 euros
+function abGroups(){
+  var k=abStyleK(), out=[];
+  getGroups().forEach(function(g){
+    if(g.special) return;
+    var fixed=AB.recs.filter(function(r){ return r.kind==='dep'&&g.cats.indexOf(r.cat)>=0; }).reduce(function(s,r){ return s+r.monthly; },0);
+    var cs=AB.cats.filter(function(c){ return g.cats.indexOf(c.cat)>=0; });
+    var vmed=cs.reduce(function(s,c){ return s+c.med; },0), vavg=cs.reduce(function(s,c){ return s+c.avg; },0), vmax=cs.reduce(function(s,c){ return s+c.max; },0);
+    if(fixed<0.5&&vavg<0.5) return;
+    var prop=Math.ceil((fixed+vmed*k)/5)*5;
+    out.push({g:g,fixed:fixed,vmed:vmed,vavg:vavg,vmax:vmax,cats:cs,prop:prop,val:AB.edit[g.key]!=null?AB.edit[g.key]:prop});
+  });
+  return out.sort(function(a,b){ return b.val-a.val; });
+}
+function abOther(){ var gc={}; getGroups().forEach(function(g){ g.cats.forEach(function(c){ gc[c]=1; }); }); return AB.cats.filter(function(c){ return !gc[c.cat]; }); }
+function abShort(ds){ return shortDay(ds)+' '+ds.slice(2,4); }
+function abFreqLbl(r){ return r.freq==='week'?'chaque semaine':'chaque mois vers le '+r.day; }
+function abDraw(){
+  var gs=abGroups(), fixed=AB.recs.filter(function(r){ return r.kind==='dep'; }).reduce(function(s,r){ return s+r.monthly; },0);
+  var vari=AB.cats.reduce(function(s,c){ return s+c.avg; },0), budget=gs.reduce(function(s,x){ return s+(+x.val||0); },0);
+  var rest=AB.rev-budget-abOther().reduce(function(s,c){ return s+c.avg; },0);
+  var h=sheetHead('Analyse de budget')+
+    '<p class="sheet-note">Du <b>'+esc(abShort(AB.d0))+'</b> au <b>'+esc(abShort(AB.d1))+'</b> · moyennes sur '+AB.nM+' mois complet'+(AB.nM>1?'s':'')+(AB.nM<3?' <b>(moins de 3 mois : résultats à prendre avec prudence)</b>':'')+'.'+
+    (AB.errs&&AB.errs.length?'<br><small>Non lu : '+AB.errs.map(esc).join(' · ')+'</small>':'')+'</p>'+
+    '<div class="ab-tiles"><div><small>Revenus</small><b class="up">'+fmtE(Math.round(AB.rev))+'</b></div><div><small>Charges fixes</small><b>'+fmtE(Math.round(fixed))+'</b></div>'+
+    '<div><small>Dépenses variables</small><b>'+fmtE(Math.round(vari))+'</b></div><div><small>Reste (épargne possible)</small><b class="'+(rest<0?'down':'up')+'">'+fmtE(Math.round(rest))+'</b></div></div>';
+  // operations regulieres reperees
+  h+='<div class="adm-h"><span>🔁 Opérations qui reviennent</span></div>';
+  if(!AB.recs.length) h+='<p class="sheet-note">Aucune opération régulière repérée.</p>';
+  AB.recs.forEach(function(r,i){
+    var c=getCatObj(r.cat);
+    h+='<div class="ab-rec'+(r.sel?' on':'')+(r.exists?' ex':'')+'">'+
+      (r.exists?'':'<button class="rv-ck ab-ck" onclick="AB.recs['+i+'].sel=!AB.recs['+i+'].sel;abDraw()">'+(r.sel?'✓':'')+'</button>')+
+      catIconHtml(c,'ab-cic')+'<span class="ab-rt"><b>'+esc(r.label)+'</b><small>'+(r.exists?'<span class="ab-tag">✓ déjà régulière</span> ':'')+esc(abFreqLbl(r))+' · vu '+r.n+' fois ('+r.dates.slice(-3).map(shortDay).join(', ')+')</small></span>'+
+      '<span class="ab-ra '+(r.kind==='rev'?'up':'')+'">'+(r.kind==='rev'?'+':'')+fmtE(r.amount,true)+'</span>'+
+      (r.exists?'':'<button class="ab-no" onclick="abNever('+i+')" title="Ne plus proposer">Jamais</button>')+'</div>';
+  });
+  // budget propose
+  h+='<div class="adm-h"><span>🛒 Budget proposé par mois</span></div>'+
+    '<div class="seg ab-style">'+AB_STYLES.map(function(s){ return '<button class="'+(AB.style===s[0]?'on':'')+'" onclick="AB.style=\''+s[0]+'\';AB.edit={};abDraw()">'+s[1]+'</button>'; }).join('')+'</div>'+
+    '<p class="am-note">'+(AB.style==='serre'?'10 % de moins que tes dépenses habituelles':AB.style==='confort'?'10 % de plus que tes dépenses habituelles':'Ce que tu dépenses habituellement (le mois du milieu)')+' + tes charges fixes. Tu peux changer chaque montant.</p>';
+  gs.forEach(function(x){
+    var cur=x.g.budget!=null&&x.g.budget!==''?+x.g.budget:null;
+    h+='<div class="ab-grp"><span class="bg-ic" style="background:'+x.g.color+';color:#fff">'+svgIcon(x.g.ic)+'</span>'+
+      '<span class="ab-rt"><b>'+esc(x.g.label)+'</b><small>'+[x.fixed>=0.5?'fixes '+fmtE(Math.round(x.fixed)):'',x.vavg>=0.5?'variables : moy. '+fmtE(Math.round(x.vavg))+', max '+fmtE(Math.round(x.vmax)):'',
+      cur!=null?'actuel '+fmtE(cur):''].filter(Boolean).join(' · ')+'</small></span>'+
+      '<span class="ab-in"><input inputmode="decimal" value="'+Math.round(x.val)+'" onchange="AB.edit[\''+x.g.key+'\']=parseFloat(this.value.replace(\',\',\'.\'))||0;abDraw()"><i>'+esc(curSym())+'</i></span></div>';
+  });
+  var oth=abOther();
+  if(oth.length) h+='<p class="am-note">Hors groupes (pas de budget) : '+oth.map(function(c){ return esc(getCatObj(c.cat).label)+' '+fmtE(Math.round(c.avg)); }).join(' · ')+'.</p>';
+  // conseils
+  h+='<div class="adm-h"><span>💡 Les conseils de Claude</span></div>';
+  if(AB.tips==='wait') h+='<div class="qk-wait small"><i></i>Claude réfléchit…</div>';
+  else if(AB.tips&&AB.tips.length) h+=AB.tips.map(function(t){ return '<div class="ab-tip"><b>'+esc(t.titre)+'</b><p>'+esc(t.texte)+'</p></div>'; }).join('');
+  else h+=(AB.tipErr?'<p class="sheet-note">'+esc(AB.tipErr)+'</p>':'<p class="am-note">Seuls les totaux ci-dessus sont envoyés à Claude, jamais le détail de tes opérations.</p>')+'<button class="sheet-btn ghost" onclick="abTips()">💡 Demander des conseils à Claude</button>';
+  var nr=AB.recs.filter(function(r){ return r.sel&&!r.exists; }).length;
+  h+='<button class="sheet-btn" onclick="abApply()">Appliquer ce budget'+(nr?' et créer '+nr+' opération'+(nr>1?'s':'')+' régulière'+(nr>1?'s':''):'')+'</button>'+
+    (AB.src==='imp'&&AB.add?'<p class="am-note" style="text-align:center">Ensuite : vérification des opérations à ajouter à tes comptes.</p>':'');
+  var sb=document.querySelector('#sheet .sheet'), y=sb?sb.scrollTop:0;
+  document.getElementById('sheetBody').innerHTML=h;
+  if(sb){ sb.classList.toggle('qk-wide',!qkMobile()); sb.scrollTop=y; }
+}
+function abNever(i){
+  var r=AB.recs[i]; if(!r) return;
+  if(!_cache.settings) _cache.settings={};
+  var no=(_cache.settings.recurNo||[]).slice(); if(no.indexOf(r.key)<0) no.push(r.key);
+  _cache.settings.recurNo=no; apiPost('/api/settings/recurNo',{value:no},null);
+  AB.recs.splice(i,1); abDraw(); showToast('« '+r.label+' » ne sera plus proposé');
+}
+function abTips(){
+  var gs=abGroups();
+  var summary={mois_analyses:AB.nM,revenus_par_mois:Math.round(AB.rev),
+    charges_fixes:AB.recs.filter(function(r){ return r.kind==='dep'; }).map(function(r){ return {nom:r.label,montant_par_mois:Math.round(r.monthly*100)/100,categorie:getCatObj(r.cat).label}; }),
+    depenses_variables:AB.cats.slice(0,25).map(function(c){ return {categorie:getCatObj(c.cat).label,moyenne:Math.round(c.avg),mois_le_plus_haut:Math.round(c.max),par_mois:c.per.map(Math.round)}; }),
+    budget_propose:gs.map(function(x){ return {groupe:x.g.label,budget:Math.round(x.val)}; })};
+  AB.tips='wait'; AB.tipErr=null; abDraw();
+  apiPost('/api/budget-advice',{summary:summary},function(err,d){
+    if(!AB) return;
+    if(err||!d||!d.ok){ AB.tips=null; AB.tipErr=(d&&d.error)||'Conseils indisponibles pour le moment.'; }
+    else AB.tips=d.conseils||[];
+    if(document.getElementById('sheet').classList.contains('open')) abDraw();
+  });
+}
+// Appliquer : budgets des groupes, operations regulieres cochees (a partir de la prochaine echeance : rien n est compte deux fois),
+// puis, pour des releves importes, verification des operations a ajouter (ajout eclair)
+function abApply(){
+  var gs=abGroups();
+  gs.forEach(function(x){ x.g.budget=Math.round((+x.val||0)*100)/100; });
+  saveGroups();
+  var todo=AB.recs.filter(function(r){ return r.sel&&!r.exists; }), k=0;
+  (function next(){
+    if(k>=todo.length) return done();
+    var r=todo[k++], ld=parseDs(r.last), nx=r.freq==='week'?addDays(r.last,7):dsOf(new Date(ld.getFullYear(),ld.getMonth()+1,Math.min(r.day,daysIn(ld.getFullYear(),ld.getMonth()+1))));
+    var nd=parseDs(nx);
+    var rr={kind:r.kind,label:r.label,cat:r.cat,bank:r.bank||'',amount:Math.round(r.amount*100)/100,day:r.freq==='week'?nd.getDate():r.day,next_month:0,
+      freq:r.freq,every:null,anchor:nx,end_date:null,start_key:mKey(nd.getFullYear(),nd.getMonth())};
+    apiPost('/api/recurring',rr,function(err,res){
+      if(!err&&res&&res.id){ rr.id=res.id; var arr=getRecurring().slice(); arr.push(rr); setRecurring(arr); }
+      next();
+    });
+  })();
+  function done(){
+    showToast('Budget appliqué'+(todo.length?' · '+todo.length+' opération'+(todo.length>1?'s':'')+' régulière'+(todo.length>1?'s':''):''));
+    refreshViews();
+    if(AB.src==='imp'&&AB.add&&AB.raw){ var raw=AB.raw; AB=null; qkReview(raw); return; }
+    AB=null; closeSheet();
+  }
 }
 function setPays(){
   var pays=payList(), hc=householdCycle(), html='';
