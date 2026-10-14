@@ -1112,6 +1112,12 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .cat-sugg{margin:4px 0 10px;padding:10px 10px 4px;border-radius:16px;background:#fbf5e8;border:1.5px solid #efe2c4;}
 .cs-h{font-size:12px;font-weight:800;color:#a8781c;text-transform:uppercase;letter-spacing:.4px;margin:0 2px 8px;}
 .cs-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
+.rb-card{background:#fff;border-radius:16px;padding:12px 14px 6px;margin:10px 0;border:1.5px solid #efe5d2;}
+.rb-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.rb-top b{font-size:16px;}
+.rb-logo{width:30px;height:30px;border-radius:8px;background:#f5efe3;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:17px;}
+.rb-logo img{width:100%;height:100%;object-fit:contain;}
+.rb-sel{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #e6dcc8;background:#fbf8f2;font:inherit;font-size:15px;font-weight:700;color:inherit;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
@@ -3206,16 +3212,21 @@ function amSettingsHtml(){
 // Reglage du foyer settings.rounding = { "<id du compte qui arrondit>": { to: "<id du compte qui recoit>", x: 1|2|5|10 } }
 function roundCfg(id){ var r=((_cache.settings||{}).rounding||{})[String(id)]; return r&&r.to&&findAccount(r.to)?{to:String(r.to),x:r.x||1}:null; }
 function roundSources(id){ var r=(_cache.settings||{}).rounding||{}; return Object.keys(r).filter(function(k){ return String(r[k].to)===String(id)&&findAccount(k); }); }
+// Compte qui recoit la petite monnaie d une banque (Reglages -> Petite monnaie)
+function roundBankTo(bank){ var id=bank&&((_cache.settings||{}).roundBank||{})[bank]; return id&&findAccount(id)?String(id):null; }
 function amRoundHtml(){
   var on=!!AM.round, others=getAccounts().filter(function(a){ return String(a.id)!==String(AM.id); }), src=roundSources(AM.id);
+  var bt=roundBankTo(AM.bank); if(bt===String(AM.id)) bt=null;
+  var def=bt||(others[0]?String(others[0].id):'');
   var h='<div class="am-line"><label class="oc-lbl">Petite monnaie</label><div class="seg am-rnd">'+
     '<button class="'+(on?'':'on')+'" onclick="AM.round=null;amRefreshSettings()">Non</button>'+
-    '<button class="'+(on?'on':'')+'" '+(others.length?'':'disabled ')+'onclick="AM.round=AM.round||{to:\''+(others[0]?others[0].id:'')+'\',x:1};amRefreshSettings()">Arrondir</button></div></div>';
+    '<button class="'+(on?'on':'')+'" '+(others.length?'':'disabled ')+'onclick="AM.round=AM.round||{to:\''+def+'\',x:1};amRefreshSettings()">Arrondir</button></div></div>';
   if(on){
     var opts=others.map(function(a){ return '<option value="'+esc(a.id)+'"'+(String(a.id)===String(AM.round.to)?' selected':'')+'>'+esc(accLabel(a))+'</option>'; }).join('');
     h+='<div class="am-rnd-to"><span>Vers</span><select onchange="AM.round.to=this.value">'+opts+'</select>'+
       '<div class="seg am-rnd-x">'+[1,2,5,10].map(function(x){ return '<button class="'+(AM.round.x===x?'on':'')+'" onclick="AM.round.x='+x+';amRefreshSettings()">×'+x+'</button>'; }).join('')+'</div></div>'+
-      '<p class="am-note">25,60 € → 0,40 €'+(AM.round.x>1?' ×'+AM.round.x:'')+' · versé en une fois chaque lundi.</p>';
+      '<p class="am-note">25,60 € → 0,40 €'+(AM.round.x>1?' ×'+AM.round.x:'')+' · versé en une fois chaque lundi.'+
+      (bt&&String(AM.round.to)===bt?' Compte choisi pour '+esc((findBank(AM.bank)||{}).name||'cette banque')+' dans Réglages → Petite monnaie.':'')+'</p>';
   }
   if(src.length) h+='<p class="am-note">🪙 Reçoit la petite monnaie de : '+src.map(function(k){ return esc(findAccount(k).name); }).join(', ')+'.</p>';
   return h;
@@ -5974,6 +5985,7 @@ function renderSettingsPage(){
       (AUTH.user&&AUTH.user.admin?row(svgIcon('lock'),'Administration','','setAdmin()'):'')+
       row(svgIcon('sun'),'Apparence',{auto:'Automatique',light:'Clair',dark:'Sombre'}[themePref()],'setAppearance()')+
       row('<span class="set-flag">🇫🇷</span>','Langue','Français','showToast(\'Le site est en français\')')+
+      row('<span class="set-eu">🪙</span>','Petite monnaie',Object.keys((_cache.settings||{}).roundBank||{}).length?String(Object.keys(_cache.settings.roundBank).length):'','setRoundBanks()')+
       row(svgIcon('cash'),'Paies du foyer',payList().length?String(payList().length):'','setPays()')+
       row(svgIcon('bell'),'Notifications','','setNotif()')+
       row(svgIcon('bolt'),'Ajout éclair','','setQuick()')+
@@ -7058,6 +7070,35 @@ function paySuggestions(){
     }
   });
   return out;
+}
+// Reglages -> Petite monnaie : pour chaque banque, le compte qui recoit les arrondis de ses comptes
+function setRoundBanks(){
+  var accs=getAccounts(), banks=[];
+  accs.forEach(function(a){ if(a.bank&&a.bank!=='especes'&&banks.indexOf(a.bank)<0) banks.push(a.bank); });
+  var map=(_cache.settings||{}).roundBank||{}, html='<p class="sheet-note">Choisis, pour chaque banque, le compte où vont les arrondis de tes achats (par exemple une Pocket Revolut). Il sera proposé d’office quand tu actives « Arrondir » sur un compte de cette banque.</p>';
+  if(!banks.length) html+='<p class="sheet-note"><i>Aucun compte n’a encore de banque.</i></p>';
+  banks.forEach(function(k){
+    var b=findBank(k)||{name:k}, lg=b.key&&LOGOS[b.key]?'<img src="'+LOGOS[b.key]+'" alt="">':(b.emoji||'🏦');
+    var same=accs.filter(function(a){ return a.bank===k; }), other=accs.filter(function(a){ return a.bank!==k; }), cur=roundBankTo(k)||'';
+    function opt(a){ return '<option value="'+esc(a.id)+'"'+(String(a.id)===cur?' selected':'')+'>'+esc(accLabel(a))+'</option>'; }
+    var rounding=same.filter(function(a){ return roundCfg(a.id); }).map(function(a){ return esc(a.name); });
+    html+='<div class="rb-card"><div class="rb-top"><span class="rb-logo">'+lg+'</span><b>'+esc(b.name)+'</b></div>'+
+      '<label class="oc-lbl">Les arrondis vont vers</label><select class="rb-sel" onchange="setRoundBank(\''+esc(k)+'\',this.value)"><option value="">— Pas de compte choisi —</option>'+
+      '<optgroup label="'+esc(b.name)+'">'+same.map(opt).join('')+'</optgroup>'+(other.length?'<optgroup label="Autres banques">'+other.map(opt).join('')+'</optgroup>':'')+'</select>'+
+      '<p class="am-note">'+(rounding.length?'🪙 Arrondissent déjà : '+rounding.join(', ')+'.':'Aucun compte '+esc(b.name)+' n’arrondit encore (roue de la carte → Petite monnaie → Arrondir).')+'</p></div>';
+  });
+  openSheet(sheetHead('Petite monnaie')+html);
+}
+function setRoundBank(bank,to){
+  if(!_cache.settings) _cache.settings={};
+  var map=Object.assign({},_cache.settings.roundBank||{});
+  if(to) map[bank]=String(to); else delete map[bank];
+  _cache.settings.roundBank=map; apiPost('/api/settings/roundBank',{value:map},null);
+  // les comptes de cette banque qui arrondissent deja versent maintenant vers ce compte
+  var n=0;
+  if(to) getAccounts().forEach(function(a){ var c=roundCfg(a.id); if(a.bank===bank&&c&&String(a.id)!==String(to)&&c.to!==String(to)){ saveRoundCfg(a.id,{to:to,x:c.x}); n++; } });
+  setRoundBanks(); refreshViews();
+  showToast(to?(n?n+' compte'+(n>1?'s':'')+' mis à jour':'Compte enregistré'):'Choix retiré');
 }
 function setPays(){
   var pays=payList(), hc=householdCycle(), html='';
