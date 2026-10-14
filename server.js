@@ -1120,6 +1120,7 @@ app.post('/api/import', requireAuth, async (req, res) => {
   }
   if (text) content.push({ type: 'text', text: '<fichier nom="' + String(req.body.textName || 'import.csv').replace(/[<>"]/g, '') + '">\n' + text + '\n</fichier>' });
   const today = new Date().toISOString().slice(0, 10);
+  const holders = db.prepare('SELECT name FROM users WHERE household_id = ?').all(req.hid).map(u => u.name).filter(Boolean).join(', ') || req.user;
   content.push({ type: 'text', text:
     'Date du jour : ' + today + '.\n' +
     'Catégories disponibles (clé : nom, groupe) :\n' + cats.map(c => '- ' + c.key + ' : ' + c.label + ' (' + (c.group === 'rev' ? 'revenu' : 'dépense') + ')').join('\n') + '\n\n' +
@@ -1140,6 +1141,9 @@ app.post('/api/import', requireAuth, async (req, res) => {
     'son propre coffre ou livret) : interne = true et "compte_lie" = le nom de l\'autre compte (si la ligne ne le dit pas, c\'est le compte ' +
     'principal pour une Pocket ou un coffre). Garde chaque ligne telle qu\'elle apparaît dans chaque compte, sans les fusionner. ' +
     'Sinon interne = false et compte_lie = "".\n' +
+    '- Virement vers ou depuis le titulaire lui-même ou une personne de son foyer (' + holders + ') : c\'est de l\'argent qui passe ' +
+    'd\'un de ses comptes à un autre (autre banque, compte du conjoint), pas une dépense ni un revenu : interne = true, et compte_lie = ' +
+    'le compte du document concerné s\'il y en a un, sinon "".\n' +
     '- arrondi = true pour les virements automatiques de petite monnaie (arrondi à l\'euro supérieur après un achat, quelques centimes ' +
     'à quelques euros, ex. « Sur la Pocket EUR Loisir depuis EUR » juste après un paiement), des deux côtés ; false sinon (un vrai virement choisi).'
   });
