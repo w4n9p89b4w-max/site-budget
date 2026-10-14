@@ -1163,6 +1163,15 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .tt-acc{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:11px 14px;border-radius:14px;border:1.5px solid #ece3d2;background:#fff;font:inherit;text-align:left;cursor:pointer;}
 .tt-acc b{font-size:15px;} .tt-acc small{font-size:12px;color:#8a7f72;font-weight:600;}
 .tt-acc.out{background:#fbf5e8;border-style:dashed;}
+.ab-inc{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #c9a14a;border-radius:16px;padding:12px 14px;margin:6px 0 10px;}
+.ab-inc>span:first-child{flex:1;display:flex;flex-direction:column;}
+.ab-inc small{font-size:13px;font-weight:800;color:#8a7f72;} .ab-inc em{font-style:normal;font-size:12px;color:#a89a80;font-weight:600;}
+.ab-in.big input{width:100px;font-size:20px;}
+.ab-claude{background:linear-gradient(135deg,#c9a14a,#a8781c)!important;color:#fff!important;}
+.ab-done{text-align:center;font-weight:800;color:#2f6a46;font-size:14px;margin:4px 0 8px;} .ab-done a{color:#a8781c;}
+.ab-alloc{height:10px;border-radius:6px;background:#e3f0e6;overflow:hidden;margin:10px 0 2px;} .ab-alloc span{display:block;height:100%;background:#c0533f;border-radius:6px;}
+.ab-grp.zero{opacity:.6;} .ab-ep{border-color:#3fa45b;background:#eef7f0;} .ab-ep.neg{border-color:#c0533f;background:#fbe9e6;}
+.ab-ra.down{color:#b5523f;} .ab-err{color:#b5523f;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
@@ -6314,7 +6323,7 @@ function qkFileList(list){
 function qkSend(body){
   var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+'/api/import',true);
   xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token);
-  xhr.timeout=180000;
+  xhr.timeout=900000;
   function fail(m){ if(!document.getElementById('sheet').classList.contains('open')) return;
     document.getElementById('sheetBody').innerHTML=sheetHead('Ajout éclair')+'<p class="sheet-note">'+esc(m)+'</p><button class="sheet-btn" onclick="setQuick()">Réessayer</button>'; }
   xhr.onload=function(){
@@ -7278,7 +7287,7 @@ function openBudgetAnalysis(){
     '<p class="sheet-note">Donne-moi <b>au moins 3 mois</b> de relevés : je repère tes charges fixes, je calcule ce que tu dépenses vraiment par catégorie et je te propose un budget.</p>'+
     '<label class="qk-drop ab-drop" id="abDrop" ondragover="event.preventDefault();this.classList.add(\'over\')" ondragleave="this.classList.remove(\'over\')" ondrop="event.preventDefault();this.classList.remove(\'over\');abFiles([].slice.call(event.dataTransfer.files||[]))">'+
       '<span class="qk-drop-ic">📑</span><b>'+(qkMobile()?'Choisir mes relevés':'Glisse tes relevés ici')+'</b>'+
-      '<small>PDF, CSV ou captures · plusieurs fichiers d’un coup (un par mois, c’est le plus fiable)</small>'+
+      '<small>PDF, CSV ou captures · mets-en plusieurs d’un coup : un par mois, un par banque…</small>'+
       '<input type="file" accept="'+ACCEPT+'" multiple onchange="abFiles([].slice.call(this.files||[]))"></label>'+
     '<label class="ab-check"><input type="checkbox" '+(AB.add?'checked ':'')+'onchange="AB.add=this.checked"> Ajouter aussi ces opérations à mes comptes <small>(avec le contrôle des doublons)</small></label>'+
     '<div class="qk-or">ou</div>'+
@@ -7301,7 +7310,7 @@ function abFiles(list){
     function send(err){
       if(err){ errs.push(err.message); i++; return next(); }
       var xhr=new XMLHttpRequest(); xhr.open('POST',API_BASE+'/api/import',true);
-      xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token); xhr.timeout=180000;
+      xhr.setRequestHeader('Content-Type','application/json'); xhr.setRequestHeader('Authorization','Bearer '+AUTH.token); xhr.timeout=900000;
       function fin(m){ if(m) errs.push((f.name||'Relevé')+' : '+m); i++; next(); }
       xhr.onload=function(){
         if(xhr.status===401){ authExpired(); return; }
@@ -7337,7 +7346,7 @@ function abRead(res,errs){
 function abStart(ops,src){
   AB.src=src; AB.ops=ops.filter(function(o){ return o.amount>0&&/^\d{4}-\d{2}-\d{2}$/.test(o.date); }).sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
   if(!AB.ops.length){ showToast('Aucune opération à analyser'); return; }
-  AB.edit={}; AB.tips=null;
+  AB.edit={}; AB.plan=null; AB.planErr=null; AB.inc=null; AB.reclass=null;
   abAnalyze(); abDraw();
 }
 function abMedian(a){ if(!a.length) return 0; var s=a.slice().sort(function(x,y){ return x-y; }), m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
@@ -7399,7 +7408,17 @@ function abAnalyze(){
   }).sort(function(a,b){ return b.avg-a.avg; });
 }
 function abStyleK(){ return (AB_STYLES.filter(function(s){ return s[0]===AB.style; })[0]||AB_STYLES[1])[2]; }
-// Budget propose par groupe : charges fixes reperees + depenses variables habituelles (mediane des mois), arrondi a 5 euros
+// Categories rangees dans aucun groupe (Divers, etc.)
+function abInGroup(){ var gc={}; getGroups().forEach(function(g){ g.cats.forEach(function(c){ gc[c]=1; }); }); return function(c){ return !!gc[c]; }; }
+// Revenu a repartir : les paies reperees (revenus reguliers de 300 euros ou plus), sinon les paies du site, sinon la moyenne des revenus
+function abSalary(){
+  var pays=AB.recs.filter(function(r){ return r.kind==='rev'&&r.amount>=300; });
+  if(pays.length) return {v:pays.reduce(function(s,r){ return s+r.monthly; },0),from:pays.map(function(r){ return r.label; })};
+  var pl=payList().filter(function(r){ return (r.freq||'month')==='month'; });
+  if(pl.length) return {v:pl.reduce(function(s,r){ return s+(+r.amount||0); },0),from:pl.map(function(r){ return r.label; })};
+  return {v:AB.rev,from:[]};
+}
+// Budget de chaque groupe (tous les groupes) : charges fixes reperees + depenses variables habituelles, ou ce que Claude a propose
 function abGroups(){
   var k=abStyleK(), out=[];
   getGroups().forEach(function(g){
@@ -7407,24 +7426,49 @@ function abGroups(){
     var fixed=AB.recs.filter(function(r){ return r.kind==='dep'&&g.cats.indexOf(r.cat)>=0; }).reduce(function(s,r){ return s+r.monthly; },0);
     var cs=AB.cats.filter(function(c){ return g.cats.indexOf(c.cat)>=0; });
     var vmed=cs.reduce(function(s,c){ return s+c.med; },0), vavg=cs.reduce(function(s,c){ return s+c.avg; },0), vmax=cs.reduce(function(s,c){ return s+c.max; },0);
-    if(fixed<0.5&&vavg<0.5) return;
-    var prop=Math.ceil((fixed+vmed*k)/5)*5;
-    out.push({g:g,fixed:fixed,vmed:vmed,vavg:vavg,vmax:vmax,cats:cs,prop:prop,val:AB.edit[g.key]!=null?AB.edit[g.key]:prop});
+    var prop=fixed+vmed<0.5?0:Math.ceil((fixed+vmed*k)/5)*5;
+    var pl=AB.plan&&AB.plan.budgets&&AB.plan.budgets[g.key];
+    out.push({g:g,fixed:fixed,vmed:vmed,vavg:vavg,vmax:vmax,cats:cs,prop:prop,why:pl?pl.why:'',
+      val:AB.edit[g.key]!=null?AB.edit[g.key]:(pl?pl.v:prop)});
   });
-  return out.sort(function(a,b){ return b.val-a.val; });
+  return out;
 }
-function abOther(){ var gc={}; getGroups().forEach(function(g){ g.cats.forEach(function(c){ gc[c]=1; }); }); return AB.cats.filter(function(c){ return !gc[c.cat]; }); }
+function abOther(){ var ig=abInGroup(); return AB.cats.filter(function(c){ return !ig(c.cat); }); }
 function abShort(ds){ return shortDay(ds)+' '+ds.slice(2,4); }
 function abFreqLbl(r){ return r.freq==='week'?'chaque semaine':'chaque mois vers le '+r.day; }
 function abDraw(){
-  var gs=abGroups(), fixed=AB.recs.filter(function(r){ return r.kind==='dep'; }).reduce(function(s,r){ return s+r.monthly; },0);
-  var vari=AB.cats.reduce(function(s,c){ return s+c.avg; },0), budget=gs.reduce(function(s,x){ return s+(+x.val||0); },0);
-  var rest=AB.rev-budget-abOther().reduce(function(s,c){ return s+c.avg; },0);
+  if(AB.inc==null){ var sa=abSalary(); AB.inc=Math.round(sa.v); AB.incFrom=sa.from; }
+  var gs=abGroups(), total=gs.reduce(function(s,x){ return s+(+x.val||0); },0), ep=AB.inc-total, oth=abOther();
   var h=sheetHead('Analyse de budget')+
-    '<p class="sheet-note">Du <b>'+esc(abShort(AB.d0))+'</b> au <b>'+esc(abShort(AB.d1))+'</b> · moyennes sur '+AB.nM+' mois complet'+(AB.nM>1?'s':'')+(AB.nM<3?' <b>(moins de 3 mois : résultats à prendre avec prudence)</b>':'')+'.'+
-    (AB.errs&&AB.errs.length?'<br><small>Non lu : '+AB.errs.map(esc).join(' · ')+'</small>':'')+'</p>'+
-    '<div class="ab-tiles"><div><small>Revenus</small><b class="up">'+fmtE(Math.round(AB.rev))+'</b></div><div><small>Charges fixes</small><b>'+fmtE(Math.round(fixed))+'</b></div>'+
-    '<div><small>Dépenses variables</small><b>'+fmtE(Math.round(vari))+'</b></div><div><small>Reste (épargne possible)</small><b class="'+(rest<0?'down':'up')+'">'+fmtE(Math.round(rest))+'</b></div></div>';
+    '<p class="sheet-note">Du <b>'+esc(abShort(AB.d0))+'</b> au <b>'+esc(abShort(AB.d1))+'</b> · '+AB.nM+' mois complet'+(AB.nM>1?'s':'')+(AB.nM<3?' <b>(moins de 3 mois : résultats à prendre avec prudence)</b>':'')+'.'+
+    (AB.errs&&AB.errs.length?'<br><small class="ab-err">Non lu : '+AB.errs.map(esc).join(' · ')+'</small>':'')+'</p>';
+  // revenu a repartir
+  h+='<div class="ab-inc"><span><small>💶 Revenu mensuel à répartir</small>'+(AB.incFrom&&AB.incFrom.length?'<em>'+esc(AB.incFrom.join(' + '))+'</em>':'<em>moyenne de tes revenus</em>')+'</span>'+
+    '<span class="ab-in big"><input inputmode="decimal" value="'+Math.round(AB.inc)+'" onchange="AB.inc=parseFloat(this.value.replace(\',\',\'.\'))||0;abDraw()"><i>'+esc(curSym())+'</i></span></div>';
+  // construire avec Claude
+  if(AB.plan==='wait') h+='<div class="qk-wait small"><i></i>Claude construit ton budget…<br><small>Il range aussi tes dépenses « Divers » dans la bonne catégorie.</small></div>';
+  else if(!AB.plan) h+='<button class="sheet-btn ab-claude" onclick="abPlan()">✨ Construire mon budget avec Claude</button>'+
+    '<p class="am-note" style="text-align:center">'+(AB.planErr?'<b>'+esc(AB.planErr)+'</b><br>':'')+'Il range tes dépenses « Divers », répartit ton salaire entre tous les groupes et l’épargne, et te donne des conseils. Seuls des totaux et des noms de commerçants lui sont envoyés.</p>';
+  else h+='<p class="ab-done">✨ Budget construit par Claude'+(AB.plan.moved?' · '+AB.plan.moved+' dépense'+(AB.plan.moved>1?'s':'')+' rangée'+(AB.plan.moved>1?'s':'')+' dans une catégorie':'')+' · <a href="#" onclick="AB.plan=null;AB.edit={};abDraw();return false;">refaire</a></p>';
+  // budget de tous les groupes
+  h+='<div class="adm-h"><span>🛒 Ton budget par mois</span></div>'+
+    '<div class="seg ab-style">'+AB_STYLES.map(function(s){ return '<button class="'+(AB.style===s[0]?'on':'')+'" onclick="AB.style=\''+s[0]+'\';AB.edit={};'+(AB.plan&&AB.plan!=='wait'?'AB.plan=null;':'')+'abDraw()">'+s[1]+'</button>'; }).join('')+'</div>';
+  h+='<div class="ab-alloc"><span style="width:'+Math.min(100,AB.inc>0?total/AB.inc*100:0)+'%"></span></div>'+
+    '<p class="am-note">'+fmtE(Math.round(total))+' de dépenses prévues sur '+fmtE(Math.round(AB.inc))+' · tu peux changer chaque montant.</p>';
+  gs.forEach(function(x){
+    var cur=x.g.budget!=null&&x.g.budget!==''?+x.g.budget:null;
+    var info=[x.fixed>=0.5?'fixes '+fmtE(Math.round(x.fixed)):'',x.vavg>=0.5?'dépensé : moy. '+fmtE(Math.round(x.vavg))+', max '+fmtE(Math.round(x.vmax)):'',cur!=null?'actuel '+fmtE(cur):''].filter(Boolean).join(' · ');
+    h+='<div class="ab-grp'+(+x.val?'':' zero')+'"><span class="bg-ic" style="background:'+x.g.color+';color:#fff">'+svgIcon(x.g.ic)+'</span>'+
+      '<span class="ab-rt"><b>'+esc(x.g.label)+'</b><small>'+(x.why?esc(x.why):info||'rien dépensé sur la période')+'</small></span>'+
+      '<span class="ab-in"><input inputmode="decimal" value="'+Math.round(+x.val||0)+'" onchange="AB.edit[\''+x.g.key+'\']=parseFloat(this.value.replace(\',\',\'.\'))||0;abDraw()"><i>'+esc(curSym())+'</i></span></div>';
+  });
+  var epg=findGroup('epargne');
+  h+='<div class="ab-grp ab-ep'+(ep<0?' neg':'')+'"><span class="bg-ic" style="background:'+(epg?epg.color:'#3fa45b')+';color:#fff">'+svgIcon(epg?epg.ic:'piggy')+'</span>'+
+    '<span class="ab-rt"><b>Épargne</b><small>'+(AB.plan&&AB.plan.ep&&AB.plan.ep.why?esc(AB.plan.ep.why):(ep<0?'Tes budgets dépassent ton revenu : baisse certains montants.':'Ce qui reste une fois les budgets payés'+(AB.inc>0?' ('+Math.round(ep/AB.inc*100)+' % du revenu)':'')+'.'))+'</small></span>'+
+    '<span class="ab-ra '+(ep<0?'down':'up')+'">'+fmtE(Math.round(ep))+'</span></div>';
+  if(oth.length) h+='<p class="am-note">Pas dans un groupe (pas de budget) : '+oth.slice(0,8).map(function(c){ return esc(getCatObj(c.cat).label)+' '+fmtE(Math.round(c.avg)); }).join(' · ')+(AB.plan?'':'. Claude peut les ranger dans la bonne catégorie.')+'</p>';
+  // conseils
+  if(AB.plan&&AB.plan.conseils&&AB.plan.conseils.length) h+='<div class="adm-h"><span>💡 Les conseils de Claude</span></div>'+AB.plan.conseils.map(function(t){ return '<div class="ab-tip"><b>'+esc(t.titre)+'</b><p>'+esc(t.texte)+'</p></div>'; }).join('');
   // operations regulieres reperees
   h+='<div class="adm-h"><span>🔁 Opérations qui reviennent</span></div>';
   if(!AB.recs.length) h+='<p class="sheet-note">Aucune opération régulière repérée.</p>';
@@ -7436,24 +7480,6 @@ function abDraw(){
       '<span class="ab-ra '+(r.kind==='rev'?'up':'')+'">'+(r.kind==='rev'?'+':'')+fmtE(r.amount,true)+'</span>'+
       (r.exists?'':'<button class="ab-no" onclick="abNever('+i+')" title="Ne plus proposer">Jamais</button>')+'</div>';
   });
-  // budget propose
-  h+='<div class="adm-h"><span>🛒 Budget proposé par mois</span></div>'+
-    '<div class="seg ab-style">'+AB_STYLES.map(function(s){ return '<button class="'+(AB.style===s[0]?'on':'')+'" onclick="AB.style=\''+s[0]+'\';AB.edit={};abDraw()">'+s[1]+'</button>'; }).join('')+'</div>'+
-    '<p class="am-note">'+(AB.style==='serre'?'10 % de moins que tes dépenses habituelles':AB.style==='confort'?'10 % de plus que tes dépenses habituelles':'Ce que tu dépenses habituellement (le mois du milieu)')+' + tes charges fixes. Tu peux changer chaque montant.</p>';
-  gs.forEach(function(x){
-    var cur=x.g.budget!=null&&x.g.budget!==''?+x.g.budget:null;
-    h+='<div class="ab-grp"><span class="bg-ic" style="background:'+x.g.color+';color:#fff">'+svgIcon(x.g.ic)+'</span>'+
-      '<span class="ab-rt"><b>'+esc(x.g.label)+'</b><small>'+[x.fixed>=0.5?'fixes '+fmtE(Math.round(x.fixed)):'',x.vavg>=0.5?'variables : moy. '+fmtE(Math.round(x.vavg))+', max '+fmtE(Math.round(x.vmax)):'',
-      cur!=null?'actuel '+fmtE(cur):''].filter(Boolean).join(' · ')+'</small></span>'+
-      '<span class="ab-in"><input inputmode="decimal" value="'+Math.round(x.val)+'" onchange="AB.edit[\''+x.g.key+'\']=parseFloat(this.value.replace(\',\',\'.\'))||0;abDraw()"><i>'+esc(curSym())+'</i></span></div>';
-  });
-  var oth=abOther();
-  if(oth.length) h+='<p class="am-note">Hors groupes (pas de budget) : '+oth.map(function(c){ return esc(getCatObj(c.cat).label)+' '+fmtE(Math.round(c.avg)); }).join(' · ')+'.</p>';
-  // conseils
-  h+='<div class="adm-h"><span>💡 Les conseils de Claude</span></div>';
-  if(AB.tips==='wait') h+='<div class="qk-wait small"><i></i>Claude réfléchit…</div>';
-  else if(AB.tips&&AB.tips.length) h+=AB.tips.map(function(t){ return '<div class="ab-tip"><b>'+esc(t.titre)+'</b><p>'+esc(t.texte)+'</p></div>'; }).join('');
-  else h+=(AB.tipErr?'<p class="sheet-note">'+esc(AB.tipErr)+'</p>':'<p class="am-note">Seuls les totaux ci-dessus sont envoyés à Claude, jamais le détail de tes opérations.</p>')+'<button class="sheet-btn ghost" onclick="abTips()">💡 Demander des conseils à Claude</button>';
   var nr=AB.recs.filter(function(r){ return r.sel&&!r.exists; }).length;
   h+='<button class="sheet-btn" onclick="abApply()">Appliquer ce budget'+(nr?' et créer '+nr+' opération'+(nr>1?'s':'')+' régulière'+(nr>1?'s':''):'')+'</button>'+
     (AB.src==='imp'&&AB.add?'<p class="am-note" style="text-align:center">Ensuite : vérification des opérations à ajouter à tes comptes.</p>':'');
@@ -7468,17 +7494,37 @@ function abNever(i){
   _cache.settings.recurNo=no; apiPost('/api/settings/recurNo',{value:no},null);
   AB.recs.splice(i,1); abDraw(); showToast('« '+r.label+' » ne sera plus proposé');
 }
-function abTips(){
-  var gs=abGroups();
-  var summary={mois_analyses:AB.nM,revenus_par_mois:Math.round(AB.rev),
-    charges_fixes:AB.recs.filter(function(r){ return r.kind==='dep'; }).map(function(r){ return {nom:r.label,montant_par_mois:Math.round(r.monthly*100)/100,categorie:getCatObj(r.cat).label}; }),
-    depenses_variables:AB.cats.slice(0,25).map(function(c){ return {categorie:getCatObj(c.cat).label,moyenne:Math.round(c.avg),mois_le_plus_haut:Math.round(c.max),par_mois:c.per.map(Math.round)}; }),
-    budget_propose:gs.map(function(x){ return {groupe:x.g.label,budget:Math.round(x.val)}; })};
-  AB.tips='wait'; AB.tipErr=null; abDraw();
-  apiPost('/api/budget-advice',{summary:summary},function(err,d){
+// Claude construit le budget : il range les libelles hors groupes, puis repartit le revenu entre tous les groupes et l epargne
+function abPlan(){
+  var ig=abInGroup(), gs=abGroups(), byLbl={};
+  AB.ops.forEach(function(o){
+    if(o.kind!=='dep'||ig(o.cat)||AB.months.indexOf(o.date.slice(0,7))<0) return;
+    var k=normTxt(o.label).trim(); if(!k) return;
+    var x=byLbl[k]=byLbl[k]||{libelle:o.label,total:0,fois:0}; x.total+=o.amount; x.fois++;
+  });
+  var aRanger=Object.keys(byLbl).map(function(k){ var x=byLbl[k]; return {libelle:x.libelle,total_par_mois:Math.round(x.total/AB.nM*100)/100,fois:x.fois}; })
+    .sort(function(a,b){ return b.total_par_mois-a.total_par_mois; }).slice(0,120);
+  var body={revenu:Math.round(AB.inc),style:AB.style,mois:AB.nM,
+    groupes:gs.map(function(x){ return {cle:x.g.key,nom:x.g.label,categories:x.g.cats.map(function(c){ return getCatObj(c).label; }),
+      charges_fixes:Math.round(x.fixed),depenses_moyennes:Math.round(x.vavg),mois_le_plus_haut:Math.round(x.vmax)}; }),
+    charges_fixes:AB.recs.filter(function(r){ return r.kind==='dep'; }).map(function(r){ return {nom:r.label,par_mois:Math.round(r.monthly*100)/100,categorie:getCatObj(r.cat).label}; }),
+    a_ranger:aRanger,
+    categories:customExpCats().concat(EXP_CATS).map(function(c){ return {key:c.key,label:c.label}; })};
+  AB.plan='wait'; AB.planErr=null; abDraw();
+  apiPost('/api/budget-plan',body,function(err,d){
     if(!AB) return;
-    if(err||!d||!d.ok){ AB.tips=null; AB.tipErr=(d&&d.error)||'Conseils indisponibles pour le moment.'; }
-    else AB.tips=d.conseils||[];
+    if(err||!d||!d.ok){ AB.plan=null; AB.planErr=(d&&d.error)||'Budget indisponible pour le moment.'; if(document.getElementById('sheet').classList.contains('open')) abDraw(); return; }
+    // 1. dépenses rangées dans leur categorie
+    var map={}, moved=0; (d.reclasse||[]).forEach(function(x){ if(x.cat&&x.cat!=='autres_dep') map[normTxt(x.libelle).trim()]=x.cat; });
+    AB.reclass=map;
+    AB.ops.forEach(function(o){ var c=map[normTxt(o.label).trim()]; if(o.kind==='dep'&&c&&!ig(o.cat)){ o.cat=c; moved++; } });
+    if(AB.raw) AB.raw.operations.forEach(function(o){ var c=map[normTxt(o.label).trim()]; if(o.kind==='dep'&&c&&!ig(o.cat)) o.cat=c; });
+    var sel={}; AB.recs.forEach(function(r){ sel[r.key]=r.sel; });
+    abAnalyze();
+    AB.recs.forEach(function(r){ if(sel[r.key]!=null) r.sel=sel[r.key]; });
+    // 2. budgets de tous les groupes
+    var bud={}; (d.budgets||[]).forEach(function(x){ bud[x.groupe]={v:Math.max(0,Math.round(+x.montant||0)),why:x.pourquoi||''}; });
+    AB.plan={budgets:bud,ep:d.epargne,conseils:d.conseils||[],moved:moved}; AB.edit={};
     if(document.getElementById('sheet').classList.contains('open')) abDraw();
   });
 }
@@ -7488,6 +7534,12 @@ function abApply(){
   var gs=abGroups();
   gs.forEach(function(x){ x.g.budget=Math.round((+x.val||0)*100)/100; });
   saveGroups();
+  // operations deja saisies : on garde les categories trouvees par Claude
+  if(AB.src==='site'&&AB.reclass){
+    var ig=abInGroup(), ch=[];
+    getTxns().forEach(function(t){ var c=AB.reclass[normTxt(t.label).trim()]; if(txnKind(t)==='dep'&&c&&!ig(t.cat)){ t.cat=c; ch.push(t); } });
+    if(ch.length) apiPost('/api/transactions/bulk',{transactions:ch},null);
+  }
   var todo=AB.recs.filter(function(r){ return r.sel&&!r.exists; }), k=0;
   (function next(){
     if(k>=todo.length) return done();
