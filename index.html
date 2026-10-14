@@ -1158,6 +1158,11 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 @media(max-width:699px){ .ab-entry-sub{display:none;} .bg-manage b{flex:1;text-align:left;} }
 .qk-wait.small{padding:14px;font-size:14px;}
 .gd-move{margin-top:4px;max-width:100%;padding:5px 8px;border-radius:9px;border:1.5px solid #e6dcc8;background:#fbf8f2;font:inherit;font-size:12.5px;font-weight:700;color:#8a7f72;}
+.oc-tra{display:block;margin:6px auto 0;}
+.tt-list{display:flex;flex-direction:column;gap:6px;}
+.tt-acc{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:11px 14px;border-radius:14px;border:1.5px solid #ece3d2;background:#fff;font:inherit;text-align:left;cursor:pointer;}
+.tt-acc b{font-size:15px;} .tt-acc small{font-size:12px;color:#8a7f72;font-weight:600;}
+.tt-acc.out{background:#fbf5e8;border-style:dashed;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
 .pv-chip.mine{border-style:dashed;border-color:#d9c3a0;}
@@ -5319,6 +5324,35 @@ function ocRegHtml(rev,od){
   return '<label class="oc-lbl">'+svgIcon('repeat')+' Répéter</label><div class="seg oc-rep">'+seg+'</div>'+
     (f?'<p class="am-note oc-rep-note">'+info+', à partir de celle-ci. Elle apparaîtra « à confirmer » dans le Budget à chaque échéance'+(rev?' (pratique pour ta paie)':'')+'.</p>':'');
 }
+// Depense (ou revenu) qui est en fait un virement vers un autre de mes comptes : elle sort du budget.
+// Si l autre compte est sur le site, on cree aussi l autre moitie du virement.
+function ocToTransfer(){
+  var t=getTxns().filter(function(x){ return String(x.id)===String(OC.txnId); })[0]; if(!t) return;
+  var out=t.type!=='rev', accs=getAccounts().filter(function(a){ return String(a.id)!==String(t.bank)&&!accLocked(a.id); });
+  var rows=accs.map(function(a){ return '<button class="tt-acc" onclick="txnToTransfer(\''+Number(t.id)+'\',\''+a.id+'\')"><b>'+esc(a.name)+'</b><small>'+esc((findBank(a.bank)||{}).name||'')+'</small></button>'; }).join('');
+  openSheet(sheetHead(out?'Virement vers…':'Virement depuis…')+
+    '<p class="sheet-note">« '+esc(t.label)+' » ('+fmtE(+t.amount,true)+') deviendra un virement : il ne comptera plus '+(out?'dans tes dépenses':'dans tes revenus')+'. '+(out?'Sur quel compte est arrivé cet argent ?':'De quel compte venait cet argent ?')+'</p>'+
+    '<div class="tt-list">'+rows+'<button class="tt-acc out" onclick="txnToTransfer(\''+Number(t.id)+'\',\'\')"><b>Un compte qui n’est pas sur le site</b><small>autre banque, compte de quelqu’un du foyer…</small></button></div>');
+  document.getElementById('sheet').classList.add('over');
+}
+function txnToTransfer(id,to){
+  var txns=getTxns(), t=txns.filter(function(x){ return String(x.id)===String(id); })[0]; if(!t) return;
+  var out=t.type!=='rev', upd={}; for(var k in t) upd[k]=t[k];
+  upd.type=out?'transfert':'transfert_in'; upd.cat='';
+  var list=[upd], other=null;
+  if(to){
+    var nid=Date.now();
+    other={id:nid,date:t.date,label:t.label,cat:'',amount:t.amount,type:out?'transfert_in':'transfert',bank:String(to),need:'',transfer_pair:t.id,transferPair:t.id,note:t.note||''};
+    upd.transfer_pair=nid; upd.transferPair=nid; list.push(other);
+  }
+  apiPost('/api/transactions/bulk',{transactions:list},function(err){
+    if(err){ showToast('Erreur : '+err.message); return; }
+    for(var j=0;j<txns.length;j++){ if(txns[j]===t) txns[j]=upd; }
+    if(other) txns.unshift(other);
+    setTxns(txns); closeSheet(); closeAccModal(); refreshViews();
+    showToast('C’est maintenant un virement'+(to?' vers '+(findAccount(to)||{}).name:''));
+  });
+}
 function deleteTxnFromEdit(){ var id=OC.txnId; closeAccModal(); deleteHomeTxn(String(Number(id))); }
 function renderOccModal(){
   var rev=OC.kind==='rev', tra=OC.kind==='tra', cat=getCatObj(OC.cat), accs=getAccounts(), cards='';
@@ -5350,6 +5384,7 @@ function renderOccModal(){
     '<div><label class="oc-lbl">Note</label><input class="oc-in" id="ocNote" maxlength="80" placeholder="Note facultative…" value="'+esc(OC.note)+'"></div></div>'+
     (OC.calOpen?ocCalHtml():'')+
     (edit&&!OC.reg&&!OC.locked?ocRegHtml(rev,od):'')+
+    (edit&&!OC.locked?'<button class="cyc-reset oc-tra" onclick="ocToTransfer()">↔️ Ce n’est pas '+(rev?'un revenu':'une dépense')+' : c’est un virement entre mes comptes</button>':'')+
     (OC.locked?lockNote(OC.bank)+'<div class="am-btns"><button class="am-cancel" style="flex:1" onclick="closeAccModal()">Fermer</button></div></div>':'')+
     (OC.locked?'':edit&&OC.later?'<button class="cyc-reset" onclick="closeAccModal();markTxnPaid(\''+Number(OC.txnId)+'\')">Marquer comme payée</button>':'')+
     (OC.locked?'':'<div class="am-btns"><button class="am-cancel" onclick="closeAccModal()">Annuler</button><button class="am-save oc-go" onclick="'+(edit?'saveTxnEdit()':'bgConfirmOcc()')+'">'+btn+'</button></div></div>');
