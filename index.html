@@ -888,6 +888,8 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
   #page-budget .bg-body:has(>:nth-child(2))>.bg-card:first-child,#page-dashboard .bg-body:has(>:nth-child(2))>.bg-card:first-child{grid-column:1;grid-row:1 / span 60;position:sticky;top:20px;}
   #page-budget .bg-body:has(>:nth-child(2))>*:not(:first-child),#page-dashboard .bg-body:has(>:nth-child(2))>*:not(:first-child){grid-column:2;}
   #page-budget .bg-body>:nth-child(2),#page-dashboard .bg-body>:nth-child(2){margin-top:62px;}
+  /* vue Budget : graphique + analyse a gauche, alignes en haut sur « Revenus » et qui defilent avec la liste */
+  #page-budget .bg-body:has(>:nth-child(2))>.bg-left:first-child{grid-column:1;grid-row:1 / span 60;margin-top:62px;}
   /* une seule carte (calendrier) : elle prend toute la largeur */
   #page-budget .bg-body:not(:has(>:nth-child(2))){max-width:980px;}
   #page-budget .bg-head,#page-dashboard .st-head{padding-bottom:70px;}
@@ -1152,6 +1154,8 @@ button.amt-pill.on{background:#f8e6e2;border-color:#e4b9b1;color:var(--red);}
 .ab-tip{background:#fff;border-left:4px solid #c9a14a;border-radius:12px;padding:10px 12px;margin:6px 0;}
 .ab-tip b{font-size:15px;} .ab-tip p{margin:4px 0 0;font-size:14px;color:#5a5048;line-height:1.4;}
 .ab-entry-sub{flex:1;text-align:left;font-size:12px;color:#9a8f7c;font-weight:600;margin-left:6px;}
+.bg-manage b+.ab-entry-sub{margin-left:auto;}
+@media(max-width:699px){ .ab-entry-sub{display:none;} .bg-manage b{flex:1;text-align:left;} }
 .qk-wait.small{padding:14px;font-size:14px;}
 .lock-note{background:#f6efe0;border:1px solid #e6d5b0;color:#7a5a1c;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;margin:8px 0;line-height:1.35;}
 .chip-com{background:#efe7d8;font-size:13px;}
@@ -4946,7 +4950,7 @@ function dnPick(el,k){
 }
 function renderBgBudget(){ return withAccFilter(renderBgBudgetInner); }
 function renderBgBudgetInner(){
-  var y=BG.y, m=BG.m, st=monthStats(y,m), groups=getGroups(), reel=BG.mode==='reel', html='';
+  var y=BG.y, m=BG.m, st=monthStats(y,m), groups=getGroups(), reel=BG.mode==='reel', html='<div class="bg-left">';
   html+='<div class="bg-card">'+accChipsHtml()+(BG.f&&!reel?'<p class="bg-fnote">Budgets calculés avec les opérations régulières de '+(/^u:/.test(BG.prevAcc)?'ses comptes':BG.prevAcc==='common'?'vos comptes communs':'ce compte')+'.</p>':'')+'<div class="bg-pv"><button class="'+(!reel?'on':'')+'" onclick="BG.mode=\'prevu\';renderBudget()">'+svgIcon('pie')+'Prévu</button>'+
     '<button class="'+(reel?'on':'')+'" onclick="BG.mode=\'reel\';renderBudget()">'+svgIcon('bars')+'Réel</button></div>';
   var segs=[];
@@ -4970,6 +4974,8 @@ function renderBgBudgetInner(){
     html+='<div class="bg-bar"><span class="red" style="width:'+(st.spent/base*100)+'%"></span><span class="hatch" style="width:'+(st.upDep/base*100)+'%"></span><span class="beige" style="flex:1"></span></div>';
   }
   html+='</div>';
+  // sous le graphique : l analyse de budget
+  html+='<button class="bg-manage" onclick="openBudgetAnalysis()"><span class="bg-ic" style="background:#f6edd9">🔍</span><b>Analyse de budget</b><small class="ab-entry-sub">Mes relevés de 3 mois → un budget proposé</small>'+svgIcon('chev')+'</button></div>';
   // Revenus
   var incs=regulars('rev'), occ=rangeOccs(st.range);
   html+='<div class="bg-sec"><b>Revenus</b><b>'+fmtE(reel?st.incReal:st.incPlanned)+'</b></div><div class="bg-list">';
@@ -5009,7 +5015,6 @@ function renderBgBudgetInner(){
   if(oth>0) html+=bgRow('<span class="bg-ic" style="background:#8a8178;color:#fff">'+svgIcon('box')+'</span>','Autres dépenses','Hors groupes','<b>'+fmtE(oth)+'</b>','bgManageGroups()');
   html+='<button class="bg-add" onclick="bgNewGroup()">+ Ajouter un groupe</button></div>';
   html+='<button class="bg-manage" onclick="bgManageGroups()"><span class="bg-ic" style="background:#f1dedb;color:#8a7f72">'+svgIcon('gear')+'</span><b>Gérer mes groupes</b>'+svgIcon('chev')+'</button>';
-  html+='<button class="bg-manage" onclick="openBudgetAnalysis()"><span class="bg-ic" style="background:#f6edd9">🔍</span><b>Analyse de budget</b><small class="ab-entry-sub">Mes relevés de 3 mois → un budget proposé</small>'+svgIcon('chev')+'</button>';
   return html;
 }
 // Ligne de liste : icone, titre, sous-titre, montant, action, barre (0-1)
