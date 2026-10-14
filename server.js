@@ -1059,6 +1059,46 @@ function anthropicConfig() {
   c.model = process.env.ANTHROPIC_MODEL || c.model || 'claude-opus-5-5';
   return Anthropic && c.apiKey && !/^sk-ant-\.\.\./.test(c.apiKey) ? c : null;
 }
+// Analyse de budget : conseils de Claude a partir des seuls totaux mensuels (jamais le detail des operations)
+app.post('/api/budget-advice', requireAuth, async (req, res) => {
+  const conf = anthropicConfig();
+  if (!conf) return res.status(503).json({ error: 'Clé Anthropic pas encore réglée sur le serveur (anthropic.config.json).' });
+  const summary = JSON.stringify(req.body.summary || {}).slice(0, 20000);
+  const schema = {
+    type: 'object', additionalProperties: false, required: ['conseils'],
+    properties: { conseils: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titre', 'texte'],
+      properties: { titre: { type: 'string' }, texte: { type: 'string' } } } } }
+  };
+  try {
+    const client = new Anthropic({ apiKey: conf.apiKey });
+    const msg = await client.beta.messages.create({
+      model: conf.model,
+      max_tokens: 4000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'low', format: { type: 'json_schema', schema } },
+      messages: [{ role: 'user', content:
+        'Voici le résumé des finances d\'un foyer sur plusieurs mois (moyennes mensuelles en euros, calculées par son appli de budget) :\n' +
+        summary + '\n\n' +
+        'Donne 3 à 5 conseils concrets pour son budget, en français simple, en tutoyant, sur un ton bienveillant. ' +
+        'Appuie-toi sur les chiffres : dépenses en hausse ou très variables, abonnements qui s\'additionnent, budget proposé trop serré ou trop large, ' +
+        'capacité d\'épargne et comment l\'utiliser. Pas de conseils génériques ni de placements financiers précis. ' +
+        'titre : 6 mots maximum, avec un émoji au début ; texte : 2 phrases maximum, avec les montants utiles.' }]
+    });
+    if (msg.stop_reason === 'refusal') return res.status(422).json({ error: 'Claude n’a pas voulu répondre.' });
+    const data = JSON.parse(msg.content.filter(b => b.type === 'text').map(b => b.text).join(''));
+    const conseils = (data.conseils || []).slice(0, 6).map(c => ({ titre: String(c.titre || '').slice(0, 80), texte: String(c.texte || '').slice(0, 400) }));
+    console.log('Analyse de budget : ' + conseils.length + ' conseil(s) pour ' + req.user + ' (' + msg.usage.input_tokens + ' + ' + msg.usage.output_tokens + ' jetons)');
+    res.json({ ok: true, conseils });
+  } catch (e) {
+    console.log('Analyse de budget : erreur', e.status || '', e.message);
+    let m = 'Conseils indisponibles pour le moment, réessaie.';
+    if (e instanceof Anthropic.AuthenticationError) m = 'Clé Anthropic refusée : vérifie anthropic.config.json.';
+    else if (e instanceof Anthropic.RateLimitError) m = 'Trop de demandes d’un coup, réessaie dans une minute.';
+    else if (e instanceof Anthropic.BadRequestError && /credit|billing/i.test(e.message)) m = 'Plus de crédit sur le compte Anthropic.';
+    res.status(502).json({ error: m });
+  }
+});
 app.get('/api/import', requireAuth, (req, res) => {
   res.json({ ready: !!anthropicConfig(), module: !!Anthropic });
 });
