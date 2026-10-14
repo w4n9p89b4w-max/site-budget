@@ -1059,8 +1059,8 @@ function anthropicConfig() {
   c.model = process.env.ANTHROPIC_MODEL || c.model || 'claude-opus-5-5';
   return Anthropic && c.apiKey && !/^sk-ant-\.\.\./.test(c.apiKey) ? c : null;
 }
-// Analyse de budget : Claude construit le budget du mois a partir du salaire et des totaux (jamais le detail des operations),
-// et range dans une categorie les libelles qui sont dans « Divers » ou hors groupes.
+// Analyse de budget : Claude construit le budget du mois a partir du revenu et des totaux (jamais le detail des operations),
+// range dans une categorie les libelles « Divers » / hors groupes, et peut ajuster un budget deja propose a la demande.
 app.post('/api/budget-plan', requireAuth, async (req, res) => {
   const conf = anthropicConfig();
   if (!conf) return res.status(503).json({ error: 'Clé Anthropic pas encore réglée sur le serveur (anthropic.config.json).' });
@@ -1069,42 +1069,57 @@ app.post('/api/budget-plan', requireAuth, async (req, res) => {
   const gKeys = groups.map(g => String(g.cle)), cKeys = cats.map(c => String(c.key));
   if (!gKeys.length || !cKeys.length) return res.status(400).json({ error: 'Données incomplètes' });
   const schema = {
-    type: 'object', additionalProperties: false, required: ['reclasse', 'budgets', 'epargne', 'conseils'],
+    type: 'object', additionalProperties: false, required: ['resume', 'reclasse', 'budgets', 'epargne', 'conseils'],
     properties: {
+      resume: { type: 'string' },
       reclasse: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['libelle', 'cat'],
         properties: { libelle: { type: 'string' }, cat: { type: 'string', enum: cKeys } } } },
-      budgets: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['groupe', 'montant', 'pourquoi'],
-        properties: { groupe: { type: 'string', enum: gKeys }, montant: { type: 'number' }, pourquoi: { type: 'string' } } } },
+      budgets: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['groupe', 'montant', 'type', 'pourquoi', 'detail'],
+        properties: { groupe: { type: 'string', enum: gKeys }, montant: { type: 'number' }, type: { type: 'string', enum: ['besoin', 'envie'] }, pourquoi: { type: 'string' },
+          detail: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['cat', 'montant'], properties: { cat: { type: 'string', enum: cKeys }, montant: { type: 'number' } } } } } } },
       epargne: { type: 'object', additionalProperties: false, required: ['montant', 'pourquoi'], properties: { montant: { type: 'number' }, pourquoi: { type: 'string' } } },
       conseils: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titre', 'texte'], properties: { titre: { type: 'string' }, texte: { type: 'string' } } } }
     }
   };
-  const data = JSON.stringify({ revenu_a_repartir: b.revenu, style: b.style, mois_analyses: b.mois, groupes: groups, charges_fixes: b.charges_fixes, a_ranger: b.a_ranger, categories: cats }).slice(0, 60000);
+  const clip = (v, n) => String(v || '').slice(0, n);
+  const data = JSON.stringify({ revenu_a_repartir: b.revenu, autres_revenus_moyens: b.autres_revenus, style: b.style, mois_analyses: b.mois, personnes_du_foyer: b.personnes,
+    groupes: groups, charges_fixes: b.charges_fixes, a_ranger: b.a_ranger, categories: cats }).slice(0, 80000);
+  const consignes = clip(b.consignes, 1500), demande = clip(b.demande, 800);
+  const precedent = b.plan_precedent ? JSON.stringify(b.plan_precedent).slice(0, 15000) : '';
   try {
     const client = new Anthropic({ apiKey: conf.apiKey });
     const msg = await client.beta.messages.stream({
       model: conf.model,
-      max_tokens: 32000,
+      max_tokens: 64000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
+      output_config: { effort: 'high', format: { type: 'json_schema', schema } },
       messages: [{ role: 'user', content:
-        'Tu aides un foyer à construire son budget mensuel dans son appli. Voici ses données (moyennes par mois, en euros) :\n' + data + '\n\n' +
-        '1. reclasse : pour chaque libellé de "a_ranger" (dépenses aujourd\'hui sans vraie catégorie), donne la clé de catégorie la plus probable ' +
-        'parmi "categories", d\'après le nom du commerçant. Garde la catégorie fourre-tout seulement si c\'est vraiment impossible à deviner.\n' +
-        '2. budgets : un montant mensuel pour CHAQUE groupe de "groupes" (0 si le groupe ne le concerne pas), en tenant compte des dépenses rangées ' +
-        'à l\'étape 1. Couvre d\'abord les charges fixes, puis un budget réaliste pour les dépenses variables d\'après l\'historique, ' +
-        'selon le style demandé (serre = un peu en dessous de l\'habitude, reel = l\'habitude, confort = un peu au-dessus). Montants ronds (multiples de 5). ' +
-        'pourquoi : une phrase courte.\n' +
-        '3. epargne : ce qui reste du revenu à répartir. La somme des budgets + epargne doit être égale au revenu à répartir ; si les dépenses ' +
-        'habituelles dépassent le revenu, réduis d\'abord les dépenses variables non essentielles et explique-le.\n' +
-        '4. conseils : 3 ou 4 conseils concrets et chiffrés, en français simple, en tutoyant (titre de 6 mots maximum avec un émoji au début, texte de 2 phrases maximum).' }]
+        'Tu es un conseiller en budget bienveillant. Un foyer te confie ses chiffres (moyennes par mois, en euros, calculées par son appli à partir de ses relevés) :\n' +
+        '<donnees>\n' + data + '\n</donnees>\n' +
+        (consignes ? '<precisions_du_foyer>\n' + consignes + '\n</precisions_du_foyer>\n' : '') +
+        (precedent ? '<budget_deja_propose>\n' + precedent + '\n</budget_deja_propose>\n' : '') +
+        (demande ? '<ajustement_demande>\n' + demande + '\n</ajustement_demande>\nPars du budget déjà proposé et applique cet ajustement ; ne change le reste que si c\'est nécessaire pour que les totaux tombent juste.\n' : '') +
+        '\nConstruis son budget mensuel :\n' +
+        '1. reclasse : pour chaque libellé de "a_ranger" (dépenses sans vraie catégorie), la clé de catégorie la plus probable parmi "categories", ' +
+        'd\'après le commerçant. Garde la catégorie fourre-tout seulement si c\'est impossible à deviner.\n' +
+        '2. budgets : pour CHAQUE groupe de "groupes" : un montant mensuel (0 s\'il ne le concerne pas), type = besoin (logement, courses, transport, ' +
+        'santé, assurances, crédits, factures…) ou envie (sorties, restaurants, shopping, loisirs, voyages…), une raison courte et chiffrée, et detail = ' +
+        'la répartition du montant entre ses catégories (seulement celles qui ont un montant). Tiens compte des dépenses rangées à l\'étape 1. ' +
+        'Couvre d\'abord les charges fixes, puis des budgets réalistes pour les dépenses variables d\'après l\'historique (moyenne, mois le plus haut) ' +
+        'selon le style (serre = un peu sous l\'habitude, reel = l\'habitude, confort = un peu au-dessus). Montants ronds (multiples de 5, sauf charges fixes exactes).\n' +
+        '3. epargne : ce qui reste. La somme des budgets + épargne doit être exactement égale au revenu à répartir. Vise si possible 10 à 20 % d\'épargne ' +
+        '(repère 50 / 30 / 20 : besoins / envies / épargne) sans rendre le budget irréaliste ; si les dépenses habituelles dépassent le revenu, réduis ' +
+        'd\'abord les envies et explique-le. Respecte en priorité les précisions du foyer.\n' +
+        '4. resume : 2 phrases qui expliquent l\'idée du budget.\n' +
+        '5. conseils : 3 ou 4 conseils concrets et chiffrés tirés de ses données (titre de 6 mots maximum avec un émoji au début, texte de 2 phrases maximum).\n' +
+        'Écris en français simple, en tutoyant.' }]
     }).finalMessage();
     if (msg.stop_reason === 'refusal') return res.status(422).json({ error: 'Claude n’a pas voulu répondre.' });
     if (msg.stop_reason === 'max_tokens') return res.status(422).json({ error: 'Trop de données d’un coup, réessaie.' });
     const out = JSON.parse(msg.content.filter(x => x.type === 'text').map(x => x.text).join(''));
     console.log('Analyse de budget : plan pour ' + req.user + ' (' + msg.usage.input_tokens + ' + ' + msg.usage.output_tokens + ' jetons)');
-    res.json({ ok: true, reclasse: out.reclasse || [], budgets: out.budgets || [], epargne: out.epargne || null, conseils: (out.conseils || []).slice(0, 6) });
+    res.json({ ok: true, resume: out.resume || '', reclasse: out.reclasse || [], budgets: out.budgets || [], epargne: out.epargne || null, conseils: (out.conseils || []).slice(0, 6) });
   } catch (e) {
     console.log('Analyse de budget : erreur', e.status || '', e.message);
     let m = 'Budget indisponible pour le moment, réessaie.';
