@@ -1082,7 +1082,7 @@ app.post('/api/budget-plan', requireAuth, async (req, res) => {
     }
   };
   const clip = (v, n) => String(v || '').slice(0, n);
-  const data = JSON.stringify({ revenu_a_repartir: b.revenu, autres_revenus_moyens: b.autres_revenus, style: b.style, mois_analyses: b.mois, personnes_du_foyer: b.personnes,
+  const data = JSON.stringify({ revenu_a_repartir: b.revenu, revenu_total: b.revenu_total, marge_de_securite: b.marge, autres_revenus_moyens: b.autres_revenus, style: b.style, mois_analyses: b.mois, personnes_du_foyer: b.personnes,
     groupes: groups, charges_fixes: b.charges_fixes, a_ranger: b.a_ranger, categories: cats }).slice(0, 80000);
   const consignes = clip(b.consignes, 1500), demande = clip(b.demande, 800);
   const precedent = b.plan_precedent ? JSON.stringify(b.plan_precedent).slice(0, 15000) : '';
@@ -1100,7 +1100,8 @@ app.post('/api/budget-plan', requireAuth, async (req, res) => {
         (consignes ? '<precisions_du_foyer>\n' + consignes + '\n</precisions_du_foyer>\n' : '') +
         (precedent ? '<budget_deja_propose>\n' + precedent + '\n</budget_deja_propose>\n' : '') +
         (demande ? '<ajustement_demande>\n' + demande + '\n</ajustement_demande>\nPars du budget déjà proposé et applique cet ajustement ; ne change le reste que si c\'est nécessaire pour que les totaux tombent juste.\n' : '') +
-        '\nConstruis son budget mensuel :\n' +
+        '\nLe foyer garde une marge de sécurité (marge_de_securite, hors budget, pour les imprévus) : ne la répartis pas, travaille seulement ' +
+        'sur revenu_a_repartir.\nConstruis son budget mensuel :\n' +
         '1. reclasse : pour chaque libellé de "a_ranger" (dépenses sans vraie catégorie), la clé de catégorie la plus probable parmi "categories", ' +
         'd\'après le commerçant. Garde la catégorie fourre-tout seulement si c\'est impossible à deviner.\n' +
         '2. budgets : pour CHAQUE groupe de "groupes" : un montant mensuel (0 s\'il ne le concerne pas), type = besoin (logement, courses, transport, ' +
